@@ -1,2 +1,3 @@
 # LemonSharkCKMR
-This project will attempt to fit a CKMR model to a lemon shark population.
+Use the fishSim_CKMR script to simulate a fish populaton then fit a CKMR model to that population.
+Need to parallelize within the script; presently, each iteration of simulation + model fitting takes about 45 minutes ... 
