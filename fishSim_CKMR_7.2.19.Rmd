@@ -16,8 +16,8 @@ Goals as of 7/2/2019
 ```{r}
 library(fishSim)
 library(parallel)
-library(foreach)
 library(doParallel)
+library(foreach)
 library(plyr) #for frequencies
 library(optimx)
 
@@ -69,10 +69,10 @@ ncol(indiv)
 indiv2 <- as.data.frame(indiv)
 indiv2 <- indiv2[!is.na(indiv2$Death.Year),]
 
-# Number of females alive at t0
+# Number of mature females alive at t0
 cat(paste("Females alive at t0:", sum(as.numeric(as.character(indiv2$Age)) > as.numeric(as.character(indiv2$Death.Year)) & indiv2$Sex=="F")))
 
-# Number of males alive at t0
+# Number of mature males alive at t0
 cat(paste("Males alive at t0:", sum(as.numeric(as.character(indiv2$Age)) > as.numeric(as.character(indiv2$Death.Year)) & indiv2$Sex=="M")))
 tail(indiv2)
 ```
@@ -91,37 +91,29 @@ for (y in c(t_start:t_end)) {
   indiv <- altMate(indiv, batchSize = .5, firstBreed = 0, fecundityDist = "binomial", year = y, type = "age", maxClutch = 1, singlePaternity = TRUE, maturityCurve = c(rep(0,6), 0.1666667, 0.3333333, 0.5, 0.6666667, 0.8333333, rep(1.0, 1000)))
   indiv <- mort(indiv, type = "simple", maxPop = 9000, year=y, maxAge = 40) #make maxPop ~ 9000 if setting mort to flat, as this is the approx size of the population in the Bravington script.
   indiv <- birthdays(indiv)
-  sample_vec <- append(sample_vec, sample(indiv[indiv[,5] > (y-n_ages) & is.na(indiv[,6]) == TRUE,][,1], size =
-  n_samples_per_yr))
+  sample_vec <- append(sample_vec, sample(indiv[indiv[,5] > (y-n_ages) & is.na(indiv[,6]) == TRUE,][,1], size = n_samples_per_yr))
+  death_yr <- append(death_yr, rep(y, n_samples_per_yr))
 }
 
+head(sampled)
 head(indiv)
 
 length(sample_vec)
-sample_vec2 <- unique(sample_vec) #recapturing individuals -- eventually need to adjust simulation settings. For now, just get rid of recaptures.
-length(sample_vec2)
-
-tail(indiv)
-#sampled[,1] = ID
-#sampled[,2] = birth year
-#sampled[,3] = death yeear
-#sampled[,4] = sex
-sampled <- data.frame(sample_vec2) #Make dataframe to store unique captures
-death_yr <- c(rep(100:105, each=length(sample_vec2)/6)) #assign death year, evenly split among samples. Number is odd because of need to eliminate recaptures from dataset.
+length(death_yr)
+sampled <- cbind(sample_vec,death_yr) #make dataframe of sampled individuals and death year
+sampled <- data.frame(sampled[duplicated(sampled[,1])==FALSE,]) #get rid of duplicate values
 
 for(i in 1:length(sampled[,1])) {
-  sampled[i,2] = as.numeric(indiv[which(indiv[,1] == sampled[i,1]),5]) #birth year
-  sampled[i,3] =  death_yr[i] #death year
+  sampled[i,3] = as.numeric(indiv[which(indiv[,1] == sampled[i,1]),5]) #birth year
   sampled[i,4] = indiv[which(indiv[,1] == sampled[i,1]),2] #sex
 }
 
-sampled_col <- c("ID", "Birth Year", "Death Year", "Sex")
+sampled_col <- c("ID", "Death Year", "Birth Year", "Sex")
 colnames(sampled) <- sampled_col
 length(sampled[,1])
+sampled <- sampled[,c(1,3,2,4)]
 head(sampled)
 tail(sampled)
-#sampled[577:579,3] = 105 #Fill in any NAs at the tail of the data frame with the most recent sampling year
-## Make this calculate automatically
 
 sexnum <- c()
 for(i in 1:length(sampled[,1])) {
@@ -153,9 +145,9 @@ Find relatives among sampled individuals
 pairs <- findRelativesPar(indiv = indiv, sampled = sampled[,1])
 head(pairs)
 
-head(POPs)
 HSPs <- pairs[pairs$TwoTwo == 1,] ##pairs that are half-siblings of each other
 POPs <- pairs[pairs$OneTwo == 1,] ##pairs that are parents of each other
+head(POPs)
 
 POPs2 <- POPs[,1:2] #extract IDs from related individuals (for use in the next chunk)
 length(POPs2[,1])
@@ -217,6 +209,7 @@ for(i in 1:length(non_POPs2[,1])) {
   Data3[i,4] = sampled[which(sampled[,1]==non_POPs2[i,2]),5]
   }
 }
+
 head(sampled)
 head(Data3,12)
 tail(Data3)
