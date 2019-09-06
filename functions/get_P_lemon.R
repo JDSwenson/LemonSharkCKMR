@@ -5,8 +5,12 @@ t_end=28
 mat_age=rep(0, n_ages)
 mat_age[12:n_ages]=1
 P_Mother = P_Father = array(0,dim=c(n_yrs,n_yrs,n_yrs))  #creates two empty arrays, one for mother and one for father.  Dimensions are parent birth year, parent death year, offspring birth year (all of which are specified by n_yrs)
+### Maybe come back and use a truncated distribution instead (package truncnorm)
+#a_priori_abund <- round(rnorm(n=1, mean=80, sd=80),0)
+#a_priori_abund <- ifelse(a_priori_abund < 10, 10, a_priori_abund)
+a_priori_abund <- 80
 
-Pars=c(log(40),log(40)) #Based on the avg # juveniles in Bimini, not adults, and assumes equal sex ratio
+Pars=c(log(a_priori_abund/2),log(a_priori_abund/2)) #Based on the avg # juveniles in Bimini, not adults, and assumes equal sex ratio
 
 get_P_lemon <- function(Pars,P_Mother,P_Father,n_yrs,t_start,t_end){
   N_F=exp(Pars[1]) #number of mature females (assume time constant) - (total reproductive output from females)
@@ -27,5 +31,5 @@ get_P_lemon <- function(Pars,P_Mother,P_Father,n_yrs,t_start,t_end){
       }
     } 
   }
-  return(list(P_Mother=P_Mother,P_Father=P_Father))
+  return(list(P_Mother=P_Mother,P_Father=P_Father)) #return makes sure this is moved out of the loop into the environment
 }

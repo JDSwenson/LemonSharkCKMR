@@ -1,3 +1,6 @@
+rm(list=ls())
+set.seed(20)
+
 source("functions/Data_format.R")
 source("functions/get_P_lemon.R")
 source("functions/lemon_neg_log_like.R")
@@ -13,7 +16,8 @@ Samples$Indiv_ID[which(Samples$Indiv_ID %in% Samples$Mother)]
 
 summary(CK_fit)
 #compute variance covariance matrix
-D=diag(3)*c(exp(CK_fit$p1[2]),exp(CK_fit$p2[2])) #derivatives of transformations
+#Put this on hold - try to understand
+D=diag(length(Pars))*c(exp(CK_fit$p1[2]),exp(CK_fit$p2[2])) #derivatives of transformations
 VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
 VC = (t(D)%*%VC_trans%*%D) #delta method
 SE=sqrt(diag(VC))
