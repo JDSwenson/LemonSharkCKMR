@@ -1,18 +1,24 @@
 rm(list=ls())
-set.seed(20)
+#set.seed(50000)
+#seed of 5000 works
 
-source("functions/Data_format.R")
+source("functions/data_format_lemon.R")
 source("functions/get_P_lemon.R")
 source("functions/lemon_neg_log_like.R")
+
+#P = get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+#Dimensions are parent birth year, parent death year, offspring birth year, specified by n_yrs
+#P$P_Mother[3,29,19]
+#P$P_Father[12,26,26]
 
 lemon_neg_log_lik(Pars=Pars,Negatives_Mother=Data_mom_no,Negatives_Father=Data_dad_no,Pairs_Mother=Data_mom_yes,Pairs_Father=Data_dad_yes,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
 library(optimx)
 CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE,Negatives_Mother=Data_mom_no,Negatives_Father=Data_dad_no,Pairs_Mother=Data_mom_yes,Pairs_Father=Data_dad_yes,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
-head(Samples)
-Samples$Indiv_ID[which(Samples$Indiv_ID %in% Samples$Father)]
-Samples$Indiv_ID[which(Samples$Indiv_ID %in% Samples$Mother)]
+#head(Samples)
+#Samples$Indiv_ID[which(Samples$Indiv_ID %in% Samples$Father)]
+#Samples$Indiv_ID[which(Samples$Indiv_ID %in% Samples$Mother)]
 
 summary(CK_fit)
 #compute variance covariance matrix
