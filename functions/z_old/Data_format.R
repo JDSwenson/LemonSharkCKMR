@@ -1,26 +1,30 @@
 #To quickly navigate:
 #Search for DELETE for sections that can likely be deleted
 #Search for VARIABLES for variables that can probably be moved to top of script
-#Search for Troubleshoot for areas that may have issues
-#rm(list=ls())
+
+rm(list=ls())
 library(tidyverse)
 
 lemon_data <- read.csv("Main_lemon_shark.csv", header=TRUE, stringsAsFactors = FALSE)
 lemon_data <- lemon_data[which(lemon_data$Island=="BIM"),] #Subset for bimini
 lemon_data %>% separate(Tube.Label, sep=";", into = c("Juvenile_ID", "Recapture_1", "Recapture_2", "Recapture_3", "Recapture_4")) -> lemon_data2 #Separate Tube labels into capture history (there is one tube label per sample instance)
 colnames(lemon_data2) <- c("PIT_tag","Capture_ID", "Recapture_1", "Recapture_2", "Recapture_3", "Recapture_4", "Capture_Year", "Capture_Date", "Island", "Site", "Sex", "PCL_cm", "TL_cm", "DOB", "Father", "Mother") #relabel columns
-#head(lemon_data2)
+head(lemon_data2)
 
 lemon_ref <- lemon_data2[which(lemon_data2$DOB!=""),] #Subset for juveniles with known birth dates
 
-#head(lemon_ref)
-#length(lemon_data2[,1]) #How many total bimini lemon sharks in the dataset
-#length(lemon_ref[,1]) #How many bimini lemon sharks with known birth dates
+#DELETE below lines?
+#lemon_ref2 <- lemon_ref[,c(2,15:16)] #Subset just juvenile and parent IDs
+#colnames(lemon_ref2) <- c("Juv_ID", "Father", "Mother")
+
+head(lemon_ref)
+length(lemon_data2[,1]) #How many total bimini lemon sharks in the dataset
+length(lemon_ref[,1]) #How many bimini lemon sharks with known birth dates
 
 Juv_ref <- lemon_ref[,c(2,7,11,14:16)] #Add columns 15 & 16 to add parent IDs
 Juv_ref %>% separate(DOB, sep="/", into=c("Yr1", "Yr2")) -> Juv_ref #Separate uncertain birth years (e.g. 1993/1994) into separate columns
 colnames(Juv_ref) <- c("Indiv_ID", "Capture_Year","Sex","Yr1","Yr2","Father","Mother")
-#head(Juv_ref)
+head(Juv_ref)
 
 #Randomly assign year if more than one specified
 assign_yr <- function(yr1,yr2) {
@@ -37,12 +41,20 @@ Juv_ref$DOB = DOB #Add randomly assigned birth year to Juv_ref
 Juv_ref$Father <- sub("^$", "Unknown", Juv_ref$Father) #Replace empty Father cells with Unknown
 Juv_ref$Mother <- sub("^$", "Unknown", Juv_ref$Mother) #Replace empty Mother cells with Unknown
 
+# DELETE below code section?
+#Save Juvenile birth year in separate vector -- why?
+# Juv_birth <- sort(as.numeric(Juv_ref$DOB))
+# head(Juv_birth)
+# length(Juv_birth)
+
+#DELETE library load below?
+#library(plyr) -- tidyverse likely loads this already
 #Make reference table for adults and frequency of offspring by year
 Father_ref <- plyr::count(Juv_ref[,c(6,8)])
 Mother_ref <- plyr::count(Juv_ref[,c(7:8)])
-#head(Juv_ref)
-#head(Father_ref)
-#tail(Mother_ref)
+head(Juv_ref)
+head(Father_ref)
+tail(Mother_ref)
 
 ################# Simulate adult info ################
 # Simulate and assign ages to adults based on life history
@@ -64,14 +76,13 @@ m_mat <- c(rep(0,11), rep(1,14)) #Set proportion of mature males at each age -- 
 Surv_age_m <- rep(0.85,length(m_adult_age)) #Set survival for adults
 Prop_age_m <- rep(1, length(m_adult_age)) #Initialize variable Prop_age_m
 for(iage in 2:length(Prop_age_m)) Prop_age_m[iage]=Prop_age_m[iage-1]*Surv_age_m[iage-1] #Set proportion of animals from each cohort surviving to the next age class based on Surv_age
+
 Prop_age_m=Prop_age_m/sum(Prop_age_m)  #stable age distribution given assumed survival i.e. gives proportion of ages in a population based on assumed survival
 
 Uniq_Father <- unique(Father_ref$Father) #Save unique fathers
-
-#Commented out below 9/19
-#Father_age <- sample(m_adult_age, replace=TRUE, prob=Prop_age_m, size=length(Uniq_Father)) #Simulate father ages (with replacement) with probability equal to age distribution
-#Father_age <- as.data.frame(cbind(Uniq_Father,Father_age), stringsAsFactors=FALSE)
-#colnames(Father_age) <- c("Father", "Age")
+Father_age <- sample(m_adult_age, replace=TRUE, prob=Prop_age_m, size=length(Uniq_Father)) #Simulate father ages (with replacement) with probability equal to age distribution
+Father_age <- as.data.frame(cbind(Uniq_Father,Father_age), stringsAsFactors=FALSE)
+colnames(Father_age) <- c("Father", "Age")
 
 #Same as above but with mothers (which mature one year later)
 f_adult_age <- c(13:25)
@@ -82,112 +93,76 @@ for(iage in 2:length(Prop_age_f)) Prop_age_f[iage]=Prop_age_f[iage-1]*Surv_age_f
 Prop_age_f=Prop_age_f/sum(Prop_age_f)
 
 Uniq_Mother <- unique(Mother_ref$Mother)
-
 #Simulate ages of mothers
-#Commented out below 9/19
-#Mother_age <- as.data.frame(cbind(Uniq_Mother,Mother_age), stringsAsFactors=FALSE)
-#colnames(Mother_age) <- c("Mother", "Age")
+Mother_age <- sample(f_adult_age, replace=TRUE, prob=Prop_age_f, size=length(Uniq_Mother))
+Mother_age <- as.data.frame(cbind(Uniq_Mother,Mother_age), stringsAsFactors=FALSE)
+colnames(Mother_age) <- c("Mother", "Age")
 
 # Want to base estimate on animals caught between 2004-2007 (the most heavily sampled years)
 
 ####Set up dataframe for population we will sample####
 #Subset for animals captured in 2004-2007
-t_start <- 2004
-t_end <- 2007
+t_start = 2004
+t_end=2007
 lems <- subset(Juv_ref, subset=Capture_Year %in% c(2004:2007), select=c(Indiv_ID, Capture_Year, Father, Mother, DOB, Sex))
-#head(Juv_ref)
-#View(lems)
+head(lems)
+
 #Assign ages to parents in subset of data
 #Mothers
 #DELETE one of the for loops below -- I think the second will work fine b/c I replaced blanks with Unknown, but testing
-#for(i in 1:length(lems[,1])) {
-#  if(lems$Mother[i]!=""){
-#    lems$Mother_age[i] <- Mother_age[which(Mother_age$Mother==lems$Mother[i]),2]
-#  }
-#}
+for(i in 1:length(lems[,1])) {
+  if(lems$Mother[i]!=""){
+    lems$Mother_age[i] <- Mother_age[which(Mother_age$Mother==lems$Mother[i]),2]
+  }
+}
 
-#for(i in 1:length(lems[,1])) {
-#    lems$Mother_age[i] <- Mother_age[which(Mother_age$Mother==lems$Mother[i]),2]
-#}
+for(i in 1:length(lems[,1])) {
+    lems$Mother_age[i] <- Mother_age[which(Mother_age$Mother==lems$Mother[i]),2]
+}
 
 #Change age into DOB (will be used in CKMR model)
-#lems$Mother_DOB <- t_start-as.numeric(lems$Mother_age)
-#min(lems$Mother_DOB)
+lems$Mother_DOB <- t_start-as.numeric(lems$Mother_age)
+min(lems$Mother_DOB)
 
 #Fathers
 #DELETE one of the below for loops (I think the second will work, but testing)
-#for(i in 1:length(lems[,1])) {
- # if(lems$Father[i]!=""){
-#    lems$Father_age[i] <- Father_age[which(Father_age$Father==lems$Father[i]),2]
-#  }
-#}
-
-#for(i in 1:length(lems[,1])) {
-#    lems$Father_age[i] <- Father_age[which(Father_age$Father==lems$Father[i]),2]
-#}
-
-#lems$Father_DOB <- t_start-as.numeric(lems$Father_age)
-#head(lems)
-
-#add the +1 so the first and last years of sampling are counted
-yr_1=t_start-max_age
-yrs <- c(seq(yr_1,t_end))
-samp_yrs <- c(t_start:t_end)
-study_yrs <- c(1:((t_end+1)-yr_1))
-samp_study_yrs = c(26:29)
-#study_yrs[which(yrs == lems$DOB[1])]
-
-
-#Change birth year for juveniles to birth year relative to study
-Juv_study_DOB <- c()
-for(i in 1:length(lems[,1])){
-  Juv_study_DOB[i] <- study_yrs[which(yrs == lems$DOB[i])]
+for(i in 1:length(lems[,1])) {
+  if(lems$Father[i]!=""){
+    lems$Father_age[i] <- Father_age[which(Father_age$Father==lems$Father[i]),2]
+  }
 }
 
-Juv_lems <- as.data.frame(cbind(lems$Indiv_ID, Juv_study_DOB, lems$Capture_Year, lems$Sex), stringsAsFactors = FALSE)
-colnames(Juv_lems) <- c("Indiv", "Juv_study_DOB", "Capture_Year", "Sex")
-Juv_lems2 <- Juv_lems[,c(1,3:4)]
-
-Fat_lems <- as.data.frame(cbind(lems$Father, lems$Capture_Year, rep("M", length(lems[,1]))), stringsAsFactors = FALSE)
-
-Mot_lems <- as.data.frame(cbind(lems$Mother, lems$Capture_Year, rep("F", length(lems[,1]))), stringsAsFactors = FALSE)
-
-colnames(Fat_lems) = colnames(Mot_lems) = colnames(Juv_lems2) = c("Indiv", "Capture_Year", "Sex")
-
-#Add column for capture year that corresponds to study year (e.g. 26 instead of 2004)
-for(i in 1:length(Juv_lems2[,1])){ 
-  Juv_lems2$Capt_study_yr[i] <- samp_study_yrs[which(samp_yrs==Juv_lems2$Capture_Year[i])]
-}
-for(i in 1:length(Fat_lems[,1])){
-  Fat_lems$Capt_study_yr[i] <- samp_study_yrs[which(samp_yrs==Fat_lems$Capture_Year[i])]
-}
-for(i in 1:length(Mot_lems[,1])){
-  Mot_lems$Capt_study_yr[i] <- samp_study_yrs[which(samp_yrs==Mot_lems$Capture_Year[i])]
+for(i in 1:length(lems[,1])) {
+    lems$Father_age[i] <- Father_age[which(Father_age$Father==lems$Father[i]),2]
 }
 
-#colnames(Juv_lems) <- c("Indiv", "Capture_Year", "Sex")
-#head(Fat_lems)
-#head(Mot_lems)
-#length(Mot_lems[,1])
+lems$Father_DOB <- t_start-as.numeric(lems$Father_age)
+head(lems)
+
+#Make separate dfs for Juveniles, Mothers, and Fathers (to combine)
+Juv_lems <- as.data.frame(cbind(lems$Indiv_ID, lems$DOB, lems$Capture_Year, lems$Sex), stringsAsFactors = FALSE)
+Fat_lems <- as.data.frame(cbind(lems$Father, lems$Father_DOB, lems$Capture_Year, rep("M", length(lems[,1]))), stringsAsFactors = FALSE)
+Mot_lems <- as.data.frame(cbind(lems$Mother, lems$Mother_DOB, lems$Capture_Year, rep("F", length(lems[,1]))), stringsAsFactors = FALSE)
+colnames(Fat_lems) = colnames(Juv_lems) = colnames(Mot_lems) = c("Indiv", "DOB", "Capture_Year", "Sex")
+head(Fat_lems)
+
 #Remove duplicate entries (There are no duplicate juveniles - double-checked 9/13/19)
-#Troubleshoot - Below will only keep the first instance of each, so more captures in first year (because assigned capture year to all individuals)
-Mot_lems <- Mot_lems[!duplicated(Mot_lems$Indiv),]
-#Mot_lems$uniqID <- NULL
-Mot_lems <- Mot_lems[-c(which(Mot_lems[,1]=="Unknown")),] #Remove Unknown individuals
+Mot_lems$uniqID <- paste0(Mot_lems$Indiv,Mot_lems$DOB)
+#length(Mot_lems[,1]) #Check number of all recorded mothers
+Mot_lems <- Mot_lems[!duplicated(Mot_lems$uniqID),]
+Mot_lems$uniqID <- NULL
 #length(Mot_lems[,1]) #Check number of unique mothers
 
-#Fat_lems$uniqID <- paste0(Fat_lems$Indiv,Fat_lems$DOB)
+Fat_lems$uniqID <- paste0(Fat_lems$Indiv,Fat_lems$DOB)
 #length(Fat_lems[,1])
-Fat_lems <- Fat_lems[!duplicated(Fat_lems$Indiv),]
-#Fat_lems$uniqID <- NULL
-Fat_lems <- Fat_lems[-c(which(Fat_lems[,1]=="Unknown")),] #Remove unknown individuals
+Fat_lems <- Fat_lems[!duplicated(Fat_lems$uniqID),]
+Fat_lems$uniqID <- NULL
 #length(Fat_lems[,1])
 
 #Combine data frames
-pop_df <- c()
-pop_df <- rbind(Juv_lems2, Fat_lems, Mot_lems)
-#head(pop_df)
-#tail(pop_df)
+pop_df <- rbind(Juv_lems, Fat_lems, Mot_lems)
+head(pop_df)
+tail(pop_df)
 
 ####Sample from population####
 #Want 88 samples total, spread over 4 years, so 22 samples per year
@@ -195,57 +170,35 @@ pop_df <- rbind(Juv_lems2, Fat_lems, Mot_lems)
 #VARIABLES to move to top
 Estimated_truth <- 77
 n_samples <- round(10*sqrt(Estimated_truth), 0)
+samp_yrs = 4
 samps=c()
 
 #Make vector called samps that randomly samples the population
 for(i in 1:4){
   cp_yr = c(2004:2007)[i]
-  samps <- c(samps, sample(pop_df[which(pop_df$Capture_Year==cp_yr),1], size=n_samples/length(samp_study_yrs), replace=FALSE))
+  samps <- c(samps, sample(pop_df[which(pop_df$Capture_Year==cp_yr),1], size=n_samples/samp_yrs, replace=FALSE))
 }
 
-#length(samps)
-#head(samps)
-#head(pop_df)
+length(samps)
+head(samps)
+head(pop_df)
 
 #Create sample dataframe that has year of capture(death) year of birth, and sex
 Samp_birth = c() #Initialize vectors
 Samp_cap_yr = c()
 Samp_sex = c()
-  
-#head(Juv_lems)
-#head(Fat_lems)
-#study_yrs
-#samp_yrs
 
-#samp_study_yrs[which(samp_yrs==Fat_lems$Capture_Year[1])]
-#head(pop_df)
-#Add capture year that corresponds to study year (e.g. 26 instead of 2004)
-#head(Juv_lems)
-#Simulate birth year (based on study year)
-#as.numeric(Juv_lems$DOB[which(Juv_lems==samps[2])])
-for(i in 1:length(samps)){
-  if(samps[i] %in% Juv_lems$Indiv){
-    Samp_birth[i] <- as.numeric(Juv_lems$Juv_study_DOB[which(Juv_lems==samps[i])])
-  } else if(samps[i] %in% Fat_lems$Indiv){
-    Samp_birth[i] <- Fat_lems$Capt_study_yr[which(Fat_lems$Indiv==samps[i])] - sample(m_adult_age, replace=TRUE, prob=Prop_age_m, size=1)
-  } else if(samps[i] %in% Mot_lems$Indiv){
-    Samp_birth[i] <- Mot_lems$Capt_study_yr[which(Mot_lems$Indiv==samps[i])] - sample(f_adult_age, replace=TRUE, prob=Prop_age_f, size=1)
-  }
-}
-#Samp_birth   
+for(i in 1:length(samps))Samp_birth[i] = as.numeric(pop_df[which(pop_df$Indiv==samps[i]),2]) #search pop_df for the Indiv ID and extract the associated birth year
+for(i in 1:length(samps))Samp_cap_yr[i] = as.numeric(pop_df[which(pop_df$Indiv==samps[i]),3]) #search pop_df for the Indiv ID and extract the associated capture year
+for(i in 1:length(samps))Samp_sex[i] = pop_df[which(pop_df$Indiv==samps[i]),4] #search pop_df for the Indiv ID and extract the associated sex
 
-#head(pop_df)
-#Samp_birth[i] = as.numeric(pop_df[which(pop_df$Indiv==samps[i]),2]) #search pop_df for the Indiv ID and extract the associated birth year
-for(i in 1:length(samps))Samp_cap_yr[i] = as.numeric(pop_df[which(pop_df$Indiv==samps[i]),4]) #search pop_df for the Indiv ID and extract the associated capture year
-for(i in 1:length(samps))Samp_sex[i] = pop_df[which(pop_df$Indiv==samps[i]),3] #search pop_df for the Indiv ID and extract the associated sex
 #Combine vectors into dataframe and rename columns
 Samples <- as.data.frame(cbind(samps,Samp_birth,Samp_cap_yr, Samp_sex), stringsAsFactors = FALSE)
 colnames(Samples) <- c("Indiv_ID", "Birth", "Death", "Sex")
-#head(Samples)
+head(Samples)
 
 Samples[,2] <- as.numeric(Samples[,2]) #Change columns to numeric; changing earlier doesn't work
 Samples[,3] <- as.numeric(Samples[,3])
-#Samples
 
 #Assign father and mother for each sampled individual
 #Can below be run with foreach? 
@@ -274,25 +227,23 @@ for(i in 1:length(Samples[,1])){
     Samples$Mom_death[which(Samples$Mother==Samples$Indiv_ID[i])] <- Samples$Death[i]
   }
 }
-#View(Samples)
-#Set Mom and Data column to 1 if the sampled individual in the row has a sampled parent
+
+#Set Mom and Data column to 1 is the sampled individual in the row has a sampled parent
 for(i in 1:length(Samples[,1])){
   if(is.na(Samples$Dad_birth[i])==FALSE) Samples$Dad[i]=1
   if(is.na(Samples$Mom_birth[i])==FALSE) Samples$Mom[i]=1
 }
 
 #VARIABLE
-####NOTE TO SELF - Streamline script so we skip the year and just give age according to study####
-#Set first year from which we might see individuals in the data
-#tail(Samples)
-#for(i in 1:length(Samples[,1])) Samples$Birth[i] <- max(Samples$Birth[i]-yr_1,1) #Some samples have a birth year of 0 if not for max
-#Samples$Death=Samples$Death-yr_1+1 #Add one to make sure dates of sampling are within specified range
-#for(i in 1:length(Samples[,1])) Samples$Mom_birth[i] <- max(Samples$Mom_birth[i]-yr_1)
-#Samples$Mom_death=Samples$Mom_death-yr_1+1
-#for(i in 1:length(Samples[,1])) Samples$Dad_birth[i] <- max(Samples$Dad_birth[i]-yr_1)
-#Samples$Dad_death=Samples$Dad_death-yr_1+1
-#head(Samples)
-#View(Samples)
+yr_1=t_start-25 #Set first year of study (i.e. earliest year from which we might have samples)
+
+Samples$Birth=Samples$Birth-yr_1
+Samples$Death=Samples$Death-yr_1
+Samples$Mom_birth=Samples$Mom_birth-yr_1
+Samples$Mom_death=Samples$Mom_death-yr_1
+Samples$Dad_birth=Samples$Dad_birth-yr_1
+Samples$Dad_death=Samples$Dad_death-yr_1
+head(Samples)
 
 ####Set up pairwise comparison matrix####
 #We don't want to compare individuals with themselves (hence -1), and we don't want to do each comparison twice (divide by 2)
@@ -300,7 +251,7 @@ Data <- data.frame(matrix(0,nrow=n_samples*(n_samples-1)/2,ncol=5)) # massive ar
 
 #columns are: adult birth; adult death year; young birth; adult sex; probability of POP
 counter=1
-#View(Samples)
+
 #brute force - could probably be improved w/ expand.grid or something. Fills first four columns of Data
 for(iind1 in 1:(n_samples-1)){ #iind1 starts at 1 and counts to n_samples-1
   for(iind2 in (iind1+1):n_samples){#iind2 starts at 2 and counts to n_samples
@@ -326,99 +277,60 @@ for(iind1 in 1:(n_samples-1)){ #iind1 starts at 1 and counts to n_samples-1
 }
 
 colnames(Data) <- c("Adult_birth","Adult_death","Offspring_birth","Adult_sex", "Matches")
-#length(Data[,1])
-#head(Data)
+length(Data[,1])
+head(Data)
+head(Samples)
 
 ############### Assign parentage ################
 #Create separate dataframes for sampled moms and sampled dads
-#DELETE below?
-#SM2 <- aggregate(Sampled_Moms, by=list("Birth", "Mom_death", "Mom_birth"), FUN = "sum")
-#head(Data)
-dm <- Data[Data$Adult_sex == "F",] #Subset pairwise matrix for mother comparisons
-dd <- Data[Data$Adult_sex == "M",] #Subset pairwise matrix for father comparisons
-
-#Create column for unique combinations of adult birth, adult death, and offspring birth year
-dm$MasterID <- paste(dm$Adult_birth, dm$Adult_death, dm$Offspring_birth, sep="-")
-dd$MasterID <- paste(dd$Adult_birth, dd$Adult_death, dd$Offspring_birth, sep="-")
-#head(dd)
-
-#Count unique combos of adult birth, adult death, and offspring birth AND Master ID (should be the same)
-dm2 <- plyr::count(dm[,c(1:3,6)])
-dd2 <- plyr::count(dd[,c(1:3,6)])
-colnames(dm2)[5] = colnames(dd2)[5] <- "No_matches" #Change frequency column to No_matches (assume all comparisons are no matches - will subtract matches later)
-#head(dd2)
-
-#Subset sampled moms and sampled dads
 Sampled_Moms <- Samples[Samples$Mom == 1,]
-####Troubleshoot####
-#Correct for instances where adult is sampled and mother's age is less
-
 Sampled_Dads <- Samples[Samples$Dad == 1,]
-#View(Samples)
 
-#Create dataframe of sampled moms (sm) that includes a column that counts the occurrances of specific combinations of offspring birth, adult birth, and adult death
-sm <- Sampled_Moms %>% 
+Data_mom <- Data[Data$Adult_sex == "F",]
+Data_dad <- Data[Data$Adult_sex == "M",]
+
+#SM2 <- aggregate(Sampled_Moms, by=list("Birth", "Mom_death", "Mom_birth"), FUN = "sum")
+
+Data_mom$MasterID <- paste(Data_mom$Adult_birth, Data_mom$Adult_death, Data_mom$Offspring_birth, sep="-")
+Data_dad$MasterID <- paste(Data_dad$Adult_birth, Data_dad$Adult_death, Data_dad$Offspring_birth, sep="-")
+
+SM2 <- Sampled_Moms %>% 
   #complete(f_year, month, age) %>%  #Expands each years data to include all months and ages
   group_by(Birth, Mom_birth, Mom_death) %>%  #ID which columns to group by
   summarise(Matches = sum(!is.na(Mom)))
+SM2
 
-#Create dataframe of sampled dads (sd) that includes a column that counts the occurrances of specific combinations of offspring birth, adult birth, and adult death
-sd <- Sampled_Dads %>% 
+SD2 <- Sampled_Dads %>% 
   #complete(f_year, month, age) %>%  #Expands each years data to include all months and ages
   group_by(Birth, Dad_birth, Dad_death) %>%  #ID which columns to group by
   summarise(Matches = sum(!is.na(Dad)))
+SD2$MasterID <- paste(SD2$Dad_birth, SD2$Dad_death, SD2$Birth, sep="-")
+SM2$MasterID <- paste(SM2$Mom_birth, SM2$Mom_death, SM2$Birth, sep="-")
 
-#Create MasterID column to merge dataframes with matches (sm & sd) with dataframes with all comparisons (dm2, dd2)
-sd$MasterID <- paste(sd$Dad_birth, sd$Dad_death, sd$Birth, sep="-")
-sm$MasterID <- paste(sm$Mom_birth, sm$Mom_death, sm$Birth, sep="-")
+dm3 <- plyr::count(Data_mom[,c(1:3,6)]) #Note to self: change data_mom dataframes to dm
+dd3 <- plyr::count(Data_dad[,c(1:3,6)])
+colnames(dm3)[5] = colnames(dd3)[5] <- "No_matches"
 
-all_dads <- merge(dd2, sd[,4:5], by="MasterID", all=TRUE) #Merge father dataframes
-all_dads$Matches[is.na(all_dads$Matches)==TRUE] <- 0 #Put 0 in all Matches cells with NA
-all_dads$No_matches <- all_dads$No_matches-all_dads$Matches #Calculate number of no matches
+all_dads <- merge(dd3, SD2[,4:5], by="MasterID", all=TRUE)
+all_dads$Matches[is.na(all_dads$Matches)==TRUE] <- 0
+all_dads$No_matches <- all_dads$No_matches-all_dads$Matches
 
-#sum(all_dads$Matches)
+sum(all_dads$Matches, na.rm=TRUE)
+head(all_dads)
 
-all_moms <- merge(dm2, sm[,4:5], by="MasterID", all=TRUE) #Merge mother dataframes
-all_moms$Matches[is.na(all_moms$Matches)==TRUE] <- 0 #Put 0 in all Matches cells with NA
-all_moms$No_matches <- all_moms$No_matches-all_moms$Matches #Calculate number of no matches
+all_moms <- merge(dm3, SM2[,4:5], by="MasterID", all=TRUE)
+all_moms$Matches[is.na(all_moms$Matches)==TRUE] <- 0
+all_moms$No_matches <- all_moms$No_matches-all_moms$Matches
 
-#sum(all_moms$Matches, na.rm=TRUE)
-#which(is.na(all_moms[,2])==TRUE) #Shouldn't be any
-#which(is.na(all_dads[,2])==TRUE) #Shouldn't be any
-#which(is.na(sm[,2])==TRUE)
-#which(is.na(dm[,2])==TRUE)
+sum(all_moms$Matches, na.rm=TRUE)
+head(all_moms)
 
-#head(all_moms)
-#Create dataframes for CKMR model!
-Data_mom_yes <- all_moms[all_moms$Matches > 0, c(2:4,6)] 
+Data_mom_yes <- all_moms[all_moms$Matches > 0, c(2:4,6)]
 Data_dad_yes <- all_dads[all_dads$Matches > 0, c(2:4,6)]
+
 Data_dad_no <- all_dads[all_dads$Matches == 0, c(2:4,5)]
 Data_mom_no <- all_moms[all_moms$Matches == 0, c(2:4,5)]
 
-#In case offspring are born after parents die, band-aid fix to allow the model to run
-#Change either adult birth year or death year so 1) adult does not die before offspring's birth, and 2) adult is not older than max age
-
-for(i in 1:length(Data_mom_yes[,1])){
-  if(Data_mom_yes$Offspring_birth[i] > Data_mom_yes$Adult_death[i] & Data_mom_yes$Offspring_birth[i]-Data_mom_yes$Adult_birth[i] > max_age){
-  Data_mom_yes$Adult_birth[i] <- Data_mom_yes$Offspring_birth[i]-max_age
-  Data_mom_yes$Adult_death[i] <- Data_mom_yes$Offspring_birth[i]
-} else if(Data_mom_yes$Offspring_birth[i] > Data_mom_yes$Adult_death[i] & Data_mom_yes$Offspring_birth[i]-Data_mom_yes$Adult_birth[i] <= max_age) {
-  Data_mom_yes$Adult_death[i] <- Data_mom_yes$Offspring_birth[i]
-} else Data_mom_yes$Adult_death[i] <- Data_mom_yes$Adult_death[i]
-}
-
-for(i in 1:length(Data_dad_yes[,1])){
-  if(Data_dad_yes$Offspring_birth[i] > Data_dad_yes$Adult_death[i] & Data_dad_yes$Offspring_birth[i]-Data_dad_yes$Adult_birth[i] > max_age){
-    Data_dad_yes$Adult_birth[i] <- Data_dad_yes$Offspring_birth[i]-max_age
-    Data_dad_yes$Adult_death[i] <- Data_dad_yes$Offspring_birth[i]
-  } else if(Data_dad_yes$Offspring_birth[i] > Data_dad_yes$Adult_death[i] & Data_dad_yes$Offspring_birth[i]-Data_dad_yes$Adult_birth[i] <= max_age) {
-    Data_dad_yes$Adult_death[i] <- Data_dad_yes$Offspring_birth[i]
-  } else Data_dad_yes$Adult_death[i] <- Data_dad_yes$Adult_death[i]
-}
-#In case adult is older than max_age, band-aid fix to allow the model to run
-#DELETE - think it's fixed?
-#Data_dad_yes$Adult_birth <- ifelse(Data_dad_yes$Adult_death-Data_dad_yes$Adult_birth > max_age, Data_dad_yes$Adult_death-max_age, Data_dad_yes$Adult_birth)
-#Data_mom_yes$Adult_birth <- ifelse(Data_mom_yes$Adult_death-Data_mom_yes$Adult_birth > max_age, Data_mom_yes$Adult_death-max_age, Data_mom_yes$Adult_birth)
 
 #head(Data_mom)
 #Data_mom2 <- Data_mom[!duplicated(Data_mom),]
@@ -445,6 +357,7 @@ for(i in 1:length(Data_dad_yes[,1])){
 #   }
 # }
 # head(Data)
+
 # Data_dad_no = Data[which(Data[,4]=="M" & Data[,5]==0),1:4]
 # Data_dad_yes = Data[which(Data[,4]=="M" & Data[,5]>0),1:4]
 # Data_mom_no = Data[which(Data[,4]=="F" & Data[,5]==0),1:4]
@@ -454,3 +367,8 @@ for(i in 1:length(Data_dad_yes[,1])){
 # Data_dad_yes=count(Data_dad_yes[,1:3])
 # Data_mom_yes=count(Data_mom_yes[,1:3])
 # sum(Data_mom_yes$freq)
+
+#In case offspring are born after parents die, band-aid fix to allow the model to run
+Data_mom_yes$Adult_death <- ifelse(Data_mom_yes$Offspring_birth > Data_mom_yes$Adult_death, Data_mom_yes$Offspring_birth, Data_mom_yes$Adult_death)
+
+Data_dad_yes$Adult_death <- ifelse(Data_dad_yes$Offspring_birth > Data_dad_yes$Adult_death, Data_dad_yes$Offspring_birth, Data_dad_yes$Adult_death)

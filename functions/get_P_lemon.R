@@ -1,16 +1,15 @@
 #9/16/19 Just changed the maturity age in the likelihood functions to match the maturity age used to generate the data (different for males and females)
 
-n_ages=25 #Max age of lemon sharks
-n_yrs=29
-t_start=26
-t_end=29
+#n_ages=25 #Max age of lemon sharks
+#n_yrs=29
+#t_start=26
+#t_end=29
 #mat_age=rep(0, n_ages)
 #mat_age[12:n_ages]=1
 P_Mother = P_Father = array(0,dim=c(n_yrs,n_yrs,n_yrs))  #creates two empty arrays, one for mother and one for father.  Dimensions are parent birth year, parent death year, offspring birth year (all of which are specified by n_yrs)
 ### Maybe come back and use a truncated distribution instead (package truncnorm)
 #a_priori_abund <- round(rnorm(n=1, mean=80, sd=80),0)
 #a_priori_abund <- ifelse(a_priori_abund < 10, 10, a_priori_abund)
-a_priori_abund <- 80
 
 Pars=c(log(a_priori_abund/2),log(a_priori_abund/2)) #Based on the avg # juveniles in Bimini, not adults, and assumes equal sex ratio
 
