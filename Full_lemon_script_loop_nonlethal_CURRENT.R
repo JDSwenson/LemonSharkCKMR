@@ -52,14 +52,15 @@ samp_study_yrs = c(26:29)
 #study_yrs[which(yrs == lems$DOB[1])]
 
 ####Set up simulation parameters####
-#White estimates 77 juveniles in the population
-Estimated_truth <- 50
+#Set Estimated_truth to set the sample size
+Estimated_truth <- 1000
 n_samples <- round(10*sqrt(Estimated_truth), 0) #Total number of samples taken over length of study
-a_priori_abund <- 50 #For prior estimation - sets initial parameter values, so should match Estimated_truth value
-iterations <- 500 #Set number of iterations to run in the loop
+a_priori_abund <- 1000 #For prior estimation - sets initial parameter values, so should match Estimated_truth value
+a_priori_surv <- 0.85
+iterations <- 100 #Set number of iterations to run in the loop
 
-source("functions/get_P_lemon.R")
-source("functions/lemon_neg_log_like.R")
+source("functions/get_P_lemon_nonlethal.R")
+source("functions/lemon_neg_log_like_nonlethal.R")
 
 ####################Read in data####################
 lemon_data <- read.csv("Main_lemon_shark.csv", header=TRUE, stringsAsFactors = FALSE)
@@ -69,9 +70,8 @@ colnames(lemon_data2) <- c("PIT_tag","Capture_ID", "Recapture_1", "Recapture_2",
 #head(lemon_data2)
 
 lemon_ref <- lemon_data2[which(lemon_data2$DOB!=""),] #Subset for juveniles with known birth dates
-length()
 
-head(lemon_ref)
+#head(lemon_ref)
 #length(lemon_data2[,1]) #How many total bimini lemon sharks in the dataset
 #length(lemon_ref[,1]) #How many bimini lemon sharks with known birth dates
 
@@ -102,8 +102,23 @@ Juv_ref <- Juv_ref[!duplicated(Juv_ref$Indiv_ID),]
 #Make reference table for adults and frequency of offspring by year
 Father_ref <- plyr::count(Juv_ref[,c(6,8)])
 Mother_ref <- plyr::count(Juv_ref[,c(7:8)])
+
+#What is the max number of fathers detected in one of the study years?
+#Set up dataframe of unique fathers detected during study years
+#Father_refmax <- Father_ref[which(Father_ref$Father != "Unknown"),] #Remove unknowns
+#Father_refmax <- Father_refmax[which(Father_refmax$DOB %in% samp_yrs),] #subset for study years
+#table(Father_refmax[,2])
+
+#What is the max number of mothers detected in one of the study years?
+#Set up dataframe of unique mothers detected during study years
+Mother_refmax <- Mother_ref[which(Mother_ref$Mother != "Unknown"),] #Remove unknowns
+Mother_refmax <- Mother_refmax[which(Mother_refmax$DOB %in% samp_yrs),] #Subset for sample years
+#table(Mother_refmax[,2])
+
+#length(Father_ref[,1])
 #head(Juv_ref)
 #head(Father_ref)
+#tail(Father_ref)
 #tail(Mother_ref)
 
 ####Simulate ages for parents####
@@ -180,7 +195,7 @@ pop_df <- rbind(Juv_lems2, Fat_lems, Mot_lems)
 #tail(pop_df)
 
 #length(pop_df[,1]) #Total number of animals in sampled population
-#length(Juv_lems[,1]) #How many juveniless included in sample pool
+#length(Juv_lems[,1]) #How many juveniles included in sample pool
 #length(Fat_lems[,1]) #How many fathers in sample pool
 #length(Mot_lems[,1]) #How many mothers in sample pool
 
@@ -221,7 +236,7 @@ for(i in 1:length(samps))Samp_sex[i] = pop_df[which(pop_df$Indiv==samps[i]),3]
 #Combine vectors into dataframe and rename columns
 Samples <- as.data.frame(cbind(samps,Samp_birth,Samp_cap_yr, Samp_sex), stringsAsFactors = FALSE)
 
-colnames(Samples) <- c("Indiv_ID", "Birth", "Death", "Sex")
+colnames(Samples) <- c("Indiv_ID", "Birth", "Capt", "Sex")
 #head(Samples)
 
 #Change columns to numeric; changing earlier doesn't work
@@ -242,17 +257,17 @@ for(i in 1:length(Samples[,1])){
   }
 }
 
-Samples$Dad_birth=Samples$Dad_death=Samples$Mom_birth=Samples$Mom_death=NA #Set birth and death year of parents to NA (so missing data are easier to work with downstream)
+Samples$Dad_birth=Samples$Dad_capt=Samples$Mom_birth=Samples$Mom_capt=NA #Set birth and death year of parents to NA (so missing data are easier to work with downstream)
 
-#If the sampled animal also is a parent to another sampled animal, assign it a birth and death date in the columns Dad_birth and Mom_birth
+#If the sampled animal also is a parent to another sampled animal, assign it a birth and capture date in the columns Dad_birth and Mom_birth
 for(i in 1:length(Samples[,1])){
   if(Samples$Indiv_ID[i] %in% Samples$Father){
     Samples$Dad_birth[which(Samples$Father==Samples$Indiv_ID[i])] <- Samples$Birth[i]
-    Samples$Dad_death[which(Samples$Father==Samples$Indiv_ID[i])] <- Samples$Death[i]
+    Samples$Dad_capt[which(Samples$Father==Samples$Indiv_ID[i])] <- Samples$Capt[i]
   }
   if(Samples$Indiv_ID[i] %in% Samples$Mother){
     Samples$Mom_birth[which(Samples$Mother==Samples$Indiv_ID[i])] <- Samples$Birth[i]
-    Samples$Mom_death[which(Samples$Mother==Samples$Indiv_ID[i])] <- Samples$Death[i]
+    Samples$Mom_capt[which(Samples$Mother==Samples$Indiv_ID[i])] <- Samples$Capt[i]
   }
 }
 
@@ -270,8 +285,8 @@ Data <- data.frame(matrix(0,nrow=n_samples*(n_samples-1)/2,ncol=5)) # massive ar
 counter=1
 #brute force - could probably be improved w/ expand.grid or something. Fills first four columns of Data
 for(iind1 in 1:(n_samples-1)){ #iind1 starts at 1 and counts to n_samples-1
-  for(iind2 in (iind1+1):n_samples){#iind2 starts at 2 and counts to n_samples
-    if(Samples[iind1,2]>Samples[iind2,2]){ #compare birth years of each combination of samples. If birth year is greater for iind1 i.e. if iind2 was born before iind1. Lethal sampling, so iind2 starts at the number after iind1, and there is no need to go back before.
+  for(iind2 in (iind1+1):n_samples){ #iind2 starts at 2 and counts to n_samples
+    if(Samples[iind1,2] > Samples[iind2,2]){ #compare birth years of each combination of samples. If birth year is greater for iind1 i.e. if iind2 was born before iind1. Lethal sampling, so iind2 starts at the number after iind1, and there is no need to go back before.
       #Fill Data array:
       #Data[,1] = adult birth,
       #Data[,2] = adult death year
@@ -291,8 +306,7 @@ for(iind1 in 1:(n_samples-1)){ #iind1 starts at 1 and counts to n_samples-1
     counter=counter+1
   }
 }
-
-colnames(Data) <- c("Adult_birth","Adult_death","Offspring_birth","Adult_sex", "Matches")
+colnames(Data) <- c("Adult_birth","Adult_capt","Offspring_birth","Adult_sex", "Matches")
 #length(Data[,1])
 #head(Data)
 
@@ -307,8 +321,8 @@ dm <- Data[Data$Adult_sex == "F",] #Subset pairwise matrix for mother comparison
 dd <- Data[Data$Adult_sex == "M",] #Subset pairwise matrix for father comparisons
 
 #Create column for unique combinations of adult birth, adult death, and offspring birth year
-dm$MasterID <- paste(dm$Adult_birth, dm$Adult_death, dm$Offspring_birth, sep="-")
-dd$MasterID <- paste(dd$Adult_birth, dd$Adult_death, dd$Offspring_birth, sep="-")
+dm$MasterID <- paste(dm$Adult_birth, dm$Adult_capt, dm$Offspring_birth, sep="-")
+dd$MasterID <- paste(dd$Adult_birth, dd$Adult_capt, dd$Offspring_birth, sep="-")
 #head(dd)
 
 #Count unique combos of adult birth, adult death, and offspring birth AND Master ID (should be the same)
@@ -324,17 +338,17 @@ Sampled_Dads <- Samples[Samples$Dad == 1,]
 
 #Create dataframe of sampled moms (sm) that includes a column that counts the occurrances of specific combinations of offspring birth, adult birth, and adult death
 sm <- Sampled_Moms %>% 
-  group_by(Birth, Mom_birth, Mom_death) %>%  #ID which columns to group by
+  group_by(Birth, Mom_birth, Mom_capt) %>%  #ID which columns to group by
   summarise(Matches = sum(!is.na(Mom)))
 
 #Create dataframe of sampled dads (sd) that includes a column that counts the occurrances of specific combinations of offspring birth, adult birth, and adult death
 sd <- Sampled_Dads %>% 
-  group_by(Birth, Dad_birth, Dad_death) %>%  #ID which columns to group by
+  group_by(Birth, Dad_birth, Dad_capt) %>%  #ID which columns to group by
   summarise(Matches = sum(!is.na(Dad)))
 
 #Create MasterID column to merge dataframes with matches (sm & sd) with dataframes with all comparisons (dm2, dd2)
-sd$MasterID <- paste(sd$Dad_birth, sd$Dad_death, sd$Birth, sep="-")
-sm$MasterID <- paste(sm$Mom_birth, sm$Mom_death, sm$Birth, sep="-")
+sd$MasterID <- paste(sd$Dad_birth, sd$Dad_capt, sd$Birth, sep="-")
+sm$MasterID <- paste(sm$Mom_birth, sm$Mom_capt, sm$Birth, sep="-")
 
 all_dads <- merge(dd2, sd[,4:5], by="MasterID", all=TRUE) #Merge father dataframes
 all_dads$Matches[is.na(all_dads$Matches)==TRUE] <- 0 #Put 0 in all Matches cells with NA
@@ -345,6 +359,8 @@ all_dads$No_matches <- all_dads$No_matches-all_dads$Matches #Subtract matches fr
 all_moms <- merge(dm2, sm[,4:5], by="MasterID", all=TRUE) #Merge mother dataframes
 all_moms$Matches[is.na(all_moms$Matches)==TRUE] <- 0 #Put 0 in all Matches cells with NA
 all_moms$No_matches <- all_moms$No_matches-all_moms$Matches #Calculate number of no matches
+
+#sum(all_moms$Matches)
 
 #which(is.na(all_moms[,2])==TRUE) #Shouldn't be any
 #which(is.na(all_dads[,2])==TRUE) #Shouldn't be any
@@ -357,59 +373,46 @@ Data_dad_yes <- all_dads[all_dads$Matches > 0, c(2:4,6)]
 Data_dad_no <- all_dads[all_dads$Matches == 0, c(2:4,5)]
 Data_mom_no <- all_moms[all_moms$Matches == 0, c(2:4,5)]
 
-#In case offspring are born after parents die, band-aid fix to allow the model to run
-#Change either adult birth year or death year so 1) adult does not die before offspring's birth, and 2) adult is not older than max age
 if(nrow(Data_dad_yes)>1 & nrow(Data_mom_yes)>1){
-for(i in 1:length(Data_mom_yes[,1])){
-  if(Data_mom_yes$Offspring_birth[i] > Data_mom_yes$Adult_death[i] & Data_mom_yes$Offspring_birth[i]-Data_mom_yes$Adult_birth[i] > max_age){
-  Data_mom_yes$Adult_birth[i] <- Data_mom_yes$Offspring_birth[i]-max_age
-  Data_mom_yes$Adult_death[i] <- Data_mom_yes$Offspring_birth[i]
-} else if(Data_mom_yes$Offspring_birth[i] > Data_mom_yes$Adult_death[i] & Data_mom_yes$Offspring_birth[i]-Data_mom_yes$Adult_birth[i] <= max_age) {
-  Data_mom_yes$Adult_death[i] <- Data_mom_yes$Offspring_birth[i]
-} else Data_mom_yes$Adult_death[i] <- Data_mom_yes$Adult_death[i]
-}
 
-for(i in 1:length(Data_dad_yes[,1])){
-  if(Data_dad_yes$Offspring_birth[i] > Data_dad_yes$Adult_death[i] & Data_dad_yes$Offspring_birth[i]-Data_dad_yes$Adult_birth[i] > max_age){
-    Data_dad_yes$Adult_birth[i] <- Data_dad_yes$Offspring_birth[i]-max_age
-    Data_dad_yes$Adult_death[i] <- Data_dad_yes$Offspring_birth[i]
-  } else if(Data_dad_yes$Offspring_birth[i] > Data_dad_yes$Adult_death[i] & Data_dad_yes$Offspring_birth[i]-Data_dad_yes$Adult_birth[i] <= max_age) {
-    Data_dad_yes$Adult_death[i] <- Data_dad_yes$Offspring_birth[i]
-  } else Data_dad_yes$Adult_death[i] <- Data_dad_yes$Adult_death[i]
-}
-  
-  #If adult was born too early to be the parent, then change the birth date so the adult is mature
+  #If adult was born too early to be the parent, then change the birth date so the adult is mature (and alive) when offspring is born.
   for(i in 1:length(Data_dad_yes[,1])){
     if(Data_dad_yes$Offspring_birth[i] - Data_dad_yes$Adult_birth[i] < min(m_adult_age)){
-      Data_dad_yes$Adult_birth[i] <- Data_dad_yes$Offspring_birth[i] - min(m_adult_age)
+      Data_dad_yes$Adult_birth[i] <- Data_dad_yes$Offspring_birth[i] - min(m_adult_age) #Make sure adult is mature
+    } else if (Data_dad_yes$Offspring_birth[i] - Data_dad_yes$Adult_birth[i] > max_age){
+      Data_dad_yes$Adult_birth[i] <- Data_dad_yes$Offspring_birth[i] - max_age #Make sure adult is alive
     }
   }
 
   for(i in 1:length(Data_mom_yes[,1])){
     if(Data_mom_yes$Offspring_birth[i] - Data_mom_yes$Adult_birth[i] < min(f_adult_age)){
-      Data_mom_yes$Adult_birth[i] <- Data_mom_yes$Offspring_birth[i] - min(f_adult_age)
+      Data_mom_yes$Adult_birth[i] <- Data_mom_yes$Offspring_birth[i] - min(f_adult_age) #Make sure adult is mature
+    } else if (Data_mom_yes$Offspring_birth[i] - Data_mom_yes$Adult_birth[i] > max_age){
+      Data_mom_yes$Adult_birth[i] <- Data_mom_yes$Offspring_birth[i] - max_age #Make sure adult is alive
     }
   }
   
   #########################Fit model!##############################
     CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=Data_mom_no,Negatives_Father=Data_dad_no,Pairs_Mother=Data_mom_yes,Pairs_Father=Data_dad_yes,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
     
-    #summary(CK_fit)
+    summary(CK_fit)
     #compute variance covariance matrix
-    D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1])) #derivatives of transformations
+    D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), CK_fit$p3[1]) #derivatives of transformations
     VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
     VC = (t(D)%*%VC_trans%*%D) #delta method
     SE=sqrt(diag(VC))
     
     #cat(paste("Estimated mature female abundance: ",exp(CK_fit$p1),", SE = ",SE[1],"\n"))
     #cat(paste("Estimated mature male abundance: ",exp(CK_fit$p2),", SE = ",SE[2],"\n"))
-    sim_results[iter, 1]=round(exp(CK_fit$p1[1]),0) #Nf
-    sim_results[iter, 2]=round(SE[1],0) #NfSE
-    sim_results[iter, 3]=round(exp(CK_fit$p2[1]),0) #Nm
-    sim_results[iter, 4]=round(SE[2],0) #NmSE
-    sim_results[iter,5] <- Estimated_truth
-    sim_results[iter,6] <- n_samples
-    save(CK_fit, file=paste0("Lemon_CKModel_aprioriN_",Estimated_truth,"_", iter))
+    #cat(paste("Estimated survival: ", CK_fit$p3, ", SE = ", SE[3], "\n"))
+    
+    sim_results[iter, 1] <- round(exp(CK_fit$p1[1]),0) #Nf
+    sim_results[iter, 2] <- round(SE[1],0) #NfSE
+    sim_results[iter, 3] <- round(exp(CK_fit$p2[1]),0) #Nm
+    sim_results[iter, 4] <- round(SE[2],0) #NmSE
+    sim_results[iter, 5] <- Estimated_truth
+    sim_results[iter, 6] <- n_samples
+    save(CK_fit, file=paste0("Lemon_CKModel_nonlethal_aprioriN_",Estimated_truth,"_", iter))
   } else {
     sim_results[iter, 1]=NA
     sim_results[iter, 2]=NA
@@ -424,7 +427,8 @@ sim_end_time <- Sys.time()
 sim_end_time-sim_start_time
 #Need to figure out which units for below
 #print(paste0("Run time of simulation: ", round(sim_end_time - sim_start_time, 2), ""))
-
   print(paste0("Simulation N", Estimated_truth, " finished at ", Sys.time()))
 colnames(sim_results) <- c("Nf", "NfSE", "Nm", "NmSE", "Estimated_truth", "Total_samples")
-write.table(sim_results, file = paste0("Lemon_CKMR_loop_aprioriN_",Estimated_truth,".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+#head(sim_results, 30)
+
+write.table(sim_results, file = paste0("Lemon_CKMR_loop_nonlethal_aprioriN_",Estimated_truth,".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
