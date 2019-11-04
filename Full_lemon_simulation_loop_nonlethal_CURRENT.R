@@ -18,7 +18,7 @@ library(optimx)
 # Age-at-maturity from Brown and Gruber 1988 (11.6 for M, 12.7 for F)
 # About 77 juvenile lemon sharks inhabit the nursery at a given time (White et al 2014). So, 10sqrt(N) = 88 samples total
 
-#Stable age distribution for adult males (We have ages for juveniles)
+###Stable age distribution for adults###
 max_age = 25
 m_adult_age <- c(12:25) #Set ages at which males are mature -- used to simulate ages
 m_mat <- c(rep(0,11), rep(1,14)) #Set proportion of mature males at each age -- assumes knife-edge maturity
@@ -26,7 +26,7 @@ f_adult_age <- c(13:25)
 f_mat <- c(rep(0,12), rep(1,13))
 Surv_age <- rep(0.85, max_age) #Set survival for adults
 Surv_age[1:2] <- c(rep(0.55,2))
-Prop_age <- rep(1, max_age) #Initialize variable Prop_age_m
+Prop_age <- rep(1, max_age) #Initialize variable Prop_age
 for(iage in 2:length(Prop_age)) Prop_age[iage]=Prop_age[iage-1]*Surv_age[iage-1] #Set proportion of animals from each cohort surviving to the next age class based on Surv_age
 Prop_age=Prop_age/sum(Prop_age)  #stable age distribution given assumed survival i.e. gives proportion of ages in a population based on assumed survival
 
@@ -41,17 +41,18 @@ samp_study_yrs = c(t_start:t_end)
 
 ####Set up simulation parameters####
 #Set Estimated_truth to set the sample size
-Estimated_truth <- 1000
+Estimated_truth <- 2500
 n_samples <- round(10*sqrt(Estimated_truth), 0) #Total number of samples taken over length of study
 n_samples_per_yr <- round(n_samples/length(samp_study_yrs),0)
 a_priori_abund <- 1000 #For prior estimation - sets initial parameter values, so should match Estimated_truth value
 a_priori_surv <- 0.85
 iterations <- 100 #Set number of iterations to run in the loop
 
-P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
-
 source("functions/get_P_lemon_nonlethal.R")
 source("functions/lemon_neg_log_like_nonlethal.R")
+
+Pars=c(log(1000),log(1500))
+P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
 ##############################Begin simulation##############################
 sim_start_time <- Sys.time()
@@ -102,10 +103,7 @@ colnames(Data) <- c("Adult_birth","Adult_capt","Offspring_birth","Adult_sex", "M
 #head(Data)
 
 Data[,5]=(runif(nrow(Data))<Prob_vec) #Randomly draw probabilities from a uniform distribution for each row of Data. If the value in Prob_vec is greater than the random value, then we say it's a match. 
-cat(paste("Number of POPs:",sum(Data[,5]))) 
-
-########PICK UP HERE 10/15/2019########
-#Next: set population size and parameters and run simulation to see if we recover the truth with the non-lethal model. Just pasted code below for yes and no dataframes but haven't double-checked ...
+#cat(paste("Number of POPs:",sum(Data[,5]))) 
 
 ######################### Format pairwise comparison for CKMR ###########################
 ##Ultimately, want four dataframes:
@@ -123,12 +121,12 @@ Data_mom_no = Data[which(Data[,4]==0 & Data[,5]==0),1:4]
 Data_mom_yes = Data[which(Data[,4]==0 & Data[,5]==1),1:4]
 
 library(plyr) #for frequencies
-Data_dad_no=count(Data_dad_no[,1:3]) #count (from package plyr) gives frequencies of each combination of values
-Data_mom_no=count(Data_mom_no[,1:3])
-Data_dad_yes=count(Data_dad_yes[,1:3])
-Data_mom_yes=count(Data_mom_yes[,1:3])
+Data_dad_no <- plyr::count(Data_dad_no[,1:3]) #count (from package plyr) gives frequencies of each combination of values
+Data_mom_no <- plyr::count(Data_mom_no[,1:3])
+Data_dad_yes <- plyr::count(Data_dad_yes[,1:3])
+Data_mom_yes <- plyr::count(Data_mom_yes[,1:3])
 ##END of data generation -- we've set up a specific population and age/sex structure, with no growth over time.
-colnames(Data_dad_yes) <- c("Adult birth yr", "Adult death yr", "Offspring birth yr", "freq")
+colnames(Data_dad_yes) = colnames(Data_mom_yes) = c("Adult birth yr", "Adult death yr", "Offspring birth yr", "freq")
 
 
 if(nrow(Data_dad_yes)>1 & nrow(Data_mom_yes)>1){
@@ -136,9 +134,9 @@ if(nrow(Data_dad_yes)>1 & nrow(Data_mom_yes)>1){
   #########################Fit model!##############################
     CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=Data_mom_no,Negatives_Father=Data_dad_no,Pairs_Mother=Data_mom_yes,Pairs_Father=Data_dad_yes,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
     
-    summary(CK_fit)
+    #summary(CK_fit)
     #compute variance covariance matrix
-    D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), CK_fit$p3[1]) #derivatives of transformations
+    D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1])) #derivatives of transformations
     VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
     VC = (t(D)%*%VC_trans%*%D) #delta method
     SE=sqrt(diag(VC))
@@ -151,9 +149,9 @@ if(nrow(Data_dad_yes)>1 & nrow(Data_mom_yes)>1){
     sim_results[iter, 2] <- round(SE[1],0) #NfSE
     sim_results[iter, 3] <- round(exp(CK_fit$p2[1]),0) #Nm
     sim_results[iter, 4] <- round(SE[2],0) #NmSE
-    sim_results[iter, 5] <- Estimated_truth
+    sim_results[iter, 5] <- sum(Data[,5])
     sim_results[iter, 6] <- n_samples
-    save(CK_fit, file=paste0("Lemon_CKModel_nonlethal_aprioriN_",Estimated_truth,"_", iter))
+    save(CK_fit, file=paste0("models/Lemon_CKModel_nonlethalsim_",n_samples,"_samples_", iter))
   } else {
     sim_results[iter, 1]=NA
     sim_results[iter, 2]=NA
@@ -169,7 +167,7 @@ sim_end_time-sim_start_time
 #Need to figure out which units for below
 #print(paste0("Run time of simulation: ", round(sim_end_time - sim_start_time, 2), ""))
   print(paste0("Simulation N", Estimated_truth, " finished at ", Sys.time()))
-colnames(sim_results) <- c("Nf", "NfSE", "Nm", "NmSE", "Estimated_truth", "Total_samples")
+colnames(sim_results) <- c("Nf", "NfSE", "Nm", "NmSE", "POPs_found", "Total_samples")
 #head(sim_results, 30)
 
-write.table(sim_results, file = paste0("Lemon_CKMR_loop_nonlethal_aprioriN_",Estimated_truth,".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(sim_results, file = paste0("Lemon_CKMR_loop_nonlethalsim_",n_samples,"_samples.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
