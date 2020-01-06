@@ -2,6 +2,7 @@ lemon_neg_log_lik <- function(Pars,Negatives_Mother,Negatives_Father,Pairs_Mothe
   
 P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
+
 (Negatives_Father <- Data_dad_no)
 (Negatives_Mother <- Data_mom_no)
 (Pairs_Mother <- Data_mom_yes)

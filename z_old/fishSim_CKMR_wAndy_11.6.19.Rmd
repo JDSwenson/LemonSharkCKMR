@@ -1,0 +1,168 @@
+---
+title: "fishSim_CKMR"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#Setting global defaults for knitting -- can be overwritten in individual chunks
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+
+
+### Define lemon population parameters
+Max age: two options: 
+37 from https://www.saveourseasmagazine.com/lemon-sharks-old/
+25 from White et. al. 2014
+Juvenile survival values from Dibattista 2007: 0.55 (mort = 0.45)
+Adult survival value from White et. al. 2014: 0.85 (mort=0.15)
+Litter size from Feldheim et. al. 2002 (avg=6, max=18)
+Age-at-maturity from Brown and Gruber 1988 (11.6 for M, 12.7 for F)
+About 77 juvenile lemon sharks inhabit the nursery at a given time (White et al 2014).
+
+```{r}
+library(fishSim)
+library(parallel)
+library(doParallel)
+library(foreach)
+library(plyr) #for frequencies
+library(optimx)
+library(dplyr)
+
+#From CKMR script#
+t_start = 40
+t_end = 45
+
+# set up the simulation parameters
+sim_yrs = c(1:39)
+n_samp_yr = t_end-t_start #Number of years being sampled
+n_samples_per_yr = 40
+n_samples_total <- n_samples_per_yr * n_samp_yr
+
+
+#makeFounder parameters
+osr <- c(0.5, 0.5) #Operating sex ratio
+stocks <- c() #stocks (empty for now)
+maxAge <- 25 #max age of lemon sharks
+Surv_age <- rep(0.85,maxAge) #Set survival for each age to 85%
+Surv_age[1] <- 0.55 #Set survival for first year to 55%
+Surv_age[2] <- 0.65
+Prop_age <- rep(1:maxAge)
+pop <- 2000
+
+for(iage in 2:maxAge)Prop_age[iage]=Prop_age[iage-1]*Surv_age[iage-1]
+Prop_age <- Prop_age/sum(Prop_age)  #stable age distribution
+survCurv <- Prop_age #Sets probability of founder cohort belonging to each age class
+
+#Set parameters for altMate
+batchSize = 6 #average size of brood -- assumes Poisson distribution for fecundity (which is default for altMate)
+mat_m <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
+mat_m[12:maxAge]=1  #Knife-edge maturity for males, beginning at age 12
+
+mat_f <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
+mat_f[13:maxAge]=1  #Knife-edge maturity for females, beginning at age 13
+
+maleCurve <- c(mat_m, rep(max(mat_m), 1000)) #Set male age at maturity
+femaleCurve <- c(mat_f, rep(max(mat_m), 1000)) #Set female age at maturity
+maxClutch <- 18 #Maximum number of offspring one individual can possibly produce
+mat_type <- "ageSex"
+
+
+#Set parameters for mort()
+ageMort <- (1 - Surv_age)
+ageMort[maxAge+1] <- ageMort[maxAge]
+death_type <- "age"
+
+```
+
+###Make Founder population and simulate into the future
+```{r}
+#makeFounders creates a matrix of specified size (pop) where each row is an individual in the founder popualtion.
+indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, survCurv=survCurv)
+head(indiv)
+hist(as.numeric(indiv[,8])) #histogram of population ages
+
+#Simulate 100 years of mating
+#altMate derives the number of offspring produced by drawing from a sampling distribution for each female based on the parameters specified in the function. Fathers are randomly drawn from all mature males in the mother's stock.
+##This loop takes ~ 1 minute to run
+for (y in 1:length(sim_yrs)) {
+  indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort) #make maxPop ~ 9000 if setting mort to flat, as this is the approx size of the population in the Bravington script.
+  indiv <- birthdays(indiv)
+}
+nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
+```
+
+Find out how many adults are alive at t0 to compare to model estimates
+```{r}
+ncol(indiv)
+indiv2 <- as.data.frame(indiv)
+indiv2 <- indiv2[!is.na(indiv2$Death.Year),]
+
+# Number of mature females alive at t0
+cat(paste("Females alive at t0:", sum(as.numeric(as.character(indiv2$Age)) > as.numeric(as.character(indiv2$Death.Year)) & indiv2$Sex=="F")))
+
+# Number of mature males alive at t0
+cat(paste("Males alive at t0:", sum(as.numeric(as.character(indiv2$Age)) > as.numeric(as.character(indiv2$Death.Year)) & indiv2$Sex=="M")))
+tail(indiv2)
+```
+
+### Sampling
+Simulates six more years of population growth, sampling 100 individuals each year. Grabs the birth year and sex of each individual from the indiv table, then manually gives a death year that corresponds to the year of sampling.
+
+```{r}
+# An example of Creating sample dataframe to sample 40 random lemonsharks that are alive.
+sample_df <- dplyr::sample_n(indiv[is.na(indiv[,6]==TRUE),], n_samples_per_yr)
+
+# Dataframe that includes all of the samples from t_start to t_end
+total_df <- NULL
+#Repeats the above loop, assigning offspring, deaths, and birthdays, but this time also draws samples each year
+for (y in c(t_start:t_end)) {
+  indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
+  indiv <- birthdays(indiv)
+  capt_yr <- rep(y, n_samples_per_yr)
+  samples_per_year <- sample_n(indiv[is.na(indiv[,6]==TRUE),],n_samples_per_yr, replace = TRUE)
+  samples_per_year$capt_yr <- capt_yr
+  # combine dataframes of samples to one single dataframe
+  total_df <- rbind(total_df, samples_per_year)
+  #sample individuals that are still alive, sample individuals where Death.Year == NA, make a dataframe from sampled individual
+}
+```
+
+```{r}
+Data <- data.frame(matrix(0,nrow = n_samples_total*(n_samples_total-1)/2,ncol = 5))
+
+#Fill in the array:
+  #Data[,1] = adult birth,
+  #Data[,2] = adult capture year
+  #Data[,3] = young birth
+  #Data[,4] = adult sex
+
+Data <- Data %>% rename('Adult Birth' = X1 , 'Adult Capture Year' = X2, 'Young Birth' = X3, 'Adult Sex' = X4,'Matches' = X5)
+
+count = 1
+for(iind1 in 1:(n_samples_total-1)){ #iind1 starts at 1 and counts to n_samples-1
+  for(iind2 in (iind1+1):n_samples_total) { #iind2 starts at 2 and counts to n_samples
+    if(total_df[iind1,2] > total_df[iind2,2]){
+      #compare birth years of each combination of samples. If birth year is greater for iind1 i.e. if iind2 was born before iind1.
+      #Fill Data array:
+      Data[count,1] = total_df[iind2,2] #put birth year of iind2 in adult birth year
+      Data[count,2] = total_df[iind2,3]
+      Data[count,3] = total_df[iind1,2]
+      Data[count,4] = total_df[iind2,4]
+    }
+    else{ #birth year greater for second value - reverse above
+      Data[count,1]=total_df[iind1,2]
+      Data[count,2]=total_df[iind1,3]
+      Data[count,3]=total_df[iind2,2]
+      Data[count,4]=total_df[iind1,4]
+    }
+    count = count+1
+  }
+}
+head(Data)
+head(total_df)
+nrow(Data)
+nrow(total_df)
+```

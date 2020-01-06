@@ -1,0 +1,267 @@
+---
+title: "fishSim_CKMR"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#Setting global defaults for knitting -- can be overwritten in individual chunks
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+
+
+### Define simulation parameters
+Max age: two options: 
+37 from https://www.saveourseasmagazine.com/lemon-sharks-old/
+25 from White et. al. 2014
+Juvenile survival values from Dibattista 2007: 0.55 (mort = 0.45)
+Adult survival value from White et. al. 2014: 0.85 (mort=0.15)
+Litter size from Feldheim et. al. 2002 (avg=6, max=18)
+Age-at-maturity from Brown and Gruber 1988 (11.6 for M, 12.7 for F)
+About 77 juvenile lemon sharks inhabit the nursery at a given time (White et al 2014).
+
+```{r}
+library(fishSim)
+library(parallel)
+library(doParallel)
+library(foreach)
+library(plyr) #for frequencies
+library(optimx)
+library(dplyr)
+
+#From CKMR script#
+t_start = 40
+t_end = 45
+
+# set up the simulation parameters
+sim_yrs = c(1:39)
+n_samp_yr = t_end-t_start #Number of years being sampled
+n_samples_per_yr = 40
+n_samples_total <- n_samples_per_yr * n_samp_yr
+
+
+#makeFounder parameters
+osr <- c(0.5, 0.5) #Operating sex ratio
+stocks <- c() #stocks (empty for now)
+maxAge <- 25 #max age of lemon sharks
+Surv_age <- rep(0.85,maxAge) #Set survival for each age to 85%
+Surv_age[1] <- 0.55 #Set survival for first year to 55%
+Surv_age[2] <- 0.65
+Prop_age <- rep(1:maxAge)
+pop <- 2000
+
+for(iage in 2:maxAge)Prop_age[iage]=Prop_age[iage-1]*Surv_age[iage-1]
+Prop_age <- Prop_age/sum(Prop_age)  #stable age distribution
+survCurv <- Prop_age #Sets probability of founder cohort belonging to each age class
+
+#Set parameters for altMate
+batchSize = 6 #average size of brood -- assumes Poisson distribution for fecundity (which is default for altMate)
+mat_m <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
+mat_m[12:maxAge]=1  #Knife-edge maturity for males, beginning at age 12
+
+mat_f <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
+mat_f[13:maxAge]=1  #Knife-edge maturity for females, beginning at age 13
+
+maleCurve <- c(mat_m, rep(max(mat_m), 1000)) #Set male age at maturity
+femaleCurve <- c(mat_f, rep(max(mat_m), 1000)) #Set female age at maturity
+maxClutch <- 18 #Maximum number of offspring one individual can possibly produce
+mat_type <- "ageSex"
+
+
+#Set parameters for mort()
+ageMort <- (1 - Surv_age)
+ageMort[maxAge+1] <- ageMort[maxAge]
+death_type <- "age"
+```
+
+###Make Founder population and simulate into the future
+```{r}
+#makeFounders creates a matrix of specified size (pop) where each row is an individual in the founder popualtion.
+indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, survCurv=survCurv)
+head(indiv)
+hist(as.numeric(indiv[,8])) #histogram of population ages
+
+#Simulate 100 years of mating
+#altMate derives the number of offspring produced by drawing from a sampling distribution for each female based on the parameters specified in the function. Fathers are randomly drawn from all mature males in the mother's stock.
+##This loop takes ~ 1 minute to run
+for (y in 1:length(sim_yrs)) {
+  indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort) #make maxPop ~ 9000 if setting mort to flat, as this is the approx size of the population in the Bravington script.
+  indiv <- birthdays(indiv)
+}
+nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
+```
+
+Find out how many adults are alive at t0 to compare to model estimates
+```{r}
+ncol(indiv)
+indiv2 <- as.data.frame(indiv)
+indiv2 <- indiv2[!is.na(indiv2$Death.Year),]
+
+# Number of mature females alive at t0
+cat(paste("Females alive at t0:", sum(as.numeric(as.character(indiv2$Age)) > as.numeric(as.character(indiv2$Death.Year)) & indiv2$Sex=="F")))
+
+# Number of mature males alive at t0
+cat(paste("Males alive at t0:", sum(as.numeric(as.character(indiv2$Age)) > as.numeric(as.character(indiv2$Death.Year)) & indiv2$Sex=="M")))
+tail(indiv2)
+```
+
+### Sampling
+Simulates six more years of population growth, sampling 100 individuals each year. Grabs the birth year and sex of each individual from the indiv table, then manually gives a death year that corresponds to the year of sampling.
+
+```{r}
+# An example of Creating sample dataframe to sample 40 random lemonsharks that are alive.
+sample_df <- dplyr::sample_n(indiv[is.na(indiv[,6]==TRUE),], n_samples_per_yr)
+
+# Dataframe that includes all of the samples from t_start to t_end
+total_df <- NULL
+#Repeats the above loop, assigning offspring, deaths, and birthdays, but this time also draws samples each year
+for (y in c(t_start:t_end)) {
+  indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
+  indiv <- birthdays(indiv)
+  capt_yr <- rep(y, n_samples_per_yr)
+  samples_per_year <- sample_n(indiv[is.na(indiv[,6]==TRUE),],n_samples_per_yr, replace = TRUE)
+  samples_per_year$capt_yr <- capt_yr
+  # combine dataframes of samples to one single dataframe
+  total_df <- rbind(total_df, samples_per_year)
+  #sample individuals that are still alive, sample individuals where Death.Year == NA, make a dataframe from sampled individual
+}
+```
+
+
+### Pairwise Comparison Matrix test code
+```{r}
+Data <- data.frame(matrix(0,nrow = n_samples_per_yr*(n_samples_per_yr-1)/2,ncol = 6))
+
+#Fill in the array:
+#Data[,1] = adult birth,
+#Data[,2] = adult capture year
+#Data[,3] = young birth
+#Data[,4] = young capture year
+#Data[,5] = adult sex
+
+Data <- Data %>% rename('Adult_birth' = X1 , 'Adult_capture_year' = X2, 'Young_birth' = X3, 'Young_capture_year' = X4,'Adult_sex' = X5, 'Matches' = X6)
+
+count = 1
+for(iind1 in 1:(n_samples_total -1)){ #iind1 starts at 1 and counts to n_samples-1
+  for(iind2 in (iind1+1):n_samples_total) { #iind2 starts at 2 and counts to n_samples
+    if(total_df[iind1,5] > total_df[iind2,5]){
+      #print(total_df[iind1,5])
+      #print(total_df[iind2,5])
+      #compare birth years of each combination of samples. If birth year is greater for iind1 i.e. if iind2 was born before iind1.
+      #Fill Data array:
+      Data[count,1] = total_df[iind2,5] #put birth year of iind2 in adult birth year
+      Data[count,2] = total_df[iind2,10]
+      Data[count,3] = total_df[iind1,5]
+      Data[count,4] = total_df[iind1,10]
+      Data[count,5] = total_df[iind2,2]
+    }
+    else{ #birth year greater for second value - reverse above
+      Data[count,1] = total_df[iind1,5]
+      Data[count,2] = total_df[iind1,10]
+      Data[count,3] = total_df[iind2,5]
+      Data[count,4] = total_df[iind2,10]
+      Data[count,5] = total_df[iind1,2]
+    }
+    count = count + 1
+  }
+}
+
+head(Data)
+tail(Data)
+nrow(Data[Data$Adult_birth <= Data$Young_birth,]) #check that birth year is in right column
+```
+
+
+
+
+## For reference
+### Set up pairwise comparison matrix
+```{R}
+#Note to Andy: Think of "Samples" dataframe in code below as total_df
+
+#We don't want to compare individuals with themselves (hence -1), and we don't want to do each comparison twice (divide by 2)
+**Data <- data.frame(matrix(0,nrow=n_samples*(n_samples-1)/2,ncol=6)) # massive array for pairwise comparisons
+
+counter=1
+#brute force - could probably be improved w/ expand.grid or something. Fills first four columns of Data
+for(iind1 in 1:(n_samples-1)){ #iind1 starts at 1 and counts to n_samples-1
+  for(iind2 in (iind1+1):n_samples){ #iind2 starts at 2 and counts to n_samples
+    if(Samples[iind1,2] > Samples[iind2,2]){ #compare birth years of each combination of samples. If birth year is greater for iind1 i.e. if iind2 was born before iind1.
+      #Fill Data array:
+      #Data[,1] = adult birth,
+      #Data[,2] = adult capture year
+      #Data[,3] = young birth
+      #Data[,4] = young capture year
+      #Data[,5] = adult sex
+      Data[counter,1]=Samples[iind2,2] #put birth year of iind2 in adult birth year
+      Data[counter,2]=Samples[iind2,3] #put year of capture of iind2 in adult death year (remember, lethal sampling)
+      Data[counter,3]=Samples[iind1,2] #put birth year of iind1 in offspring birth year
+      Data[counter, 4]=Samples[iind1,3] #put birth year of iind1 in offspring capture year
+      Data[counter,5]=Samples[iind2,4] #put sex of iind2 in adult sex
+    }
+    else{ #birth year greater for second value - reverse above
+      Data[counter,1]=Samples[iind1,2]
+      Data[counter,2]=Samples[iind1,3]
+      Data[counter,3]=Samples[iind2,2]
+      Data[counter, 4]=Samples[iind2,3]
+      Data[counter,5]=Samples[iind1,4]
+    }
+    counter=counter+1
+  }
+}
+colnames(Data) <- c("Adult_birth","Adult_capt","Offspring_birth", "Offspring_capt", Adult_sex", "Matches")**
+#length(Data[,1])
+#head(Data)
+
+######################### Format pairwise comparison for CKMR ###########################
+##Ultimately, want four dataframes:
+#1) Rows contain positive comparisons for mothers
+#2) Rows contain positive comparisons for fathers
+#3) Rows contain negative comparisons for mothers
+#4) Rows contain negtive comparisons for fathers
+
+dm <- Data[Data$Adult_sex == "F",] #Subset pairwise matrix for mother comparisons
+dd <- Data[Data$Adult_sex == "M",] #Subset pairwise matrix for father comparisons
+
+#Create column for unique combinations of adult birth, adult death, and offspring birth year
+dm$MasterID <- paste(dm$Adult_birth, dm$Adult_capt, dm$Offspring_birth, sep="-")
+dd$MasterID <- paste(dd$Adult_birth, dd$Adult_capt, dd$Offspring_birth, sep="-")
+#head(dd)
+
+#Count unique combos of adult birth, adult death, and offspring birth AND Master ID (should be the same)
+dm2 <- plyr::count(dm[,c(1:3,6)])
+dd2 <- plyr::count(dd[,c(1:3,6)])
+colnames(dm2)[5] = colnames(dd2)[5] <- "No_matches" #Change frequency column to No_matches (assume for now all comparisons are no matches - will subtract matches later)
+#head(dd2)
+
+#Subset sampled moms and sampled dads from dataframe of all samples
+Sampled_Moms <- Samples[Samples$Mom == 1,]
+Sampled_Dads <- Samples[Samples$Dad == 1,]
+#View(Samples)
+
+#Create dataframe of sampled moms (sm) that includes a column that counts the occurrances of specific combinations of offspring birth, adult birth, and adult death
+sm <- Sampled_Moms %>% 
+  group_by(Birth, Mom_birth, Mom_capt) %>%  #ID which columns to group by
+  summarise(Matches = sum(!is.na(Mom)))
+
+#Create dataframe of sampled dads (sd) that includes a column that counts the occurrances of specific combinations of offspring birth, adult birth, and adult death
+sd <- Sampled_Dads %>% 
+  group_by(Birth, Dad_birth, Dad_capt) %>%  #ID which columns to group by
+  summarise(Matches = sum(!is.na(Dad)))
+
+#Create MasterID column to merge dataframes with matches (sm & sd) with dataframes with all comparisons (dm2, dd2)
+sd$MasterID <- paste(sd$Dad_birth, sd$Dad_capt, sd$Birth, sep="-")
+sm$MasterID <- paste(sm$Mom_birth, sm$Mom_capt, sm$Birth, sep="-")
+
+all_dads <- merge(dd2, sd[,4:5], by="MasterID", all=TRUE) #Merge father dataframes
+all_dads$Matches[is.na(all_dads$Matches)==TRUE] <- 0 #Put 0 in all Matches cells with NA
+all_dads$No_matches <- all_dads$No_matches-all_dads$Matches #Subtract matches from no matches
+
+#sum(all_dads$Matches)
+
+all_moms <- merge(dm2, sm[,4:5], by="MasterID", all=TRUE) #Merge mother dataframes
+all_moms$Matches[is.na(all_moms$Matches)==TRUE] <- 0 #Put 0 in all Matches cells with NA
+all_moms$No_matches <- all_moms$No_matches-all_moms$Matches #Calculate number of no matches
+```

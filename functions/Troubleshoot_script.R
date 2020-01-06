@@ -1,3 +1,7 @@
+#Dimensions are parent birth year, parent capture year, offspring birth year
+P$P_Mother[10, 22, 23]
+
+
 lemon_neg_log_lik <- function(Pars,Negatives_Mother,Negatives_Father,Pairs_Mother,Pairs_Father,P_Mother,P_Father,n_yrs,t_start,t_end){
   Negatives_Mother <- Data_mom_no
   Negatives_Father <- Data_dad_no

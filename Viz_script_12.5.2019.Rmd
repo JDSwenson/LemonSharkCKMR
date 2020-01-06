@@ -1,0 +1,123 @@
+Sample Size Simulation Results
+========================================================
+
+author: John Swenson
+date: 4/1/2019
+autosize: true
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require("knitr")
+opts_knit$set(root.dir = "~/R/working_directory/Lemon_shark_CKMR")
+```
+
+Import results - Non-lethal POP
+```{r, echo=FALSE}
+f_truth <- 1000
+m_truth <- 1500
+non_sim <- read.csv("results/Nonlethal_sim_500_samps_11.30.19.csv")
+
+head(non_sim)
+
+#Check for NAs
+length(which(is.na(non_sim[,1])==TRUE))
+
+#Calculate means
+non_m_mean <- mean(non_sim$Nm)
+non_m_SE <- mean(non_sim$NmSE)
+non_f_mean <- mean(non_sim$Nf)
+non_f_SE <- mean(non_sim$NfSE)
+
+#Reformat dataframes for ggplot
+F_truth <- 1000
+M_truth <- 1500
+
+non_m_df <- non_sim[,3:6]
+non_m_df$Sex <- "M"
+non_m_df$rel_bias <- ((non_sim$Nm - M_truth)/M_truth)*100
+non_m_rel_bias_mean <- round(mean(non_m_df$rel_bias, na.rm=TRUE),1)
+
+non_f_df <- non_sim[,c(1:2, 5:6)]
+non_f_df$Sex <- "F"
+non_f_df$rel_bias <- ((non_sim$Nf - F_truth)/F_truth)*100
+non_f_rel_bias_mean <- round(mean(non_f_df$rel_bias, na.rm=TRUE),1)
+
+colnames(non_f_df)[1:2] = colnames(non_m_df)[1:2] <-  c("Abund","SE")
+head(non_f_df)
+head(non_m_df)
+
+non_sim_plot <- rbind(non_m_df, non_f_df)
+```
+
+Visualize results - Non-lethal POP
+```{r, echo=FALSE}
+library(ggplot2)
+head(non_sim_plot)
+#Box plot of relative bias of abundance estimate
+ggplot(data=non_sim_plot, aes(x=Sex, y=rel_bias)) +
+  geom_boxplot() +
+  geom_abline(intercept = 0, slope = 0, color="dark red") +
+  ggtitle("CKMR Non-lethal Null Model Simulations (500 samples)") +
+  xlab("Sex") +
+  ylab("Relative bias") +
+  geom_label(aes(label=paste0("Relative bias: ",non_m_rel_bias_mean), x=2, y=50), fill="lightskyblue1", colour="darkslategray", fontface="bold", show.legend=NA) +
+  geom_label(aes(label=paste0("Relative bias: ",non_f_rel_bias_mean), x=1, y=50), fill="indianred1", colour="darkred", fontface="bold", show.legend=NA)  
+
+####Visualize relative bias by POPs detected
+ggplot(data=non_sim_plot)
+```
+
+Import results - Half-sib
+```{r, echo=FALSE}
+f_truth <- 1000
+m_truth <- 1500
+half_sim <- read.csv("results/Halfsib_sim_500samps_11.30.2019.csv")
+head(half_sim)
+
+#Check for NAs
+length(which(is.na(half_sim[,1])==TRUE))
+
+#Calculate means
+half_m_mean <- mean(half_sim$Nm)
+half_m_SE <- mean(half_sim$NmSE)
+half_f_mean <- mean(half_sim$Nf)
+half_f_SE <- mean(half_sim$NfSE)
+
+#Reformat dataframes for ggplot
+F_truth <- 1000
+M_truth <- 1500
+
+half_m_df <- half_sim[,c(3:5,7)]
+half_m_df$Sex <- "M"
+half_m_df$rel_bias <- ((half_sim$Nm - M_truth)/M_truth)*100
+half_m_rel_bias_mean <- round(mean(half_m_df$rel_bias, na.rm=TRUE),1)
+
+half_f_df <- half_sim[,c(1:2,6:7)]
+half_f_df$Sex <- "F"
+half_f_df$rel_bias <- ((half_sim$Nf - F_truth)/F_truth)*100
+half_f_rel_bias_mean <- round(mean(half_f_df$rel_bias, na.rm=TRUE),1)
+
+colnames(half_f_df)[1:3] = colnames(half_m_df)[1:3] <-  c("Abund","SE", "Parent_detected") #For rows where the sex of the parent is female, "Parent detected" will refer to the mothers detected only, and same with males and fathers
+head(half_f_df)
+head(half_m_df)
+
+half_sim_plot <- rbind(half_m_df, half_f_df)
+```
+
+Visualize results
+```{r, echo=FALSE}
+library(ggplot2)
+head(half_sim_plot)
+#Box plot of relative bias of abundance estimate
+ggplot(data=half_sim_plot, aes(x=Sex, y=rel_bias)) +
+  geom_boxplot() +
+  geom_abline(intercept = 0, slope = 0, color="dark red") +
+  ggtitle("CKMR half-lethal Null Model Simulations (500 samples)") +
+  xlab("Sex") +
+  ylab("Relative bias") +
+  geom_label(aes(label=paste0("Relative bias: ",half_m_rel_bias_mean), x=2, y=50), fill="lightskyblue1", colour="darkslategray", fontface="bold", show.legend=NA) +
+  geom_label(aes(label=paste0("Relative bias: ",half_f_rel_bias_mean), x=1, y=50), fill="indianred1", colour="darkred", fontface="bold", show.legend=NA)  
+
+####Visualize relative bias by POPs detected
+ggplot(data=non_sim_plot)
+```

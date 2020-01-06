@@ -1,4 +1,3 @@
-#THIS IS THE MOST RECENT SCRIPT 9/20/2019
 #To quickly navigate:
 #Search for DELETE for sections that can likely be deleted
 #Search for VARIABLES for variables that can probably be moved to top of script
@@ -25,7 +24,7 @@ m_mat <- c(rep(0,11), rep(1,14)) #Set proportion of mature males at each age -- 
 f_adult_age <- c(13:25)
 f_mat <- c(rep(0,12), rep(1,13))
 Surv_age <- rep(0.85, max_age) #Set survival for adults
-Surv_age[1:2] <- c(rep(0.55,2))
+#Surv_age[1:2] <- c(rep(0.55,2)) #Gave juveniles same survival as adults; otherwise, sampling comprises almost entirely juveniles - may want to find different way around this
 Prop_age <- rep(1, max_age) #Initialize variable Prop_age
 for(iage in 2:length(Prop_age)) Prop_age[iage]=Prop_age[iage-1]*Surv_age[iage-1] #Set proportion of animals from each cohort surviving to the next age class based on Surv_age
 Prop_age=Prop_age/sum(Prop_age)  #stable age distribution given assumed survival i.e. gives proportion of ages in a population based on assumed survival
@@ -44,28 +43,34 @@ samp_study_yrs = c(t_start:t_end)
 Estimated_truth <- 2500
 n_samples <- round(10*sqrt(Estimated_truth), 0) #Total number of samples taken over length of study
 n_samples_per_yr <- round(n_samples/length(samp_study_yrs),0)
-a_priori_abund <- 1000 #For prior estimation - sets initial parameter values, so should match Estimated_truth value
-a_priori_surv <- 0.85
-iterations <- 100 #Set number of iterations to run in the loop
+#a_priori_abund <- 1000 #For prior estimation - sets initial parameter values, so should match Estimated_truth value
+#a_priori_surv <- 0.85
+iterations <- 500 #Set number of iterations to run in the loop
+
+N_f <- 1000
+N_m <- 1500
+Pars=c(log(N_f),log(N_m))
 
 source("functions/get_P_lemon_nonlethal.R")
 source("functions/lemon_neg_log_like_nonlethal.R")
 
-Pars=c(log(1000),log(1500))
 P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
 ##############################Begin simulation##############################
 sim_start_time <- Sys.time()
-print(paste0("Simulation N", Estimated_truth, " started at ", Sys.time()))
+print(paste0("Simulation N started at ", Sys.time()))
 
 sim_results <- matrix(0, nrow = iterations, ncol = 6)
+
 for(iter in 1:iterations) {
   
 #############################Sample population##############################
-  Samples = matrix(0,n_samples,3) #matrix filled with 0s, 1800 rows (n_samples) and 3 columns; each row is a sample(piece of tissue from beluga)
+  Samples = matrix(0,n_samples,3) #matrix filled with 0s, 500 rows (n_samples) and 3 columns; each row is a sample(piece of tissue from beluga)
+prob_m <- N_m/(N_f+N_m)
+
   Samples[,1]=rep(c(t_start:t_end),each=n_samples_per_yr) #what year did I capture you? repeat each year of sampling 30 times. Do this three times to fill all 1,800 rows of the matrix
-  Samples[,2]=Samples[,1]-sample(c(1:n_ages),n_samples,replace=TRUE,prob=Prop_age) #birth year
-  Samples[,3]=round(runif(n_samples)) #sex; 0=female
+  Samples[,2]=Samples[,1]-sample(c(1:n_ages),n_samples,replace=TRUE,prob=Prop_age) #birth year -- simulate age based on Prop_age, and subtract from capture year to get birth year
+  Samples[,3]=rbinom(n=n_samples, size=1, prob=prob_m) #sex; 0=female
   
   ######################Set up pairwise comparison matrix####################
 #We don't want to compare individuals with themselves (hence -1), and we don't want to do each comparison twice (divide by 2)
@@ -76,14 +81,14 @@ Data <- data.frame(matrix(0,nrow=n_samples*(n_samples-1)/2,ncol=5)) # massive ar
   #brute force - could probably be improved w/ expand.grid or something. Fills first four columns of Data
   for(iind1 in 1:(n_samples-1)){ #iind1 starts at 1 and counts to n_samples-1
     for(iind2 in (iind1+1):n_samples){#iind2 starts at 2 and counts to n_samples
-      if(Samples[iind1,2]>Samples[iind2,2]){ #compare birth years of each combination of samples. If birth year is greater for iind1 i.e. if iind2 was born before iind1. Lethal sampling, so iind2 starts at the number after iind1, and there is no need to go back before.
+      if(Samples[iind1,2]>Samples[iind2,2]){ #compare birth years of each combination of samples. If birth year is greater for iind1 i.e. if iind2 was born before iind1.
         #Fill Data array:
         #Data[,1] = adult birth,
-        #Data[,2] = adult death year
+        #Data[,2] = adult capture year
         #Data[,3] = young birth
         #Data[,4] = adult sex
         Data[counter,1]=Samples[iind2,2] #put birth year of iind2 in adult birth year
-        Data[counter,2]=Samples[iind2,1] #put year of capture of iind2 in adult death year (remember, lethal sampling)
+        Data[counter,2]=Samples[iind2,1] #put year of capture of iind2 in adult capture year
         Data[counter,3]=Samples[iind1,2] #put birth year of iind1 in offspring birth year
         Data[counter,4]=Samples[iind2,3] #put sex of iind2 in adult sex
       }
@@ -93,7 +98,7 @@ Data <- data.frame(matrix(0,nrow=n_samples*(n_samples-1)/2,ncol=5)) # massive ar
         Data[counter,3]=Samples[iind2,2]
         Data[counter,4]=Samples[iind1,3]
       }
-      if(Data[counter,4]==0)Prob_vec[counter]=P$P_Mother[Data[counter,1],Data[counter,2],Data[counter,3]] #If the older sample is a female, then add to Prob_vec the probability of kinship calculated for the same values for adult birth, adult death, and offspring birth in the prior probability for the mother.
+      if(Data[counter,4]==0)Prob_vec[counter]=P$P_Mother[Data[counter,1],Data[counter,2],Data[counter,3]] #If the older sample is a female, then add to Prob_vec the probability of kinship calculated for the same values for adult birth, adult death, and offspring birth in the prior probability array for the mother.
       if(Data[counter,4]==1)Prob_vec[counter]=P$P_Father[Data[counter,1],Data[counter,2],Data[counter,3]] #Same with the father
       counter=counter+1
     }
@@ -126,7 +131,7 @@ Data_mom_no <- plyr::count(Data_mom_no[,1:3])
 Data_dad_yes <- plyr::count(Data_dad_yes[,1:3])
 Data_mom_yes <- plyr::count(Data_mom_yes[,1:3])
 ##END of data generation -- we've set up a specific population and age/sex structure, with no growth over time.
-colnames(Data_dad_yes) = colnames(Data_mom_yes) = c("Adult birth yr", "Adult death yr", "Offspring birth yr", "freq")
+colnames(Data_dad_yes) = colnames(Data_mom_yes) = c("Adult birth yr", "Adult capture yr", "Offspring birth yr", "freq")
 
 
 if(nrow(Data_dad_yes)>1 & nrow(Data_mom_yes)>1){
@@ -170,4 +175,4 @@ sim_end_time-sim_start_time
 colnames(sim_results) <- c("Nf", "NfSE", "Nm", "NmSE", "POPs_found", "Total_samples")
 #head(sim_results, 30)
 
-write.table(sim_results, file = paste0("Lemon_CKMR_loop_nonlethalsim_",n_samples,"_samples.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(sim_results, file = paste0("Nonlethal_sim_",n_samples,"_samps_12.11.19.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
