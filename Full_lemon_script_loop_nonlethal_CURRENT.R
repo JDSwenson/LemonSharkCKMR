@@ -70,15 +70,17 @@ colnames(lemon_data2) <- c("PIT_tag","Capture_ID", "Recapture_1", "Recapture_2",
 #head(lemon_data2)
 
 lemon_ref <- lemon_data2[which(lemon_data2$DOB!=""),] #Subset for juveniles with known birth dates
+nrow(lemon_ref)
+head(lemon_ref)
 
 #head(lemon_ref)
 #length(lemon_data2[,1]) #How many total bimini lemon sharks in the dataset
 #length(lemon_ref[,1]) #How many bimini lemon sharks with known birth dates
 
-Juv_ref <- lemon_ref[,c(2,7,11,14:16)] #Add columns 15 & 16 to add parent IDs
+Juv_ref <- lemon_ref[,c(2,7,10:11,14:16)] #Add columns 15 & 16 to add parent IDs
 Juv_ref %>% separate(DOB, sep="/", into=c("Yr1", "Yr2")) -> Juv_ref #Separate uncertain birth years (e.g. 1993/1994) into separate columns
-colnames(Juv_ref) <- c("Indiv_ID", "Capture_Year","Sex","Yr1","Yr2","Father","Mother")
-#head(Juv_ref)
+colnames(Juv_ref) <- c("Indiv_ID", "Capture_Year","Site", "Sex","Yr1","Yr2","Father","Mother")
+head(Juv_ref)
 
 #Randomly assign year if more than one specified
 assign_yr <- function(yr1,yr2) {
@@ -97,7 +99,10 @@ Juv_ref$Father <- sub("^$", "Unknown", Juv_ref$Father) #Replace empty Father cel
 Juv_ref$Mother <- sub("^$", "Unknown", Juv_ref$Mother) #Replace empty Mother cells with Unknown
 #Remove duplicate entries from Juv_ref
 Juv_ref <- Juv_ref[!duplicated(Juv_ref$Indiv_ID),]
-#Mot_lems <- Mot_lems[!duplicated(Mot_lems$Indiv),]
+head(Juv_ref)
+
+####Dataframe for captured individuals = Juv_ref ####
+View(table(Juv_ref$DOB))
 
 #Make reference table for adults and frequency of offspring by year
 Father_ref <- plyr::count(Juv_ref[,c(6,8)])
