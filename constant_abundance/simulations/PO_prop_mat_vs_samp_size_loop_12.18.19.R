@@ -1,7 +1,7 @@
-#To quickly navigate:
-#Search for DELETE for sections that can likely be deleted
-#Search for VARIABLES for variables that can probably be moved to top of script
-#Search for Troubleshoot for areas that may have issues
+########### This simulation compares proportion mature vs sample size ###########
+# Fits a non-lethal parent-offspring model
+# Goal is to compare populations with different age structures and different sample sizes to assess bias and precision among a few different elasmobranch life histories.
+
 rm(list=ls())
 #library(tidyverse)
 library(plyr)

@@ -1,5 +1,5 @@
 # LemonSharkCKMR
-Use the Full_lemon_script_loop_CURRENT.R script to fit a CKMR model to the Bimini lemon shark data.
+Use the following naming convention when naming scripts:
+[prior]_[script_type(data, null, simulation description)]_loop_[CURRENT or date]
 
-Use the fishSim_CKMR script to simulate a fish populaton then fit a CKMR model to that population.
-This script is under construction.
+e.g.: HS_lemon_data_loop_CURRENT; PO_prop_mat_vs_samp_size_loop_12.18.19; HS_time_series_null_loop_CURRENT

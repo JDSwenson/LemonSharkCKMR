@@ -1,7 +1,10 @@
-#To quickly navigate:
-#Search for DELETE for sections that can likely be deleted
-#Search for VARIABLES for variables that can probably be moved to top of script
-#Search for Troubleshoot for areas that may have issues
+
+
+######## This code assumes abundance is constant through time and returns a single CKMR abundance estimate for the sampled time period ########
+
+# Formats the data for a parent-offspring (non-lethal) model
+# The code simulates kinship assignment with the same probabilities as the model i.e. it is code to test the null model
+
 rm(list=ls())
 library(tidyverse)
 library(optimx)
