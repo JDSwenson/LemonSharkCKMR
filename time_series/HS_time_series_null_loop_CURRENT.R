@@ -66,7 +66,7 @@ P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=
 sim_start_time <- Sys.time()
 print(paste0("Simulation started at ", Sys.time()))
 
-iterations <- 10 #Set number of iterations to run in the loop
+iterations <- 500 #Set number of iterations to run in the loop
 sim_results <- matrix(0, nrow = iterations, ncol = 40)
 for(iter in 1:iterations) {
 
@@ -200,7 +200,7 @@ Data_mom_no <- Data_mom_no[,c(1:3)]
     sim_results[iter, 39] <- exp(Pars[10]) #Truth
     sim_results[iter, 40] <- sum(Data_dad_yes[which(Data_dad_yes$Young_sib_birth==7),3]) #Number of HS mothers
     
-    save(CK_fit, file=paste0("model_object/Lemon_CKModel_HS_time_series_iteration_", iter))
+    save(CK_fit, file=paste0("results/model_objects/Lemon_CKModel_HS_time_series_iteration_", iter))
 #  } else {
     #sim_results[iter, 1]=NA
     #sim_results[iter, 2]=NA
@@ -216,7 +216,7 @@ Data_mom_no <- Data_mom_no[,c(1:3)]
 sim_end_time <- Sys.time()
 sim_end_time-sim_start_time
 #Need to figure out which units for below
-#print(paste0("Run time of simulation: ", round(sim_end_time - sim_start_time, 2), ""))
+print(paste0("Run time of simulation: ", round(sim_end_time - sim_start_time, 2), ""))
   print(paste0("Simulation finished at ", Sys.time()))
 colnames(sim_results) <- c("Nf_yr3", "NfSE_yr3", "NfTruth_yr3", "Moms_detected_yr3",
                            "Nf_yr4", "NfSE_yr4", "NfTruth_yr4", "Moms_detected_yr4",
@@ -227,8 +227,7 @@ colnames(sim_results) <- c("Nf_yr3", "NfSE_yr3", "NfTruth_yr3", "Moms_detected_y
                            "Nm_yr4", "NmSE_yr4", "NmTruth_yr4", "Dads_detected_yr4",
                            "Nm_yr5", "NmSE_yr5", "NmTruth_yr5", "Dads_detected_yr5",
                            "Nm_yr6", "NmSE_yr6", "NmTruth_yr6", "Dads_detected_yr6",
-                           "Nm_yr7", "NmSE_yr7", "NmTruth_yr7", "Dads_detected_yr7",
+                           "Nm_yr7", "NmSE_yr7", "NmTruth_yr7", "Dads_detected_yr7"
                            )
 #head(sim_results, 30)
-
-#write.table(sim_results, file = paste0("Halfsib_sim_", n_samples, "samps_11.30.2019.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(sim_results, file = paste0("results/HS_time_series_null_4.24.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
