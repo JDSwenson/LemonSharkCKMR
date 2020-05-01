@@ -1,5 +1,4 @@
-#THIS IS THE MOST RECENT SCRIPT 5/1/2020
-#Changed the random assignment of kinship to be a Poisson distribution, rather than uniform.
+#THIS IS THE MOST RECENT SCRIPT 3/26/2020
 
 ######## This code gives a time-series of CKMR abundance estimates over four years of sampling ########
 
@@ -112,14 +111,16 @@ for(i in 1:nrow(Data2)){
   Data2$Mom_prob[i] <- P$P_Mother[Data2[i,1],Data2[i,2]]
   Data2$Dad_prob[i] <- P$P_Father[Data2[i,1],Data2[i,2]]
 }
-#Data2
+Data2
 
 #Randomly assign matches
 for(i in 1:nrow(Data2)){
-  Data2$Mom_Matches[i] <- sum(rpois(n=Data2$freq[i], lambda=Data2$Mom_prob[i]))
-  Data2$Dad_Matches[i] <- sum(rpois(n=Data2$freq[i], lambda=Data2$Dad_prob[i]))
+  Data2$Mom_Matches_unif[i] <- sum(runif(Data2[i,3])<Data2[i,4])
+  Data2$Dad_Matches_unif[i] <- sum(runif(Data2[i,3])<Data2[i,5])
+  Data2$Mom_Matches_pois[i] <- sum(rpois(n=Data2$freq[i], lambda=Data2$Mom_prob[i]))
+  Data2$Dad_Matches_pois[i] <- sum(rpois(n=Data2$freq[i], lambda=Data2$Dad_prob[i]))
   }
-
+Data2
 
 ######################### Format pairwise comparison for CKMR ###########################
 ##Ultimately, want four dataframes:
@@ -129,12 +130,12 @@ for(i in 1:nrow(Data2)){
 #4) Rows contain negtive comparisons for fathers
 
 ###################Create dataframes for CKMR model####################
-Data_mom_yes <- Data2[which(Data2$Mom_Matches >0), c(1:2,6)]
-Data_dad_yes <- Data2[which(Data2$Dad_Matches >0), c(1:2,7)]
+Data_mom_yes <- Data2[which(Data2$Mom_Matches_pois >0), c(1:2,6)]
+Data_dad_yes <- Data2[which(Data2$Dad_Matches_pois >0), c(1:2,7)]
 Data_dad_no = Data_mom_no <- Data2
-Data_dad_no[,3] <- Data_dad_no[,3] - Data_dad_no[,7]
+Data_dad_no[,3] <- Data_dad_no$freq - Data_dad_no$Dad_Matches_pois
 Data_dad_no <- Data_dad_no[,c(1:3)]
-Data_mom_no[,3] <- Data_mom_no[,3] - Data_mom_no[,6]
+Data_mom_no[,3] <- Data_mom_no$freq - Data_mom_no$Mom_Matches_pois
 Data_mom_no <- Data_mom_no[,c(1:3)]
 
 ####LOOP####
@@ -161,8 +162,8 @@ Data_mom_no <- Data_mom_no[,c(1:3)]
     VC = (t(D)%*%VC_trans%*%D) #delta method
     SE=sqrt(diag(VC))
 
-#    cat(paste("Estimated mature female abundance: ",c(exp(CK_fit[1,1:4])),", SE = ",c(SE[1:4]),"\n"))
- #cat(paste("Estimated mature male abundance: ",c(exp(CK_fit[1,5:8])),", SE = ",c(SE[5:8]),"\n"))
+  cat(paste("Estimated mature female abundance: ",c(exp(CK_fit[1,1:4])),", SE = ",c(SE[1:4]),"\n"))
+  cat(paste("Estimated mature male abundance: ",c(exp(CK_fit[1,5:8])),", SE = ",c(SE[5:8]),"\n"))
     
     sim_results[iter, 1] <- round(exp(CK_fit$p1[1]),0) #Nf
     sim_results[iter, 2] <- round(SE[1],0) #NfSE
