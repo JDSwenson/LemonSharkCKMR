@@ -37,6 +37,6 @@ get_P_lemon <- function(Pars,P_Mother,P_Father,n_yrs,t_start,t_end){
   }
   return(list(P_Mother=P_Mother, P_Father=P_Father)) #return makes sure this is moved out of the loop into the environment
 }
-P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
-P$P_Mother
-P$P_Father
+#P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+#P$P_Mother
+#P$P_Father
