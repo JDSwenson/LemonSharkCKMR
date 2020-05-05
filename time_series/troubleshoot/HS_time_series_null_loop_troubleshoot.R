@@ -234,4 +234,4 @@ colnames(sim_results) <- c("Nf_yr4", "NfSE_yr4", "NfTruth_yr4", "Moms_detected_y
                            "Nm_yr7", "NmSE_yr7", "NmTruth_yr7", "Dads_detected_yr7", "Yr1_samples", "Yr2_samples", "Yr3_samples", "Yr4_samples", "Yr5_samples", "Yr6_samples", "Yr7_samples")
 #head(sim_results, 30)
 
-write.table(sim_results, file = paste0("HS_time_series_null_4.30.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(sim_results, file = paste0("HS_time_series_null_poisson_05.01.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)

@@ -6,9 +6,6 @@
 # Formats the data for a half-sibling model
 # The code simulates kinship assignment with the same probabilities as the model i.e. it is code to test the null model
 
-#NEXT TO DO
-# 1. Standard error estimates aren't working (line 139). Fix this and then run on a loop.
-
 rm(list=ls())
 library(tidyverse)
 library(optimx)
@@ -69,7 +66,7 @@ P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=
 sim_start_time <- Sys.time()
 print(paste0("Simulation started at ", Sys.time()))
 
-iterations <- 500 #Set number of iterations to run in the loop
+iterations <- 300 #Set number of iterations to run in the loop
 sim_results <- matrix(0, nrow = iterations, ncol = 39)
 
 for(iter in 1:iterations) {
@@ -204,7 +201,7 @@ Data_mom_no <- Data_mom_no[,c(1:3)]
     sim_results[iter, 38] <- sum(Samples==6)
     sim_results[iter, 39] <- sum(Samples==7)
     
-    save(CK_fit, file=paste0("../Results/model_objects/Lemon_CKModel_HS_time_series_iteration_", iter))
+    save(CK_fit, file=paste0("../Results/model_objects/Lemon_CKModel_HS_time_series_null_iteration_", iter))
     #  } else {
     #sim_results[iter, 1]=NA
     #sim_results[iter, 2]=NA
@@ -233,4 +230,4 @@ colnames(sim_results) <- c("Nf_yr4", "NfSE_yr4", "NfTruth_yr4", "Moms_detected_y
                            "Nm_yr7", "NmSE_yr7", "NmTruth_yr7", "Dads_detected_yr7", "Yr1_samples", "Yr2_samples", "Yr3_samples", "Yr4_samples", "Yr5_samples", "Yr6_samples", "Yr7_samples")
 #head(sim_results, 30)
 
-write.table(sim_results, file = paste0("HS_time_series_null_4.30.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(sim_results, file = paste0("../Results/HS_time_series_null_5.04.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
