@@ -1,8 +1,8 @@
-#THIS IS THE MOST RECENT SCRIPT 05/17/2020
+#THIS IS THE MOST RECENT SCRIPT 05/19/2020
 
 ##NEXT: 
-#1) Check for full siblings across years
-#2) What is the variance in reproductive output among individuals? Or, what is the probability of sampling a given individual? Use dplyr for this
+#1) Adapt model for the input dataframes
+#2) Fit model
 
 
 rm(list=ls())
@@ -19,17 +19,16 @@ library(optimx)
 # Litter size from Feldheim et. al. 2002 (avg=6, max=18)
 # Age-at-maturity from Brown and Gruber 1988 (11.6 for M, 12.7 for F)
 # About 77 juvenile lemon sharks inhabit the nursery at a given time (White et al 2014). So, 10sqrt(N) = 88 samples total
-
+# Systematically and exhaustively sampled juvenile lemon sharks from 1995-2000
 
 ##############Set up experiment parameters##############
 n_ages=25 #Max age of lemon sharks
-n_yrs=29 #Number of years from earliest individual to end of study
 y_start <- 1995 #Start year of data
-y_end <- 2011 #End year of data
+y_end <- 2000 #End year of data
 total_yrs <- c(seq(y_start,y_end)) #all years represented in dataset
 study_yrs <- c(1:length(total_yrs)) #above translated to study years ie beginning at 1
-min_est_cohort <- 10 #First year we are estimating abundance
-max_est_cohort <- 17 #Last year we are estimating abundance
+min_est_cohort <- min(study_yrs)+2 #First year we are estimating abundance
+max_est_cohort <- max(study_yrs) #Last year we are estimating abundance
 est_yrs <- min_est_cohort:max(study_yrs) #All years for which we are estimating abundance
 n_yrs <- length(est_yrs) #Number of years for which we are estimating abundance
 
@@ -43,7 +42,7 @@ Pars=c(log(N_f),log(N_m))
 
 #iterations <- 100 #Set number of iterations to run in the loop
 
-source("./time_series/models/get_P_lemon_HS_time_series_mod.R")
+source("./time_series/models/get_P_lemon_HS_time_series_ind_het.R")
 source("./likelihood_functions/lemon_neg_log_like_HS.R")
 
 #################### LOAD AND CLEAN UP DATA ####################
@@ -88,11 +87,11 @@ Juv_ref <- Juv_ref[!duplicated(Juv_ref$Indiv_ID),]
 
 #############3########### SUBSET AND SAMPLE ###########################
 #head(Juv_ref)
-#table(factor(Juv_ref$DOB))
+table(factor(Juv_ref$DOB))
 
 #Set up dataframe for population we will sample
 # Want to base estimate on animals caught between 2004-2007 (the most heavily sampled years) so subset for animals captured in 2004-2007
-lems <- subset(Juv_ref, subset=DOB %in% c(1995:2011), select=c(Indiv_ID, Capture_Year, Father, Mother, DOB, Sex))
+lems <- subset(Juv_ref, subset=DOB %in% c(y_start:y_end), select=c(Indiv_ID, Capture_Year, Father, Mother, DOB, Sex))
 
 #head(Juv_ref)
 #head(lems)
@@ -107,6 +106,7 @@ for(i in 1:length(lems[,1])){
 Juv_lems <- as.data.frame(cbind(lems$Indiv_ID, Juv_study_DOB, lems$Capture_Year, lems$Father, lems$Mother), stringsAsFactors = FALSE) 
 colnames(Juv_lems) <- c("Indiv", "Juv_study_DOB", "Capture_Year", "Father", "Mother")
 head(Juv_lems)
+tail(Juv_lems)
 
 ##############################Begin simulation##############################
 sim_start_time <- Sys.time()
@@ -160,58 +160,162 @@ head(Juv_lems)
 
 
 
-##################Set up pairwise comparison matrix########################
+
+
 #head(Samples)
 
-#Split above into dataframes of positive and negative comparisons
+##Split Juv_lems into dataframes of positive and negative comparisons
 Juv_lems$Juv_study_DOB <- as.numeric(Juv_lems$Juv_study_DOB) #change DOB to type numeric
 
-#Create dataframe of positive comparisons for MOTHERS
-grouped_by_mom <- Juv_lems %>% group_by(Mother) %>% group_split() #Group by mother and split into a list of dataframes, each corresponding to the offspring of a mother
+#################### Create reference tables for individual/mean reproductive output ######################
 
-group_mom2 <- Filter(function(x) nrow(x) > 1, grouped_by_mom) #Filter out the dataframes that only have one observed sibling i.e. those with no matches
+#Summarize offspring by parent by year
+grouped_by_DOB_mom <- Juv_lems %>%
+  group_by(Juv_study_DOB, Mother) %>% #Group by DOB and Mother
+  filter(Mother!="Unknown") %>% #Filter out unknown mothers
+  summarize(pups = n()) #count offspring per mother per year
 
-#Create a function for creating all possible combinations of values
+#Summarize total offspring by year
+sum_yr_mom <- grouped_by_DOB_mom %>% 
+  summarize(sumyr = sum(pups))
+
+#Calculate mean offspring per year and add to table
+sum_table_mom <- grouped_by_DOB_mom %>% 
+  summarize(mean_pups = round(mean(pups), 0)) %>%
+  left_join(grouped_by_DOB_mom) %>% 
+  select(Juv_study_DOB, Mother, pups, mean_pups)
+
+#Now we have a dataframe with the mother, her reproductive output each year, and the mean reproductive output each year
+#Let's do the same for the fathers
+#Summarize offspring by parent by year
+grouped_by_DOB_dad <- Juv_lems %>%
+  group_by(Juv_study_DOB, Father) %>% #Group by DOB and Father
+  filter(Father!="Unknown") %>% #Filter out unknown Fathers
+  summarize(pups = n()) #count offspring per Father per year
+
+#Summarize total offspring by year
+sum_yr <- grouped_by_DOB_dad %>% 
+  summarize(sumyr = sum(pups))
+
+#Calculate mean offspring per year and add to table
+sum_table_dad <- grouped_by_DOB_dad %>% 
+  summarize(mean_pups = round(mean(pups), 0)) %>%
+  left_join(grouped_by_DOB_dad) %>% 
+  select(Juv_study_DOB, Father, pups, mean_pups)
+
+head(sum_table_dad)
+tail(sum_table_dad)
+nrow(sum_table_dad)
+
+##################Set up pairwise comparison matrices########################
+#Create dataframe of positive comparisons for MOTHERS - #Group by mother and split into a list of dataframes, each corresponding to the offspring of a mother
+grouped_by_mom <- Juv_lems %>% 
+  group_by(Mother) %>% 
+  filter(Mother!="Unknown") %>% #Filter out unknown mothers
+  group_split() 
+
+#Filter out the dataframes that only have one observed sibling i.e. those with no matches
+group_mom2 <- Filter(function(x) nrow(x) > 1, grouped_by_mom)
+View(group_mom2[[1]])
+
+#Function for creating all possible combinations of values and preserving mother
 comb_df <- function(x) {
-  t(combn(x$Juv_study_DOB, m=2))
-}
+  as.data.frame(cbind(t(combn(x$Juv_study_DOB, m=2)), x$Mother[1]))
+    }
 
 #Apply the combn function to every dataframe in the list
 group_mom3 <- lapply(group_mom2, comb_df)
+group_mom3[[1]]
 
 #combine list of matrices into one matrix
 group_mom_df <- do.call(rbind, group_mom3)
+head(group_mom_df)
+tail(group_mom_df)
+str(group_mom_df)
 
-#Apply function for sorting by age and counting
-#test6 <- lapply(test5, b)
-group_mom_df <- plyr::count(t(apply(group_mom_df, 1, sort)))
-colnames(group_mom_df) <- c("Old_sib_birth", "Young_sib_birth", "Mom_matches")
+#Count number of times a comparison occurs and convert columns to numeric
+group_mom_df <- plyr::count(group_mom_df)
+group_mom_df[,1] <- as.numeric(group_mom_df[,1])
+group_mom_df[,2] <- as.numeric(group_mom_df[,2])
+group_mom_df$freq <- as.numeric(group_mom_df$freq)
 
-#Remove duplicate and impossible comparisons
+#Sort so older/younger sibling in each comparison are in correct column
+for(i in 1:nrow(group_mom_df)){
+  if(group_mom_df[i,1] > group_mom_df[i,2]){
+    group_mom_df$Old_sib_birth[i] <- group_mom_df[i,2]
+    group_mom_df$Young_sib_birth[i] <- group_mom_df[i,1]
+  } else {
+    group_mom_df$Old_sib_birth[i] <- group_mom_df[i,1]
+    group_mom_df$Young_sib_birth[i] <- group_mom_df[i,2]
+  }
+}
+group_mom_df[,1:2] <- NULL #Remove unsorted columns
+
+#Check that sorting worked
+nrow(group_mom_df[group_mom_df[,2] > group_mom_df[,1],])
+nrow(group_mom_df[group_mom_df[,1] > group_mom_df[,2],])
+nrow(group_mom_df[group_mom_df$Young_sib_birth > group_mom_df$Old_sib_birth,]) #This total should equal the two above
+
+#
+colnames(group_mom_df) <- c("Mother", "Mom_matches", "Old_sib_birth", "Young_sib_birth") #Name columns
+group_mom_df <- group_mom_df %>% select(c(Old_sib_birth, Young_sib_birth, Mom_matches, Mother)) #Order columns
+head(group_mom_df)
+
+#Remove duplicate comparisons and those we're not interested in
 mom_positives <- group_mom_df[which(group_mom_df$Old_sib_birth != group_mom_df$Young_sib_birth),]
 mom_positives <-  mom_positives[which(mom_positives$Young_sib_birth >= min_est_cohort),]
 head(mom_positives)
 tail(mom_positives)
 
-#Create dataframe of positive comparisons for FATHERS
-grouped_by_dad <- Juv_lems %>% group_by(Father) %>% group_split() #Group by mother and split into a list of dataframes, each corresponding to the offspring of a mother
-#class(grouped_by_dad[[1]])
+#####REPEAT ABOVE FOR DADS
+#Create dataframe of positive comparisons for fatherS - #Group by father and split into a list of dataframes, each corresponding to the offspring of a father
+grouped_by_dad <- Juv_lems %>% 
+  group_by(Father) %>% 
+  filter(Father!="Unknown") %>% #Filter out unknown Fathers
+  group_split() 
 
-group_dad2 <- Filter(function(x) nrow(x) > 1, grouped_by_dad) #Filter out the dataframes that only have one observed sibling i.e. those with no matches
-#class(group_dad2[[1]])
+#Filter out the dataframes that only have one observed sibling i.e. those with no matches
+group_dad2 <- Filter(function(x) nrow(x) > 1, grouped_by_dad)
+#View(group_dad2[[1]])
+
+#Function for creating all possible combinations of values and preserving Father
+comb_df <- function(x) {
+  as.data.frame(cbind(t(combn(x$Juv_study_DOB, m=2)), x$Father[1]))
+}
 
 #Apply the combn function to every dataframe in the list
 group_dad3 <- lapply(group_dad2, comb_df)
+group_dad3[[1]]
 
 #combine list of matrices into one matrix
 group_dad_df <- do.call(rbind, group_dad3)
+head(group_dad_df)
+tail(group_dad_df)
+str(group_dad_df)
 
-#Apply function for sorting by age and counting
-#test6 <- lapply(test5, b)
-group_dad_df <- plyr::count(t(apply(group_dad_df, 1, sort)))
-colnames(group_dad_df) <- c("Old_sib_birth", "Young_sib_birth", "Dad_matches")
+#Count number of times a comparison occurs and convert columns to numeric
+group_dad_df <- plyr::count(group_dad_df)
+group_dad_df[,1] <- as.numeric(group_dad_df[,1])
+group_dad_df[,2] <- as.numeric(group_dad_df[,2])
+group_dad_df$freq <- as.numeric(group_dad_df$freq)
 
-#Remove duplicate values
+#Sort so older/younger sibling in each comparison are in correct column
+for(i in 1:nrow(group_dad_df)){
+  if(group_dad_df[i,1] > group_dad_df[i,2]){
+    group_dad_df$Old_sib_birth[i] <- group_dad_df[i,2]
+    group_dad_df$Young_sib_birth[i] <- group_dad_df[i,1]
+  } else {
+    group_dad_df$Old_sib_birth[i] <- group_dad_df[i,1]
+    group_dad_df$Young_sib_birth[i] <- group_dad_df[i,2]
+  }
+}
+group_dad_df[,1:2] <- NULL #Remove unsorted columns
+
+colnames(group_dad_df) <- c("Father", "dad_matches", "Old_sib_birth", "Young_sib_birth") #Name columns
+group_dad_df <- group_dad_df %>% select(c(Old_sib_birth, Young_sib_birth, dad_matches, Father)) #Order columns
+head(group_dad_df)
+
+#Remove duplicate comparisons and those we're not interested in
 dad_positives <- group_dad_df[which(group_dad_df$Old_sib_birth != group_dad_df$Young_sib_birth),]
 dad_positives <-  dad_positives[which(dad_positives$Young_sib_birth >= min_est_cohort),]
 head(dad_positives)
@@ -223,13 +327,23 @@ all_comparisons <- plyr::count(t(apply(all_comparisons, 1, sort)))
 colnames(all_comparisons)[1:2] <- c("Old_sib_birth", "Young_sib_birth")
 
 #Remove duplicate values
-all_comparisons <- all_comparisons[which(all_comparisons$Old_sib_birth != all_comparisons$Young_sib_birth),]
+all_comparisons = all_comparisons2 <- all_comparisons[which(all_comparisons$Old_sib_birth != all_comparisons$Young_sib_birth),]
 
-#Subtract positive comparisons from all comparisons
-all_comparisons <- merge(mom_positives, all_comparisons, by=c("Old_sib_birth", "Young_sib_birth")) %>%
-  merge(dad_positives, by=c("Old_sib_birth", "Young_sib_birth"))
+#Create dataframes of total matches for moms and dads based on years of pairwise comparisons  
+(mom_total_matches <- mom_positives %>% 
+  group_by(Old_sib_birth, Young_sib_birth) %>% 
+  summarize(matches=sum(Mom_matches)))
 
-head(all_comparisons)
+(dad_total_matches <- dad_positives %>% 
+  group_by(Old_sib_birth, Young_sib_birth) %>% 
+  summarize(matches=sum(dad_matches)))
+
+
+#Subtract positive comparisons from all comparisons to make negatives dataframes
+all_comparisons <- merge(mom_total_matches, all_comparisons2, by=c("Old_sib_birth", "Young_sib_birth")) %>%
+  merge(dad_total_matches, by=c("Old_sib_birth", "Young_sib_birth")) %>% 
+  rename(Mom_matches=matches.x, Dad_matches=matches.y)
+#head(all_comparisons)
 
 mom_negatives <- all_comparisons[,c(1:2)]
 mom_negatives$Mom_negs <- all_comparisons$freq - all_comparisons$Mom_matches
@@ -237,10 +351,12 @@ mom_negatives$Mom_negs <- all_comparisons$freq - all_comparisons$Mom_matches
 dad_negatives <- all_comparisons[,c(1:2)]
 dad_negatives$dad_negs <- all_comparisons$freq - all_comparisons$Dad_matches
 
-#Confirm they match (they do)
-#head(all_comparisons)
-#head(dad_negatives)
-#head(mom_negatives)
+#Combine positive and negative dataframes for mother and father
+mom_all <- mom_positives %>% 
+  left_join(mom_negatives, by = c("Old_sib_birth", "Young_sib_birth"))
+
+dad_all <- dad_positives %>% 
+  left_join(dad_negatives, by = c("Old_sib_birth", "Young_sib_birth"))
 
 ####LOOP####
 #if(nrow(Data_dad_yes)>=1 & nrow(Data_mom_yes)>=1){
