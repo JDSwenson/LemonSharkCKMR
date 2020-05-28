@@ -1,0 +1,511 @@
+---
+title: "fishSim_CKMR"
+output: pdf_document
+---
+
+5/27/2020
+Estimates and truth don't really match up at all ... Need to: 
+1) run this in a loop - maybe just 100 iterations 
+2) visualize results
+3) double-check that truth count is accurate
+4) look at function script
+
+
+```{r setup, include=FALSE}
+#Setting global defaults for knitting -- can be overwritten in individual chunks
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+```
+
+
+### Define simulation parameters
+Max age: two options: 
+37 from https://www.saveourseasmagazine.com/lemon-sharks-old/
+25 from White et. al. 2014
+Juvenile survival values from Dibattista 2007: 0.55 (mort = 0.45)
+Adult survival value from White et. al. 2014: 0.85 (mort=0.15)
+Litter size from Feldheim et. al. 2002 (avg=6, max=18)
+Age-at-maturity from Brown and Gruber 1988 (11.6 for M, 12.7 for F)
+About 77 juvenile lemon sharks inhabit the nursery at a given time (White et al 2014).
+
+```{r}
+library(fishSim)
+library(foreach)
+library(parallel)
+library(doParallel)
+library(optimx)
+library(tidyverse)
+
+
+##############Set up experiment parameters##############
+t_start = 40 #First year we take samples
+t_end = 45 #Last year we take samples
+min_est_cohort <- 42 #First year we are estimating abundance
+max_est_cohort <- t_end #Last year we are estimating abundance
+est_yrs <- min_est_cohort:max_est_cohort #All years for which we are estimating abundance
+n_yrs <- length(est_yrs) #Number of years for which we are estimating abundance
+
+# set up the simulation parameters
+sim_yrs = c(1:39)
+n_samp_yr = t_end-t_start #Number of years being sampled
+n_samples_per_yr = 40
+n_samples_total <- n_samples_per_yr * n_samp_yr + n_samples_per_yr #because sampling starts in year t_start, we need to add one more year
+
+#makeFounder parameters
+osr <- c(0.5, 0.5) #Operating sex ratio
+stocks <- c() #stocks (empty for now)
+maxAge <- 25 #max age of lemon sharks
+Surv_age <- rep(0.85,maxAge) #Set survival for each age to 85%
+Surv_age[1] <- 0.55 #Set survival for first year to 55%
+Surv_age[2] <- 0.65 #Set survival for second year to 65%
+Prop_age <- rep(1:maxAge)
+pop <- 1000
+
+for(iage in 2:maxAge)Prop_age[iage]=Prop_age[iage-1]*Surv_age[iage-1]
+Prop_age <- Prop_age/sum(Prop_age)  #stable age distribution
+survCurv <- Prop_age #Sets probability of founder cohort belonging to each age class
+
+#Set parameters for altMate
+batchSize = 6 #average size of brood -- assumes Poisson distribution for fecundity (which is default for altMate)
+mat_m <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
+mat_m[12:maxAge]=1  #Knife-edge maturity for males, beginning at age 12
+
+mat_f <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
+mat_f[13:maxAge]=1  #Knife-edge maturity for females, beginning at age 13
+
+maleCurve <- c(mat_m, rep(max(mat_m), 1000)) #Set male age at maturity
+femaleCurve <- c(mat_f, rep(max(mat_m), 1000)) #Set female age at maturity
+maxClutch <- 18 #Maximum number of offspring one individual can possibly produce
+mat_type <- "ageSex"
+
+#Set parameters for mort()
+ageMort <- (1 - Surv_age)
+ageMort[maxAge+1] <- ageMort[maxAge]
+death_type <- "age"
+
+total_abundance <- c(rep(pop, times = n_yrs))
+N_f <- c(total_abundance/2)
+N_m <- c(total_abundance-N_f)
+Pars=c(log(N_f),log(N_m))
+```
+
+###Make Founder population and simulate into the future
+```{r}
+#makeFounders creates a matrix of specified size (pop) where each row is an individual in the founder popualtion.
+indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, survCurv=survCurv)
+head(indiv)
+hist(as.numeric(indiv[,8])) #histogram of population ages
+
+#Simulate 40 years of mating
+#altMate derives the number of offspring produced by drawing from a sampling distribution for each female based on the parameters specified in the function. Fathers are randomly drawn from all mature males in the mother's stock.
+##This loop takes ~ 1 minute to run
+for (y in 1:length(sim_yrs)) {
+  indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort) #make maxPop ~ 9000 if setting mort to flat, as this is the approx size of the population in the Bravington script.
+  indiv <- birthdays(indiv)
+}
+nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
+```
+
+### Sampling
+Simulates six more years of population growth, sampling 40 individuals each year.
+```{r}
+#Repeats the above loop, assigning offspring, deaths, and birthdays, but this time also draws samples each year and records which animals were sampled in indiv
+for (y in c(t_start:t_end)) {
+  indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
+  indiv <- birthdays(indiv)
+  indiv <- capture(indiv, n=40, year = y, fatal = FALSE)
+}
+```
+
+## Find relatives among sampled individuals
+## findRelativesPar finds relatives among the sampled individuals and stores them in a large pairwise comparison dataframe where the columns are named with numeric code corresponding to the relationships shared between the individuals being compared.
+```{r}
+pairs <- findRelativesPar(indiv = indiv, sampled = TRUE)
+POPs <- pairs[pairs$OneTwo == 1,1:2] ##Parent-Offspring pairs
+HSPs <- pairs[pairs$TwoTwo == 1,1:2] ##Half-Sibling pairs - verified from fishSim vignette
+non_POPs <- pairs[pairs$OneTwo == 0,1:2] ##pairs that are not POPs
+non_HSPs <- pairs[pairs$TwoTwo == 0,1:2] ##pairs that are not half-sibs - IGNORE until we get POPs working
+```
+
+
+Half-sib data format
+Construct positive kin dataframes for individual heterogeneity in fecundity
+```{r}
+# think of this dataframe as storing only information about the younger fish. Stores ID and birth year only (at present) for every individual in indiv, but renames the ID column to younger so it can be joined with HSPs_tbl below)
+youngerbirthyears <- indiv %>%
+  select(Me, BirthY, Mum, Dad) %>% 
+  rename("younger" = Me, "Young_sib_birth" = BirthY, "Young_sib_mom" = Mum, "Young_sib_dad" = Dad)
+
+#Create dataframe with IDs of sampled half-sibs and columns named appropriately for joins
+HSPs_tbl <- HSPs %>% 
+    rename(
+    Me = Var1,
+    younger = Var2) %>%
+  mutate_all(as.character)
+
+#Extract the values of indiv for the older individual in each comparison.
+#Join all the information from indiv with the IDs of the sampled individuals in HSPs_2_tbl. 
+HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
+  left_join(youngerbirthyears, by = "younger")  %>%
+  rename(Old_sib_birth = BirthY, "Old_sib_mom" = Mum, "Old_sib_dad" = Dad) %>% 
+  select(c(Old_sib_birth, Young_sib_birth, Old_sib_mom, Young_sib_mom, Old_sib_dad, Young_sib_dad))
+
+#Split HSPs dataframe into MHS and PHS pairs
+#Filter out 1) young sib birth years that are outside the range of years we're estimating & 2) intra-cohort comparisons
+(mom_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
+  select(Old_sib_birth, Young_sib_birth, Old_sib_mom) %>% 
+  rename(Mother = Old_sib_mom) %>% #Rename to match column name in model function
+  filter(Young_sib_birth <= max_est_cohort & Young_sib_birth >= min_est_cohort & Young_sib_birth != Old_sib_birth) %>% 
+  plyr::count() %>% 
+  select(Old_sib_birth, Young_sib_birth, freq, Mother))
+
+
+(dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,] %>% 
+  select(Old_sib_birth, Young_sib_birth, Old_sib_dad) %>% 
+  rename(Father = Old_sib_dad) %>% #Rename to match column name in model function
+  filter(Young_sib_birth <= max_est_cohort & Young_sib_birth >= min_est_cohort & Young_sib_birth != Old_sib_birth) %>% 
+  plyr::count() %>% 
+  select(Old_sib_birth, Young_sib_birth, freq, Father))
+
+
+nrow(HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad & HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,]) #Should be 0 or there are full sibs
+
+##Summarize Mother data
+#Summarize number of pups per mom per year
+(grouped_by_DOB_mom <- indiv[indiv$Mum %in% unique(mom_positives$Mother),] %>% #Extract the info from indiv for mothers with identified kin in the sample
+  group_by(BirthY, Mum) %>% #Group by mother and year
+    summarize(pups = n()) %>% #Summarize number of entries in each grouping so we have pups per year per mother
+  rename(Mother = Mum)) #Rename column to match model function
+
+nrow(grouped_by_DOB_mom[unique(grouped_by_DOB_mom$Mother),]) #Should be same as below if grouping worked
+length(unique(mom_positives$Mother))
+
+#Calculate mean offspring per year and add to table
+(sum_table_mom <- grouped_by_DOB_mom %>% 
+  summarize(mean_pups_yr = round(mean(pups), 0)) %>% #Calculate mean per mom per year
+  right_join(grouped_by_DOB_mom) %>% #Join together dataframe grouped by year and mother with mean pups per year
+  select(BirthY, Mother, pups, mean_pups_yr)) #%>% 
+  #filter(BirthY <= max_est_cohort & BirthY >= min_est_cohort)) #Filter for years we're estimating
+
+##Summarize Father data
+#Summarize number of pups per Dad per year
+(grouped_by_DOB_dad <- indiv[indiv$Dad %in% unique(dad_positives$Father),] %>% #Extract the info from indiv for fathers with identified kin in the sample
+  group_by(BirthY, Dad) %>% #Group by father and birth year
+    summarize(pups = n()) %>% #Summarize number of entries in each grouping so we have pups per year per father
+    rename(Father = Dad)) #Rename column to match model function
+
+nrow(grouped_by_DOB_dad[unique(grouped_by_DOB_dad$Father),]) #Should be same as below if grouping worked
+length(unique(dad_positives$Father))
+
+#Calculate mean offspring per year and add to table
+(sum_table_dad <- grouped_by_DOB_dad %>% 
+  summarize(mean_pups_yr = round(mean(pups), 0)) %>% #Calculate mean pups per dad per year
+  right_join(grouped_by_DOB_dad) %>% #Join together dataframe grouped by year and father with mean pups per year
+  select(BirthY, Father, pups, mean_pups_yr)) #%>% 
+  #filter(BirthY <= max_est_cohort & BirthY >= min_est_cohort)) #Filter for years we're estimating.
+
+#Columns are Birth year, Mother ID, pups for Mother[i] in BirthY[i], mean pups per mother in BirthY[i]
+sum_table_mom
+
+```
+
+
+Construct negative comparison dataframes
+```{r}
+# Rename the columns so that the join functions know what to work with. The column `Me` is still the actual id column. However, we also need the column `younger` so that we can look up the 
+#birth years stored in `youngerbirthyears`
+non_HSPs_tbl <- non_HSPs %>% 
+  rename(
+    Me = Var1,
+    younger = Var2) %>%
+  mutate_all(as.character) # convert columns to characters since not all levels of indiv$Me are present in non_POPs_tbl
+head(non_HSPs_tbl)
+
+##Extract the values of indiv for the older individual in each comparison.
+#Join all the information from indiv with the IDs of the sampled individuals in non_HSPs_2_tbl. 
+non_HSPs_2_tbl <- inner_join(indiv, non_HSPs_tbl, by = "Me") %>%
+  left_join(youngerbirthyears, by = "younger")  %>%
+  rename(Old_sib_birth = BirthY) %>% 
+  select(c(Old_sib_birth, Young_sib_birth))
+
+#Create table of all negative comparisons, count occurences, and filter for the years we're estimating
+(mom_negatives = dad_negatives <- non_HSPs_2_tbl %>% 
+  plyr::count() %>% 
+  filter(Young_sib_birth <= max_est_cohort & Young_sib_birth >= min_est_cohort & Young_sib_birth != Old_sib_birth))
+```
+
+Dataframes that matter:
+1) mom_positives
+2) dad_positives
+3) mom_negatives
+4) dad_negatives
+5) sum_table_mom
+6_ sum_table_dad
+
+
+Fit Model!
+Individual Heterogeneity in fecundity
+```{r}
+##Define variables and functions
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/time_series/models/get_P_lemon_HS_time_series_ind_het_fishSim.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS_TS_IndHet.R")
+
+P_pos=get_P_lemon_pos(Pars=Pars,P_Mother_pos=P_Mother_pos,P_Father_pos=P_Father_pos,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+
+P_neg=get_P_lemon_neg(Pars=Pars,P_Mother_neg=P_Mother_neg,P_Father_neg=P_Father_neg,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+
+#Check P function
+#P$P_Mother[19,40,45] #Dimensions are parent birth year, parent capture year, offspring birth year (all of which are specified by n_yrs)
+
+#Fit model
+    CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother_pos=P_Mother_pos, P_Father_pos=P_Father_pos,  P_Mother_neg=P_Mother_neg, P_Father_neg=P_Father_neg, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
+    
+    summary(CK_fit)
+    exp(CK_fit[1:8])
+    
+    #compute variance covariance matrix
+    D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1]), exp(CK_fit$p5[1]), exp(CK_fit$p6[1]), exp(CK_fit$p7[1]), exp(CK_fit$p8[1])) #derivatives of transformations
+    VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
+    VC = (t(D)%*%VC_trans%*%D) #delta method
+    SE=round(sqrt(diag(VC)),0)
+    
+    #Rename columns
+    colnames(CK_fit)[1:8] <- c("Year_42_F", "Year_43_F", "Year_44_F", "Year_45_F", "Year_42_M", "Year_43_M", "Year_44_M", "Year_45_M")
+
+    #Calculate true values for each year
+    m_truth = f_truth = NULL
+    for(i in 1:n_yrs){    
+      index <- c(42:45)[i]
+    m_truth[i] <- nrow(indiv[indiv$DeathY > index & indiv$BirthY <= index-12 & indiv$Sex=="M",])
+    f_truth[i] <- nrow(indiv[indiv$DeathY > index & indiv$BirthY <= index-13 & indiv$Sex=="F",])
+    }
+    
+
+  all_truth <- indiv %>% 
+    filter(DeathY >= min_est_cohort | is.na(DeathY)) %>% 
+    #replace_na(list(DeathY = 45)) %>% 
+    #mutate(age_at_DeathY = DeathY - BirthY) %>%
+    group_by(Sex) %>%
+    group_split()
+    
+  Mom_truth <- all_truth[[1]] %>% 
+    mutate(Yr_at_maturity = BirthY + 13) %>%
+    filter(Yr_at_maturity <= max_est_cohort)
+    
+  Dad_truth <- all_truth[[2]] %>% 
+    mutate(Yr_at_maturity = BirthY + 12) %>%
+    filter(Yr_at_maturity <= max_est_cohort)
+  
+  #Calculate number of adult males and females alive per year
+  #Ladies first
+  mom_truth_42 <- Mom_truth %>% 
+    filter(Yr_at_maturity <= 42) %>% 
+    filter(DeathY >42 | is.na(DeathY)) %>% 
+    count()
+    
+  mom_truth_43 <- Mom_truth %>% 
+    filter(Yr_at_maturity <= 43) %>% 
+    filter(DeathY >43 | is.na(DeathY)) %>% 
+    count()
+    
+  mom_truth_44 <- Mom_truth %>% 
+    filter(Yr_at_maturity <= 44) %>% 
+    filter(DeathY >44 | is.na(DeathY)) %>% 
+    count()
+  
+  mom_truth_45 <- Mom_truth %>% 
+    filter(Yr_at_maturity <= 45) %>% 
+    filter(DeathY >45 | is.na(DeathY)) %>% 
+    count()
+  
+  #Now guys
+  dad_truth_42 <- Dad_truth %>% 
+    filter(Yr_at_maturity <= 42) %>% 
+    filter(DeathY >42 | is.na(DeathY)) %>% 
+    count()
+    
+  dad_truth_43 <- Dad_truth %>% 
+    filter(Yr_at_maturity <= 43) %>% 
+    filter(DeathY >43 | is.na(DeathY)) %>% 
+    count()
+    
+  dad_truth_44 <- Dad_truth %>% 
+    filter(Yr_at_maturity <= 44) %>% 
+    filter(DeathY >44 | is.na(DeathY)) %>% 
+    count()
+  
+  dad_truth_45 <- Dad_truth %>% 
+    filter(Yr_at_maturity <= 45) %>% 
+    filter(DeathY >45 | is.na(DeathY)) %>% 
+    count()
+  
+#Combine above to make dataframe with truth and estimates side-by-side
+    estimates <- data.frame(cbind(t(round(exp(CK_fit[1:8]),0)), c(mom_truth_42, mom_truth_43, mom_truth_44, mom_truth_45, dad_truth_42, dad_truth_43, dad_truth_44, dad_truth_45), c(rep("F", times=4), rep("M", times=4)), c(rep(min_est_cohort:max_est_cohort, times=2))  ))
+    colnames(estimates) <- c("CKMR_estimate", "Truth", "Sex", "Year")
+    estimates
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Parent-offspring data format
+```{r}
+# think of this dataframe as storing only information about the younger fish
+youngerbirthyears <- indiv %>%
+  select(Me, BirthY) %>% 
+  rename("younger" = Me, "Offspring_Birth_Year" = BirthY)
+
+#' the main purpose of this is to rename the columns so that the join functions
+#' will know what to work with. The column `Me` is still the actual id column.
+#' However, we'll also need the column `younger` so that we can look up the 
+#' birth years stored in `youngerbirthyears`
+non_POPs_tbl <- non_POPs %>% 
+  rename(
+    Me = Var1,
+    younger = Var2) %>%
+  mutate_all(as.character) # convert columns to characters since not all levels of indiv$Me are present in non_POPs_tbl
+non_POPs_tbl
+
+#' the magic happens in the first two lines. There are many different
+#' kinds of joins that differ largely on how they handle A) the presence/absence of matching values the by column, and
+#' B) which columns they return.
+# The bit about renaming and selecting columns is to make `non_POPs_2_tbl` look exactly like `non_POPs_2`.
+
+non_POPs_2_tbl <- inner_join(indiv, non_POPs_tbl, by = "Me") %>%
+  left_join(youngerbirthyears, by = "younger")  %>%
+  rename(
+    Adult_Birth = BirthY,
+    Adult_Capture_Year = SampY,
+    Adult_Sex = Sex) %>%
+  select(names(non_POPs_2)) 
+```
+
+You should check for yourself that `non_POPs_2_tbl` contains the appropriate values (e.g., visually match Me and younger between `non_POPs_2_tbl` and `non_POPs_2`). The chunk below is an automated way to check this (but again, do manually convince yourself).
+
+```{r}
+non_POPs_2
+non_POPs_2_tbl
+all(non_POPs_2_tbl[1:nrow(non_POPs_2),] == non_POPs_2)
+
+```
+
+
+```{r}
+#Split new dataframe into mothers and fathers
+non_POPs_M <- non_POPs_2[non_POPs_2$Adult_Sex == 'M',]
+non_POPs_F <- non_POPs_2[non_POPs_2$Adult_Sex == 'F',]
+
+POPs_F <- plyr::count(POPs_F[,1:3])
+non_POPs_F <- plyr::count(non_POPs_F[,1:3])
+POPs_M <- plyr::count(POPs_M[,1:3])
+non_POPs_M <- plyr::count(non_POPs_M[,1:3])
+```
+
+Fit Model!
+```{r}
+m_truth <- nrow(indiv[is.na(indiv$DeathY)==TRUE & indiv$Sex=="M" & indiv$AgeLast >=12,])
+f_truth <- nrow(indiv[is.na(indiv$DeathY)==TRUE & indiv$Sex=="F" & indiv$AgeLast >=13,])
+Pars <- c(log(f_truth), log(m_truth))
+
+##Define variables and functions
+source("functions/get_P_Lemon_POP_sim.R")
+source("functions/Lemon_neg_log_like_sim.R")
+
+P = get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+
+#Check P function
+#P$P_Mother[19,40,45] #Dimensions are parent birth year, parent capture year, offspring birth year (all of which are specified by n_yrs)
+
+#Fit model
+CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=non_POPs_F,Negatives_Father=non_POPs_M,Pairs_Mother=POPs_F,Pairs_Father=POPs_M,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+    
+    summary(CK_fit)
+    #compute variance covariance matrix
+    D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), CK_fit$p3[1]) #derivatives of transformations
+    VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
+    VC = (t(D)%*%VC_trans%*%D) #delta method
+    SE=sqrt(diag(VC))
+    
+    round(exp(CK_fit$p1[1]),0) #Nf
+    round(SE[1],0) #NfSE
+    round(exp(CK_fit$p2[1]),0) #Nm
+    round(SE[2],0) #NmSE
+```
+
+
+
+Parent-offspring relationships - OLD??
+```{r}
+## Make the new dataframe for the adults
+POPs_2 <- data.frame(matrix(ncol=4, nrow=0, dimnames = list(NULL, c("Adult_Birth","Adult_Capture_Year", "Offspring_Birth_Year", "Adult_Sex"))))
+
+## First, determine which var is the adult.
+## Then, look up that adult's information from the indiv dataframe. 
+## Finally, store the adult's information to POPs_2.
+for(i in 1:nrow(POPs)){
+  if(indiv[indiv$Me == POPs$Var1[i],]$BirthY > indiv[indiv$Me == POPs$Var2[i],]$BirthY){
+    POPs_2[i,1] <- indiv[indiv$Me == POPs$Var2[i],]$BirthY
+    POPs_2[i,2] <- indiv[indiv$Me == POPs$Var2[i],]$SampY
+    POPs_2[i,3] <- indiv[indiv$Me == POPs$Var1[i],]$BirthY
+    POPs_2[i,4] <- indiv[indiv$Me == POPs$Var2[i],]$Sex
+  }
+  else{
+    POPs_2[i,1] <- indiv[indiv$Me == POPs$Var1[i],]$BirthY
+    POPs_2[i,2] <- indiv[indiv$Me == POPs$Var1[i],]$SampY
+    POPs_2[i,3] <- indiv[indiv$Me == POPs$Var2[i],]$BirthY
+    POPs_2[i,4] <- indiv[indiv$Me == POPs$Var1[i],]$Sex
+  }
+  i = i+1
+}
+#POPs_2
+
+#Split new dataframe into mothers and fathers. (M=Male, F=Female)
+POPs_M <- POPs_2[POPs_2$Adult_Sex == 'M',]
+POPs_F <- POPs_2[POPs_2$Adult_Sex == 'F',]
+
+#For Non-Pops
+non_POPs_2 <- data.frame(matrix(ncol=4, nrow=0, dimnames = list(NULL, c("Adult_Birth","Adult_Capture_Year", "Offspring_Birth_Year", "Adult_Sex"))))
+
+#indiv[indiv$Me == non_POPs$Var1[1],]$BirthY
+#indiv[indiv$Me == non_POPs$Var1[2],]$BirthY
+for(i in 1:nrow(non_POPs)){
+  if(indiv[indiv$Me == non_POPs$Var1[i],]$BirthY > indiv[indiv$Me == non_POPs$Var2[i],]$BirthY){
+    non_POPs_2[i,1] <- indiv[indiv$Me == non_POPs$Var2[i],]$BirthY
+    non_POPs_2[i,2] <- indiv[indiv$Me == non_POPs$Var2[i],]$SampY
+    non_POPs_2[i,3] <- indiv[indiv$Me == non_POPs$Var1[i],]$BirthY
+    non_POPs_2[i,4] <- indiv[indiv$Me == non_POPs$Var2[i],]$Sex
+  }
+  else{
+    non_POPs_2[i,1] <- indiv[indiv$Me == non_POPs$Var1[i],]$BirthY
+    non_POPs_2[i,2] <- indiv[indiv$Me == non_POPs$Var1[i],]$SampY
+    non_POPs_2[i,3] <- indiv[indiv$Me == non_POPs$Var2[i],]$BirthY
+    non_POPs_2[i,4] <- indiv[indiv$Me == non_POPs$Var1[i],]$Sex
+   }
+  i = i+1
+}
+```
+
+## Patrick's Code Sample
+

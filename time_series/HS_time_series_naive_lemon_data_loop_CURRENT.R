@@ -1,8 +1,9 @@
-#THIS IS THE MOST RECENT SCRIPT 05/17/2020
+#THIS IS THE MOST RECENT SCRIPT 05/28/2020
 
 ##NEXT: 
-#1) Check for full siblings across years
-#2) What is the variance in reproductive output among individuals? Or, what is the probability of sampling a given individual? Use dplyr for this
+#1) line 250: Figure out how SE is calculated and calculate SE for the estimates
+#2) Check for full siblings across years
+#3) What is the variance in reproductive output among individuals? Or, what is the probability of sampling a given individual? Use dplyr for this
 
 
 rm(list=ls())
@@ -31,6 +32,7 @@ study_yrs <- c(1:length(total_yrs)) #above translated to study years ie beginnin
 min_est_cohort <- 10 #First year we are estimating abundance
 max_est_cohort <- 17 #Last year we are estimating abundance
 est_yrs <- min_est_cohort:max(study_yrs) #All years for which we are estimating abundance
+est_full_yrs <- total_yrs[est_yrs]
 n_yrs <- length(est_yrs) #Number of years for which we are estimating abundance
 
 ####Set up simulation parameters####
@@ -43,11 +45,11 @@ Pars=c(log(N_f),log(N_m))
 
 #iterations <- 100 #Set number of iterations to run in the loop
 
-source("./time_series/models/get_P_lemon_HS_time_series_mod.R")
-source("./likelihood_functions/lemon_neg_log_like_HS.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/time_series/models/get_P_lemon_HS_time_series_mod.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS.R")
 
 #################### LOAD AND CLEAN UP DATA ####################
-lemon_data <- read.csv("./data/Main_lemon_shark.csv", header=TRUE, stringsAsFactors = FALSE)
+lemon_data <- read.csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/data/Main_lemon_shark.csv", header=TRUE, stringsAsFactors = FALSE)
 lemon_data <- lemon_data[which(lemon_data$Island=="BIM"),] #Subset for bimini
 lemon_data %>% separate(Tube.Label, sep=";", into = c("Juvenile_ID", "Recapture_1", "Recapture_2", "Recapture_3", "Recapture_4")) -> lemon_data2 #Separate Tube labels into capture history (there is one tube label per sample instance)
 colnames(lemon_data2) <- c("PIT_tag","Capture_ID", "Recapture_1", "Recapture_2", "Recapture_3", "Recapture_4", "Capture_Year", "Capture_Date", "Island", "Site", "Sex", "PCL_cm", "TL_cm", "DOB", "Father", "Mother") #relabel columns
@@ -245,7 +247,9 @@ dad_negatives$dad_negs <- all_comparisons$freq - all_comparisons$Dad_matches
 ####LOOP####
 #if(nrow(Data_dad_yes)>=1 & nrow(Data_mom_yes)>=1){
   
-  #########################Fit model!##############################
+#########################Fit model!##############################
+#PICK UP HERE 5/28/20 -- fix script to calculate SE appropriately (esp line 257)
+
     CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives,Negatives_Father=dad_negatives,Pairs_Mother=mom_positives,Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
 
     summary(CK_fit)
@@ -254,12 +258,55 @@ dad_negatives$dad_negs <- all_comparisons$freq - all_comparisons$Dad_matches
     VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
     VC = (t(D)%*%VC_trans%*%D) #delta method
     SE=sqrt(diag(VC))
-    exp(CK_fit[,1:16])
     
-    cat(paste("Estimated mature female abundance: ",exp(CK_fit$p1),", SE = ",SE[1],"\n"))
-    cat(paste("Estimated mature male abundance: ",exp(CK_fit$p2),", SE = ",SE[2],"\n"))
+    
+    #cat(paste("Estimated mature female abundance: ",exp(CK_fit$p1),", SE = ",SE[1],"\n"))
+    #cat(paste("Estimated mature male abundance: ",exp(CK_fit$p2),", SE = ",SE[2],"\n"))
     #cat(paste("Estimated survival: ", CK_fit$p3, ", SE = ", SE[3], "\n"))
 
+    
+    
+    ######################## Compare estimates to minimum adults ##############################
+    ##Verified below is accurate
+    #Calculate minimum number of moms per year and store in min_moms
+    min_moms <- lems %>% 
+      group_by(DOB) %>% #Group by DOB
+      distinct(Mother) %>% #Keep unique moms per group (DOB)
+      summarize(unique_moms = n()) #Count number of rows (unique moms) per group (DOB)
+    
+    #Calculate minimum number of dads per year, join with min_moms, and store as min_adults
+    min_adults <- lems %>% 
+      group_by(DOB) %>% #Group by DOB
+      distinct(Father) %>% #Keep unique dads per group (DOB)
+      summarize(unique_dads = n()) %>% #Count number of rows (unique dads) per group (DOB)
+      full_join(min_moms, by="DOB") #Join with moms
+    
+    #Add estimates for mom and dad abundance to dataframes, then combine with minimum number of parents for that year into one dataframe
+    mom_estimates <- round(t(exp(CK_fit[,1:n_yrs])),0)
+    colnames(mom_estimates)[1] <- "mom_estimates"
+    
+    dad_estimates <- round(t(exp(CK_fit[,9:16])))
+    colnames(dad_estimates)[1] <- "dad_estimates"
+    
+    estimate_vs_minimum <- cbind(min_adults[10:17,], mom_estimates, dad_estimates) %>% 
+    select(mom_estimates, unique_moms, dad_estimates, unique_dads)  
+    rownames(estimate_vs_minimum) <- min_adults$DOB[10:17]
+    estimate_vs_minimum #Final dataframe of estimates and minimum number
+    
+    
+    
+    
+    
+    
+    
+    ########################Troubleshooting##################################
+    #Check for immortal lemon sharks (ie years where there shouldn't be matches)
+    test95 <- subset(lems, subset=DOB == 1995, select=c(Indiv_ID, Capture_Year, Father, Mother, DOB, Sex)) #Subset for sharks borm in 1995
+    test2011 <- subset(lems, subset=DOB == 2011, select=c(Indiv_ID, Capture_Year, Father, Mother, DOB, Sex)) #subset for sharks born in 2011
+    test95$Mother[which(test95$Mother %in% test2011$Mother)] #see names of mothers that show up in both
+    length(unique(test95$Mother)) #What is the minimum number of mothers we should find for this year
+    
+    
     
     
     
@@ -292,9 +339,3 @@ colnames(sim_results) <- c("Nf", "NfSE", "Nm", "NmSE", "Estimated_truth", "Total
 write.table(sim_results, file = paste0("Lemon_CKMR_loop_nonlethal_aprioriN_",Estimated_truth,".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 
-########################Troubleshooting##################################
-#Check for immortal lemon sharks (ie years where there shouldn't be matches)
-test95 <- subset(lems, subset=DOB == 1995, select=c(Indiv_ID, Capture_Year, Father, Mother, DOB, Sex)) #Subset for sharks borm in 1995
-test2011 <- subset(lems, subset=DOB == 2011, select=c(Indiv_ID, Capture_Year, Father, Mother, DOB, Sex)) #subset for sharks born in 2011
-test95$Mother[which(test95$Mother %in% test2011$Mother)] #see names of mothers that show up in both
-length(unique(test2011$Mother)) #What is the minimum number of mothers we should find for this year

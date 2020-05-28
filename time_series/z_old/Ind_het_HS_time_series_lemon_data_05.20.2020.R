@@ -166,6 +166,7 @@ head(Juv_lems)
 
 ##Split Juv_lems into dataframes of positive and negative comparisons
 Juv_lems$Juv_study_DOB <- as.numeric(Juv_lems$Juv_study_DOB) #change DOB to type numeric
+head(Juv_lems, 10)
 
 #################### Create reference tables for individual/mean reproductive output ######################
 
@@ -208,13 +209,14 @@ tail(sum_table_dad)
 nrow(sum_table_dad)
 
 ##################Set up pairwise comparison matrices########################
-#Create dataframe of positive comparisons for MOTHERS - #Group by mother and split into a list of dataframes, each corresponding to the offspring of a mother
+##Create dataframe of positive comparisons for MOTHERS ##
+#Group by mother and split into a list of dataframes, each corresponding to the offspring of a mother
 grouped_by_mom <- Juv_lems %>% 
   group_by(Mother) %>% 
-  filter(Mother!="Unknown") %>% #Filter out unknown mothers
+  #filter(Mother!="Unknown") %>% #Filter out unknown mothers
   group_split() 
 
-#Filter out the dataframes that only have one observed sibling i.e. those with no matches
+#Filter out the dataframes with no matches
 group_mom2 <- Filter(function(x) nrow(x) > 1, grouped_by_mom)
 View(group_mom2[[1]])
 
@@ -225,7 +227,7 @@ comb_df <- function(x) {
 
 #Apply the combn function to every dataframe in the list
 group_mom3 <- lapply(group_mom2, comb_df)
-group_mom3[[1]]
+head(group_mom3[[1]],)
 
 #combine list of matrices into one matrix
 group_mom_df <- do.call(rbind, group_mom3)
@@ -252,16 +254,16 @@ for(i in 1:nrow(group_mom_df)){
 group_mom_df[,1:2] <- NULL #Remove unsorted columns
 
 #Check that sorting worked
-nrow(group_mom_df[group_mom_df[,2] > group_mom_df[,1],])
-nrow(group_mom_df[group_mom_df[,1] > group_mom_df[,2],])
-nrow(group_mom_df[group_mom_df$Young_sib_birth > group_mom_df$Old_sib_birth,]) #This total should equal the two above
+#nrow(group_mom_df[group_mom_df[,2] > group_mom_df[,1],])
+#nrow(group_mom_df[group_mom_df[,1] > group_mom_df[,2],])
+#nrow(group_mom_df[group_mom_df$Young_sib_birth > group_mom_df$Old_sib_birth,]) #This total should equal the two above
 
 #
 colnames(group_mom_df) <- c("Mother", "Mom_matches", "Old_sib_birth", "Young_sib_birth") #Name columns
 group_mom_df <- group_mom_df %>% select(c(Old_sib_birth, Young_sib_birth, Mom_matches, Mother)) #Order columns
 head(group_mom_df)
 
-#Remove duplicate comparisons and those we're not interested in
+#Remove same cohort comparisons and those we're not interested in
 mom_positives <- group_mom_df[which(group_mom_df$Old_sib_birth != group_mom_df$Young_sib_birth),]
 mom_positives <-  mom_positives[which(mom_positives$Young_sib_birth >= min_est_cohort),]
 head(mom_positives)
@@ -271,7 +273,7 @@ tail(mom_positives)
 #Create dataframe of positive comparisons for fatherS - #Group by father and split into a list of dataframes, each corresponding to the offspring of a father
 grouped_by_dad <- Juv_lems %>% 
   group_by(Father) %>% 
-  filter(Father!="Unknown") %>% #Filter out unknown Fathers
+  #filter(Father!="Unknown") %>% #Filter out unknown Fathers
   group_split() 
 
 #Filter out the dataframes that only have one observed sibling i.e. those with no matches
@@ -315,21 +317,21 @@ colnames(group_dad_df) <- c("Father", "dad_matches", "Old_sib_birth", "Young_sib
 group_dad_df <- group_dad_df %>% select(c(Old_sib_birth, Young_sib_birth, dad_matches, Father)) #Order columns
 head(group_dad_df)
 
-#Remove duplicate comparisons and those we're not interested in
+#Remove same cohort comparisons and those we're not interested in
 dad_positives <- group_dad_df[which(group_dad_df$Old_sib_birth != group_dad_df$Young_sib_birth),]
 dad_positives <-  dad_positives[which(dad_positives$Young_sib_birth >= min_est_cohort),]
 head(dad_positives)
 tail(dad_positives)
 
-#Create matrix of all pairwise comparisons
+#Create matrix of all possible pairwise comparisons
 all_comparisons <- t(combn(as.numeric(Juv_lems$Juv_study_DOB), m=2))
 all_comparisons <- plyr::count(t(apply(all_comparisons, 1, sort)))
 colnames(all_comparisons)[1:2] <- c("Old_sib_birth", "Young_sib_birth")
 
-#Remove duplicate values
+#Remove same cohort comparisons
 all_comparisons = all_comparisons2 <- all_comparisons[which(all_comparisons$Old_sib_birth != all_comparisons$Young_sib_birth),]
 
-#Create dataframes of total matches for moms and dads based on years of pairwise comparisons  
+#Before subtracting positive comparisons from total, need to create dataframe of total matches for moms and dads based on years of pairwise comparisons 
 (mom_total_matches <- mom_positives %>% 
   group_by(Old_sib_birth, Young_sib_birth) %>% 
   summarize(matches=sum(Mom_matches)))
