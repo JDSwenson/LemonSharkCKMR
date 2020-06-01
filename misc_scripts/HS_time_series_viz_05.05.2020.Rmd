@@ -11,6 +11,76 @@ require("knitr")
 opts_knit$set(root.dir = "~/R/Results")
 ```
 
+HS time-series null model simulations with small population size
+Took sample sizes of:
+30, 60, 90, 120, 150 in a population of 200 total individuals
+```{r, echo=FALSE}
+library(data.table)
+library(tidyverse)
+library(ggpubr)
+library(gridExtra)
+library(RColorBrewer)
+
+#Get all csv files from folder
+files <- list.files(path = "~/R/LemonSharkCKMR/", pattern = "*.csv", full.names = T)
+
+#Read in all csv files, bind together, drop NAs and filter out 0s (accidentally added 800 rows of 0s for each sample size ...)
+HS <- sapply(files, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  drop_na() %>% 
+  filter(Nf != 0 | Nm != 0)
+
+nrow(HS)
+head(HS)
+
+#UGLY ... make dataframe that merges data from males and females into one column and add column names
+HS2 <- data.frame(cbind(c(HS$Nf, HS$Nm), c(HS$NfSE, HS$NmSE), c(HS$F_truth, HS$M_truth), c(HS$Mothers_detected, HS$Fathers_detected), c(rep(HS$Total_samples, times=2))))
+HS2$Sex <- c(rep(c("F", "M"), each=nrow(HS)))
+colnames(HS2) <- c("N_est", "N_SE", "Truth", "Parents_detected", "Total_samples", "Sex")
+
+str(HS2)
+nrow(HS2)
+head(HS2)
+tail(HS2)
+
+#Create column for relative bias
+HS2 <- HS2 %>% 
+  mutate(Relative_bias = round(((N_est - Truth)/Truth)*100,0))
+
+#Get mean relative bias by samples taken
+HS2 %>% group_by(Total_samples) %>% 
+  summarize(mean(Relative_bias))
+
+#Get mean parents detected by samples taken
+HS2 %>% group_by(Total_samples, Sex) %>% 
+  summarize(mean(Parents_detected))
+
+HS3 <- HS2 %>%
+  filter(Parents_detected > 5)
+
+######################## Plot #########################
+
+#Plot relative bias by samples and sex
+ggplot(data=HS3, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Samples", y="Relative bias", title="Relative Bias By Sample Size") +
+  scale_fill_brewer(palette="Set2") #+
+  scale_x_discrete(labels = c("30", "60", "90", "120", "150"))
+
+#Plot relative bias by kin pairs detected - scatter plot
+G <- ggplot(data=HS2, aes(x=Parents_detected)) +
+  geom_point(aes(y=Relative_bias, color=Sex)) +
+  ylim(-100, 100) +
+  labs(x="Parents detected", y="Relative bias", title="Relative Bias by Kin Pairs") +
+  scale_colour_brewer(palette="Set2")
+
+G + facet_wrap(vars(factor(Total_samples)))
+```
+
+
 HS time-series null model simulations
 - Took 1414 samples total
 - Just simulated sampling of cohorts; didn't bother repeating over years (don't need year of capture in the final model anyway)
