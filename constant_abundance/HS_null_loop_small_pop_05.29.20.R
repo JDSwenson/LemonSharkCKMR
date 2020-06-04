@@ -55,7 +55,8 @@ f_results <- data.frame(matrix(0, nrow = iterations, ncol = 5))
 m_results <- data.frame(matrix(0, nrow = iterations, ncol = 5))
 for(samps in 1:5){
   n_samples <- c(30, 60, 90, 120, 150)[samps]
-for(iter in 1:iterations) {
+  sampled_ages <- data.frame(matrix(0, nrow = n_samples, ncol = iterations))
+  for(iter in 1:iterations) {
 
 #############################Sample population##############################
 Samples <- c() 
@@ -138,6 +139,7 @@ if(nrow(Data_dad_yes)>=1 & nrow(Data_mom_yes)>=1){
     m_results[iter, 4] <- N_m #truth
     m_results[iter, 5] <- n_samples
     m_results[iter, 6] <- "M"
+    sampled_ages[,iter] <- Samples
     save(CK_fit, file=paste0("../Results/model_objects/Lemon_CKModel_HS_sim_", n_samples,"_samples_", iter, "06_01_2020"))
   } else {
     f_results[iter, 1] <- NA
@@ -152,10 +154,12 @@ if(nrow(Data_dad_yes)>=1 & nrow(Data_mom_yes)>=1){
     m_results[iter, 4] <- NA
     m_results[iter, 5] <- NA
     m_results[iter, 6] <- NA
+    sampled_ages[,iter] <- NA
   }
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 }
   colnames(f_results) = colnames(m_results) <- c("N_est", "N_SE", "Parents_detected", "Truth", "Total_samples", "Sex")
+  colnames(sampled_ages) <- paste0("iter_", c(1:iterations))
   #f_results <- data.frame(f_results)
   #m_results <- data.frame(m_results)
   
@@ -166,7 +170,8 @@ if(nrow(Data_dad_yes)>=1 & nrow(Data_mom_yes)>=1){
   all_ests <- all_ests %>% 
     mutate(Relative_bias = round(((N_est - Truth)/Truth)*100,1))
   
-  write.table(all_ests, file = paste0("Halfsib_sim_small_pop_", n_samples, "_samps_06.01.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(all_ests, file = paste0("Halfsib_sim_small_pop_", n_samples, "_samps_06.04.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(sampled_ages, file = paste0("HS_sampled_ages_small_pop_", n_samples, "_samps_06.04.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 sim_end_time <- Sys.time()
 sim_end_time-sim_start_time
