@@ -1,13 +1,8 @@
-#9/16/19 Just changed the maturity age in the likelihood functions to match the maturity age used to generate the data (different for males and females)
-
 #Not assessing survival - keeping constant at 0.85
-#Pars=c(log(a_priori_abund/2),log(a_priori_abund/2))
 Surv <- 0.85
 max_age = 30 #max age of lemon sharks
-m_adult_age <- c(12:25) #Set ages at which males and females are mature.
-f_adult_age <- c(13:25)
-m_mat <- c(rep(0,11), rep(1,14)) #Set proportion of mature males and females at each age -- assumes knife-edge maturity.
-f_mat <- c(rep(0,12), rep(1,13))
+m_adult_age <- c(12:max_age) #Set ages at which males and females are mature.
+f_adult_age <- c(13:max_age)
 
 P_Mother = P_Father = array(NA,dim=c(n_yrs,n_yrs)) #creates two empty arrays, one for mother and one for father.  Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
 ### Maybe come back and use a truncated distribution instead (package truncnorm)

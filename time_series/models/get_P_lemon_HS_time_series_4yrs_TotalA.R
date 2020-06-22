@@ -3,7 +3,7 @@
 #Not assessing survival - keeping constant at 0.85
 Surv <- 0.85
 
-max_age = 25 #max age of lemon sharks
+max_age = 30 #max age of lemon sharks
 
 adult_age <- c(13:25) #Adult age of females -males assumed to be the same
 adult_mat <- c(rep(0,12), rep(1,13)) #knife-edge maturity

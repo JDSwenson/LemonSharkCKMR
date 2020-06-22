@@ -36,7 +36,7 @@ Estimated_truth <- 200
 #n_samples <- round(10*sqrt(Estimated_truth), 0) 
 #Total number of samples taken over length of study
 #n_samples_per_yr <- round(n_samples/length(samp_study_yrs),0)
-iterations <- 200 #Set number of iterations to run in the loop
+iterations <- 500 #Set number of iterations to run in the loop
 
 source("constant_abundance/models/get_P_lemon_HS.R")
 source("likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R")
@@ -51,10 +51,10 @@ P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=
 sim_start_time <- Sys.time()
 print(paste0("Simulation started at ", Sys.time()))
 
-f_results <- data.frame(matrix(0, nrow = iterations, ncol = 5))
-m_results <- data.frame(matrix(0, nrow = iterations, ncol = 5))
 for(samps in 1:5){
-  n_samples <- c(30, 60, 90, 120, 150)[samps]
+  f_results <- data.frame(matrix(0, nrow = iterations, ncol = 5))
+  m_results <- data.frame(matrix(0, nrow = iterations, ncol = 5))
+    n_samples <- c(30, 60, 90, 120, 150)[samps]
   sampled_ages <- data.frame(matrix(0, nrow = n_samples, ncol = iterations))
   for(iter in 1:iterations) {
 
@@ -89,8 +89,8 @@ for(i in 1:nrow(Data2)){
 
 #Randomly assign matches
 for(i in 1:nrow(Data2)){
-  Data2$Mom_Matches[i] <- sum(rpois(n=Data2$freq[i], lambda=Data2$Mom_prob[i]))
-  Data2$Dad_Matches[i] <- sum(rpois(n=Data2$freq[i], lambda=Data2$Dad_prob[i]))
+  Data2$Mom_Matches[i] <- sum(rbinom(n=Data2$freq[i], size=1, p=Data2$Mom_prob[i]))
+  Data2$Dad_Matches[i] <- sum(rbinom(n=Data2$freq[i], size=1, p=Data2$Dad_prob[i]))
 }
 
 
@@ -170,8 +170,8 @@ if(nrow(Data_dad_yes)>=1 & nrow(Data_mom_yes)>=1){
   all_ests <- all_ests %>% 
     mutate(Relative_bias = round(((N_est - Truth)/Truth)*100,1))
   
-  write.table(all_ests, file = paste0("Halfsib_sim_small_pop_", n_samples, "_samps_06.04.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-  write.table(sampled_ages, file = paste0("HS_sampled_ages_small_pop_", n_samples, "_samps_06.04.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(all_ests, file = paste0("Halfsib_sim_small_pop_", n_samples, "_samps_06.09.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(sampled_ages, file = paste0("HS_sampled_ages_small_pop_", n_samples, "_samps_06.09.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 sim_end_time <- Sys.time()
 sim_end_time-sim_start_time
