@@ -5,8 +5,8 @@ Surv <- 0.85
 
 max_age = 30 #max age of lemon sharks
 
-m_adult_age <- c(12:25) #Set ages at which males and females are mature.
-f_adult_age <- c(13:25)
+m_adult_age <- c(12:30) #Set ages at which males and females are mature.
+f_adult_age <- c(13:30)
 est_ages <- length(est_yrs)
 #m_mat <- c(rep(0,11), rep(1,14)) #Set proportion of mature males and females at each age -- assumes knife-edge maturity.
 #f_mat <- c(rep(0,12), rep(1,13))

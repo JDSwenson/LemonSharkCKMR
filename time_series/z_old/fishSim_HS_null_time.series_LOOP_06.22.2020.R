@@ -15,7 +15,7 @@ library(tidyverse)
 ####Time series - 4 years of estimates, 2 years of samples####
 t_start = 40 #First year we take samples
 t_end = 41 #Last year we take samples
-min_est_cohort <- 38 #First year we are estimating abundance
+min_est_cohort <- 39 #First year we are estimating abundance
 max_est_cohort <- t_end #Last year we are estimating abundance
 est_yrs <- min_est_cohort:max_est_cohort #All years for which we are estimating abundance
 n_yrs <- t_end #Number of years of study
@@ -68,9 +68,9 @@ iterations <- 100
 n_samp_yr = t_end-t_start #Number of years being sampled
 
 
-for(samps in 1:4){
+for(samps in 1:3){
   all_est <- data.frame() #Initialize dataframe for storing all iterations
-  n_samples_per_yr = c(200, 300, 400, 500)[samps]
+  n_samples_per_yr = c(300, 400, 500)[samps]
   n_samples <- n_samples_per_yr * n_samp_yr + n_samples_per_yr #because sampling starts in year t_start, we need to add one more year
   for(iter in 1:iterations) {
 
@@ -160,14 +160,14 @@ HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
 #Filter out intra-cohort comparisons
 mom_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort) %>% 
+    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - 13) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
 
 dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort) %>% 
+    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - 12) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
@@ -208,23 +208,23 @@ P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=
 #Fit model
 CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
 
-summary(CK_fit)
-exp(CK_fit[1:8])
+#summary(CK_fit)
+#exp(CK_fit[1:6])
 
 #compute variance covariance matrix
-D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1]), exp(CK_fit$p5[1]), exp(CK_fit$p6[1]), exp(CK_fit$p7[1]), exp(CK_fit$p8[1])) #derivatives of transformations
+D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1]), exp(CK_fit$p5[1]), exp(CK_fit$p6[1])) #derivatives of transformations
 VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
 VC = (t(D)%*%VC_trans%*%D) #delta method
 SE=round(sqrt(diag(VC)),0)
 
 #Rename columns
-colnames(CK_fit)[1:8] <- rep(c("N_est_F", "N_est_M"), each = 4)
+colnames(CK_fit)[1:6] <- rep(c("N_est_F", "N_est_M"), each = 3)
 
 #Combine above to make dataframe with truth and estimates side-by-side
 #store years from youngest sibling in comparisons to end of study
 yrs <- c(min(mom_positives$Young_sib_birth, dad_positives$Young_sib_birth):t_end)
 
-estimates <- data.frame(cbind(t(round(exp(CK_fit[1:8]),0)), SE, rep(c("F", "M"), each = 4)), yr = yrs)
+estimates <- data.frame(cbind(t(round(exp(CK_fit[1:6]),0)), SE, rep(c("F", "M"), each = 3)), yr = yrs)
 colnames(estimates) <- c("CKMR_estimate", "SE", "sex", "yr")
 
 moms_detected <- mom_positives %>% 
@@ -237,7 +237,7 @@ dads_detected <- dad_positives %>%
   summarize(sum(freq)) %>% 
   pull(2)
 
-estimates <- estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 2), parents_detected = c(moms_detected, dads_detected))
+estimates <- estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 6), parents_detected = c(moms_detected, dads_detected))
 
 all_est <- rbind(all_est, estimates)
 row.names(all_est) <- NULL
