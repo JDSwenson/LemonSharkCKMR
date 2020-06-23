@@ -9,10 +9,46 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 require("knitr")
 opts_knit$set(root.dir = "~/R/Results")
+library(data.table)
+library(tidyverse)
+library(ggpubr)
+library(gridExtra)
+library(RColorBrewer)
+setwd("~/R/R_working_dir/CKMR/Results/time_series") #For HP laptop
 ```
 
-Null model 1 
-HS time-series null model simulations with small population size
+Null model simulations with moderate population size (5000) using fishSim.
+Sex-specific, time-series giving a separate estimate for each year for three years.
+Took sample sizes of 400, 600, 800, 1000, each split over two years
+```{r}
+fs_hs <- read.csv("fishSim_HS_time_series_null_400samps_06.22.2020.csv", header=TRUE)
+head(fs_hs)
+
+#Add column for relative bias
+fs_hs <- fs_hs %>% mutate(relative_bias = ((CKMR_estimate-truth)/truth)*100)
+
+#Plot relative bias by year and sex
+ggplot(data=fs_hs, aes(x=factor(yr))) +
+  geom_boxplot(aes(y=relative_bias, fill=sex)) +
+  #ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Samples", y="Relative bias", title="Relative Bias By Sample Size") +
+  scale_fill_brewer(palette="Set2") #+
+  scale_x_discrete(labels = c("30", "60", "90", "120", "150"))
+
+#Plot relative bias by kin pairs detected - scatter plot
+G <- ggplot(data=all, aes(x=Parents_detected)) +
+  geom_point(aes(y=Relative_bias, color=Sex)) +
+  #ylim(-100, 100) +
+  labs(x="Parents detected", y="Relative bias", title="Relative Bias by Kin Pairs") +
+  scale_colour_brewer(palette="Set2")
+
+G + facet_wrap(vars(factor(Total_samples)))
+```
+
+
+Null model simulations with small population size - constant abundance, no time-series
 Took sample sizes of:
 30, 60, 90, 120, 150 in a population of 200 total individuals
 200 iterations
@@ -25,30 +61,47 @@ library(RColorBrewer)
 
 #Get all csv files from folder
 
+#################Sex-specific model###################
+
 #getwd()
 #list.files("~/R/R_working_dir/CKMR/Results/HS_constant_abundance/")
-files <- list.files(path = "~/R/R_working_dir/CKMR/Results/HS_constant_abundance/", pattern = "*Halfsib", full.names = T)
+files <- list.files(path = "~/R/R_working_dir/CKMR/Results/HS_constant_abundance/sex-specific", pattern = "*Halfsib", full.names = T)
 
 #Read in all csv files, bind together, drop NAs and filter out 0s (accidentally added 800 rows of 0s for each sample size ...)
 HS <- sapply(files, read_csv, simplify=FALSE) %>% 
-bind_rows() #%>% 
+bind_rows() %>% 
   drop_na() %>% 
   filter(N_est != 0)
   
 nrow(HS)
 ncol(HS)
 head(HS)
+tail(HS)
 
 #Create column for relative bias
 #HS <- HS %>% 
 #  mutate(Relative_bias = round(((N_est - Truth)/Truth)*100,0))
 
+###############Sex-combined model#################
+files2 <- list.files(path = "~/R/R_working_dir/CKMR/Results/HS_constant_abundance/combined_sexes", pattern = "Halfsib", full.names = T)
+
+TA <- sapply(files2, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  drop_na() %>% 
+  filter(Parents_detected != 0)
+
+#Combine sex-specific and sex-combined results
+all <- HS %>% 
+  full_join(TA)
+
+nrow(all)
+
 ######################## Plot #########################
 
 #Plot relative bias by samples and sex
-ggplot(data=HS, aes(x=factor(Total_samples))) +
+ggplot(data=all, aes(x=factor(Total_samples))) +
   geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
-  ylim(-100, 100) +
+  #ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +
   annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
   labs(x="Samples", y="Relative bias", title="Relative Bias By Sample Size") +
@@ -56,9 +109,9 @@ ggplot(data=HS, aes(x=factor(Total_samples))) +
   scale_x_discrete(labels = c("30", "60", "90", "120", "150"))
 
 #Plot relative bias by kin pairs detected - scatter plot
-G <- ggplot(data=HS, aes(x=Parents_detected)) +
+G <- ggplot(data=all, aes(x=Parents_detected)) +
   geom_point(aes(y=Relative_bias, color=Sex)) +
-  ylim(-100, 100) +
+  #ylim(-100, 100) +
   labs(x="Parents detected", y="Relative bias", title="Relative Bias by Kin Pairs") +
   scale_colour_brewer(palette="Set2")
 
@@ -275,7 +328,6 @@ apply(HS_ts_sub, 2, mean) #Calculate mean samples per year
 
 
 ###################### Plot #################################
-
 #Plot relative bias by year
 ggplot(data=HS.m, aes(x=variable)) +
   geom_boxplot(aes(y=relative_bias, fill=sex)) +
@@ -295,6 +347,28 @@ G <- ggplot(data=HS.m, aes(x=parents_detected)) +
   scale_colour_brewer(palette="Set2")
 
 G + facet_wrap(vars(variable))
+
+#Plot sex-specific and sex-combined results together
+#Create dataframe with sex-specific info and also total abundance so they can be plotted together
+TA.m$sex <- "combined sex"
+nrow(HS.m)
+all.m <- HS.m %>% 
+  full_join(TA.m) %>% 
+  select(c(variable, relative_bias, sex, parents_detected))
+
+nrow(all.m)
+tail(all.m)
+head(all.m)
+
+#Plot relative bias by year
+ggplot(data=all.m, aes(x=variable)) +
+  geom_boxplot(aes(y=relative_bias, fill=sex)) +
+  ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Year", y="Relative bias", title="Relative Bias Per Year") +
+  scale_fill_brewer(palette="Set2") +
+  scale_x_discrete(labels = c("Year 4", "Year 5", "Year 6", "Year 7"))
 
 
 #Plot cv by year
