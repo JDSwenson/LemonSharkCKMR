@@ -1,22 +1,5 @@
 #Model for calculating prior probability of kinship for half-siblings
 
-<<<<<<< HEAD:time_series/z_old/get_P_lemon_HS_time_series_4yrs.R
-#Not assessing survival - keeping constant at 0.85
-Surv <- 0.85
-
-max_age = 30 #max age of lemon sharks
-
-m_adult_age <- c(12:30) #Set ages at which males and females are mature.
-f_adult_age <- c(13:30)
-est_ages <- length(est_yrs)
-#m_mat <- c(rep(0,11), rep(1,14)) #Set proportion of mature males and females at each age -- assumes knife-edge maturity.
-#f_mat <- c(rep(0,12), rep(1,13))
-
-#If estimating survival, activate below code
-#Pars=c(log(a_priori_abund/2),log(a_priori_abund/2), a_priori_surv)
-
-=======
->>>>>>> 67be621d61def97a92845aa807ca2184157dba67:time_series/models/get_P_lemon_HS_time_series_4yrs.R
 P_Mother = P_Father = array(NA,dim=c(n_yrs,n_yrs)) #creates two empty arrays, one for mother and one for father.  Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
 
 get_P_lemon <- function(Pars,P_Mother,P_Father,n_yrs,t_start,t_end){

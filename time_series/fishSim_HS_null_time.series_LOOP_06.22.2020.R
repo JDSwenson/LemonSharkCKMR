@@ -33,6 +33,7 @@ f_adult_age <- c(13:30)
 m_mat <- min(m_adult_age) #Age at maturity for males
 f_mat <- min(f_adult_age) #Age at maturity for females
 
+
 ####set up the simulation parameters####
 sim_yrs = c(1:(t_start-1))
 #makeFounder parameters
@@ -75,17 +76,12 @@ Pars=c(log(N_f),log(N_m))
 ####Start loop####
 sim_start_time <- Sys.time()
 print(paste0("Simulation started at ", Sys.time()))
-iterations <- 100
+iterations <- 50
 n_samp_yr = t_end-t_start #Number of years being sampled
 
-<<<<<<< HEAD:time_series/z_old/fishSim_HS_null_time.series_LOOP_06.22.2020.R
-
-for(samps in 1:3){
-=======
-for(samps in 1:4){
->>>>>>> 67be621d61def97a92845aa807ca2184157dba67:time_series/fishSim_HS_null_time.series_LOOP_06.22.2020.R
+for(samps in 1:2){
   all_est <- data.frame() #Initialize dataframe for storing all iterations
-  n_samples_per_yr = c(300, 400, 500)[samps]
+  n_samples_per_yr = c(200, 300)[samps]
   n_samples <- n_samples_per_yr * n_samp_yr + n_samples_per_yr #because sampling starts in year t_start, we need to add one more year
   for(iter in 1:iterations) {
 
@@ -103,7 +99,6 @@ Dad_truth <- c()
 Mom_truth <- c()
 for (y in 1:length(sim_yrs)) {
   indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve, firstBreed = 0)
-  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
   
   #Store truth values
   Dad_truth[y] <- indiv %>% 
@@ -114,14 +109,15 @@ for (y in 1:length(sim_yrs)) {
     filter(Sex == "F" & is.na(DeathY)==TRUE & AgeLast >= f_mat) %>%
     summarize(n())
   
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
+  
   indiv <- birthdays(indiv)
 }
 
 #Repeats the above loop, assigning offspring, deaths, and birthdays, but this time also draws samples each year and records which animals were sampled in indiv
 for (y in c(t_start:t_end)) {
   indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve, firstBreed = 0)
-  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
-  
+ 
   #Store truth values
   Dad_truth[y] <- indiv %>% 
     filter(Sex == "M" &  is.na(DeathY)==TRUE & AgeLast >= m_mat) %>%
@@ -132,6 +128,9 @@ for (y in c(t_start:t_end)) {
     summarize(n())
   
   indiv <- capture(indiv, n=n_samples_per_yr, year=y, fatal = FALSE) #Capture individuals
+  
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
+  
   indiv <- birthdays(indiv) #Age each individual by one year
 }
 
@@ -167,17 +166,17 @@ HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
   select(c(Old_sib_birth, Young_sib_birth, Old_sib_mom, Young_sib_mom, Old_sib_dad, Young_sib_dad))
 
 #Split HSPs dataframe into MHS and PHS pairs
-#Filter out intra-cohort comparisons and comparisons we're not interested in
+#Filter out 1) intra-cohort comparisons, 2) comparisons where the younger individual is outside the range of years we're estimating, & 3) 
 mom_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - 13) %>% 
+    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
 
 dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - 12) %>% 
+    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
@@ -201,15 +200,20 @@ non_HSPs_2_tbl <- inner_join(indiv, non_HSPs_tbl, by = "Me") %>%
   select(c(Old_sib_birth, Young_sib_birth))
 
 #Create table of all negative comparisons, count occurences, and filter intracohort comparisons
-mom_negatives = dad_negatives <- non_HSPs_2_tbl %>%     plyr::count() %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort)
+mom_negatives <- non_HSPs_2_tbl %>%   
+  filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
+  plyr::count()
+
+dad_negatives <- non_HSPs_2_tbl %>%   
+  filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
+  plyr::count()
 
 ##Define variables and functions
-#source("~/R/R_working_dir/CKMR/LemonSharkCKMR/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #For desktop
-#source("~/R/R_working_dir/CKMR/LemonSharkCKMR/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For desktop
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #For desktop
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For desktop
 
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #for laptop
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For desktop
+#source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #for laptop
+#source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For desktop
 
 P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
@@ -221,13 +225,8 @@ P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=
 #Fit model
 CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
 
-<<<<<<< HEAD:time_series/z_old/fishSim_HS_null_time.series_LOOP_06.22.2020.R
 #summary(CK_fit)
 #exp(CK_fit[1:6])
-=======
-summary(CK_fit)
-exp(CK_fit[1:6])
->>>>>>> 67be621d61def97a92845aa807ca2184157dba67:time_series/fishSim_HS_null_time.series_LOOP_06.22.2020.R
 
 #compute variance covariance matrix
 D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1]), exp(CK_fit$p5[1]), exp(CK_fit$p6[1])) #derivatives of transformations
@@ -255,12 +254,12 @@ dads_detected <- dad_positives %>%
   summarize(sum(freq)) %>% 
   pull(2)
 
-estimates <- estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 6), parents_detected = c(moms_detected, dads_detected))
+(estimates <- estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 6), parents_detected = c(moms_detected, dads_detected)))
 
 all_est <- rbind(all_est, estimates)
 row.names(all_est) <- NULL
 
-save(CK_fit, file=paste0("models/Lemon_CKModel_HS_time_series_fishSim_6.23.20_", iter))
+save(CK_fit, file=paste0("models/Lemon_CKModel_HS_time_series_fishSim_6.24.20_", iter))
 print(paste0("finished iteration", iter, " at: ", Sys.time()))
 }
 
