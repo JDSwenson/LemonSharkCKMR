@@ -1,6 +1,9 @@
 #fishSim CKMR loop
 #Constant abundance, one estimate
 #Presently, estimating one abundance for males and one for females, and calling the "truth" the mean for the range of years covered by the estimate (aka earliest year for which we have an estimate)
+
+#6/29/2020 update: made new indiv dataframe to select only cohorts from the years we're estimating. However, when we subset for only the years of interest, then we can't get an estimate for the first year ... need to think about this more and troubleshoot ... 
+
 rm(list=ls())
 
 library(fishSim)
@@ -19,9 +22,9 @@ library(tidyverse)
 #f_adult_age: minimum value is used in conjunction with max_age to determine which comparisons should have a non-zero probability.
 
 ####Time series - 3 years of estimates, 2 years of samples####
-t_start = 40 #First year we take samples
+t_start = 39 #First year we take samples
 t_end = 41 #Last year we take samples
-min_est_cohort <- 39 #First year we are estimating abundance
+min_est_cohort <- 40 #First year we are estimating abundance
 max_est_cohort <- t_end #Last year we are estimating abundance
 est_yrs <- min_est_cohort:max_est_cohort #All years for which we are estimating abundance
 est_ages <- length(est_yrs)
@@ -58,8 +61,8 @@ mat_m[13:maxAge]=1  #Knife-edge maturity for males, beginning at age 12 - add 1 
 mat_f <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
 mat_f[14:maxAge] <- 1  #Knife-edge maturity for females, beginning at age 13 - add 1 (so 14) because individuals are born to age 0 cohort
 
-maleCurve <- c(mat_m, rep(max(mat_m), 1000)) #Set male age at maturity
-femaleCurve <- c(mat_f, rep(max(mat_m), 1000)) #Set female age at maturity
+maleCurve <- c(mat_m, rep(max(mat_m), 5000)) #Set male age at maturity
+femaleCurve <- c(mat_f, rep(max(mat_m), 5000)) #Set female age at maturity
 maxClutch <- 18 #Maximum number of offspring one individual can possibly produce
 mat_type <- "ageSex"
 
@@ -76,12 +79,12 @@ Pars=c(log(N_f),log(N_m))
 ####Start loop####
 sim_start_time <- Sys.time()
 print(paste0("Simulation started at ", Sys.time()))
-iterations <- 50
+iterations <- 100
 n_samp_yr = t_end-t_start #Number of years being sampled
 
 for(samps in 1:2){
   all_est <- data.frame() #Initialize dataframe for storing all iterations
-  n_samples_per_yr = c(200, 300)[samps]
+  n_samples_per_yr = c(300, 500)[samps]
   n_samples <- n_samples_per_yr * n_samp_yr + n_samples_per_yr #because sampling starts in year t_start, we need to add one more year
   for(iter in 1:iterations) {
 
@@ -114,7 +117,7 @@ for (y in 1:length(sim_yrs)) {
   indiv <- birthdays(indiv)
 }
 
-#Repeats the above loop, assigning offspring, deaths, and birthdays, but this time also draws samples each year and records which animals were sampled in indiv
+#Repeats the above loop, in the following order: 1) breed, 2) extract true abundance of adults that bred, 3) sample, 4) kill individuals, 5) birthday - adds one to AgeLast column
 for (y in c(t_start:t_end)) {
   indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve, firstBreed = 0)
  
@@ -134,6 +137,9 @@ for (y in c(t_start:t_end)) {
   indiv <- birthdays(indiv) #Age each individual by one year
 }
 
+#Subset indiv for only animals born in the cohorts of interest
+indiv2 <- subset(indiv, BirthY >= (min_est_cohort - 1))
+
 #Store truth values as vectors (dplyr makes them a list)
 Mom_truth <- unlist(Mom_truth) 
 Dad_truth <- unlist(Dad_truth)
@@ -145,7 +151,7 @@ non_POPs <- pairs[pairs$OneTwo == 0,1:2] ##pairs that are not POPs
 non_HSPs <- pairs[pairs$TwoTwo == 0,1:2] ##pairs that are not half-sibs
 
 # think of this dataframe as a renaming of indiv - specifically, the ID column is renamed "younger" so it can be joined with HSPs_tbl below)
-youngerbirthyears <- indiv %>%
+youngerbirthyears <- indiv2 %>%
   select(Me, BirthY, Mum, Dad) %>% 
   rename("younger" = Me, "Young_sib_birth" = BirthY, "Young_sib_mom" = Mum, "Young_sib_dad" = Dad)
 
@@ -160,7 +166,7 @@ HSPs_tbl <- HSPs %>%
 #Join all the information from indiv with the IDs of the sampled individuals in HSPs_2_tbl. 
 #Inner join returns all rows from x where there are matching values in y, so returns all rows of indiv that correspond with the older sib IDs stored in HSPs_tbl
 #left_join returns all rows from x and all columns from x and y, so grabs all the information from the renamed indiv dataframe (above) for all the younger sampled individuals
-HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
+HSPs_2_tbl <- inner_join(indiv2, HSPs_tbl, by = "Me") %>%
   left_join(youngerbirthyears, by = "younger")  %>%
   rename(Old_sib_birth = BirthY, "Old_sib_mom" = Mum, "Old_sib_dad" = Dad) %>% 
   select(c(Old_sib_birth, Young_sib_birth, Old_sib_mom, Young_sib_mom, Old_sib_dad, Young_sib_dad))
@@ -169,14 +175,14 @@ HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
 #Filter out 1) intra-cohort comparisons, 2) comparisons where the younger individual is outside the range of years we're estimating, & 3) 
 mom_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
+    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
 
 dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
+    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
@@ -194,18 +200,18 @@ non_HSPs_tbl <- non_HSPs %>%
 
 ##Extract the values of indiv for the older individual in each comparison.
 #Join all the information from indiv with the IDs of the sampled individuals in non_HSPs_2_tbl. 
-non_HSPs_2_tbl <- inner_join(indiv, non_HSPs_tbl, by = "Me") %>%
+non_HSPs_2_tbl <- inner_join(indiv2, non_HSPs_tbl, by = "Me") %>%
   left_join(youngerbirthyears, by = "younger")  %>%
   rename(Old_sib_birth = BirthY) %>% 
   select(c(Old_sib_birth, Young_sib_birth))
 
 #Create table of all negative comparisons, count occurences, and filter intracohort comparisons
 mom_negatives <- non_HSPs_2_tbl %>%   
-  filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
+  filter(Young_sib_birth != Old_sib_birth) %>% 
   plyr::count()
 
 dad_negatives <- non_HSPs_2_tbl %>%   
-  filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
+  filter(Young_sib_birth != Old_sib_birth) %>% 
   plyr::count()
 
 ##Define variables and functions
@@ -229,19 +235,24 @@ CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Nega
 #exp(CK_fit[1:6])
 
 #compute variance covariance matrix
-D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1]), exp(CK_fit$p5[1]), exp(CK_fit$p6[1])) #derivatives of transformations
+#Estimating for two years
+D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1])) #derivatives of transformations
+
+#Estimating for three years
+#D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1]), exp(CK_fit$p5[1]), exp(CK_fit$p6[1])) #derivatives of transformations
+
 VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
 VC = (t(D)%*%VC_trans%*%D) #delta method
 SE=round(sqrt(diag(VC)),0)
 
-#Rename columns
-colnames(CK_fit)[1:6] <- rep(c("N_est_F", "N_est_M"), each = 3)
+#Rename columns - change according to years estimating
+colnames(CK_fit)[1:4] <- rep(c("N_est_F", "N_est_M"), each = 2)
 
 #Combine above to make dataframe with truth and estimates side-by-side
 #store years from youngest sibling in comparisons to end of study
 yrs <- c(min(mom_positives$Young_sib_birth, dad_positives$Young_sib_birth):t_end)
 
-estimates <- data.frame(cbind(t(round(exp(CK_fit[1:6]),0)), SE, rep(c("F", "M"), each = 3)), yr = yrs)
+estimates <- data.frame(cbind(t(round(exp(CK_fit[1:4]),0)), SE, rep(c("F", "M"), each = 2)), yr = yrs)
 colnames(estimates) <- c("CKMR_estimate", "SE", "sex", "yr")
 
 moms_detected <- mom_positives %>% 
@@ -254,16 +265,16 @@ dads_detected <- dad_positives %>%
   summarize(sum(freq)) %>% 
   pull(2)
 
-(estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 6), parents_detected = c(moms_detected, dads_detected)))
+(estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 4), parents_detected = c(moms_detected, dads_detected)))
 
 all_est <- rbind(all_est, estimates)
 row.names(all_est) <- NULL
 
-save(CK_fit, file=paste0("models/Lemon_CKModel_HS_time_series_fishSim_6.24.20_", iter))
+save(CK_fit, file=paste0("models/Lemon_CKModel_HS_time_series_fishSim_6.29.20_", iter))
 print(paste0("finished iteration", iter, " at: ", Sys.time()))
 }
 
-write.table(all_est, file = paste0("fishSim_HS_time_series_null_", n_samples, "samps_06.23.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(all_est, file = paste0("fishSim_HS_time_series_null_", n_samples, "samps_06.29.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 
 sim_end_time <- Sys.time()

@@ -5,8 +5,8 @@ Surv <- 0.85
 
 max_age = 30 #max age of lemon sharks
 
-adult_age <- c(13:25) #Adult age of females -males assumed to be the same
-adult_mat <- c(rep(0,12), rep(1,13)) #knife-edge maturity
+adult_age <- c(12:30) #Adult age of females -males assumed to be the same
+adult_mat <- c(rep(0,11), rep(1,19)) #knife-edge maturity
 
 P_Parent = array(NA,dim=c(n_yrs,n_yrs)) #creates two empty arrays, one for mother and one for father.  Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
 

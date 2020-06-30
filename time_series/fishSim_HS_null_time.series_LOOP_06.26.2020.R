@@ -1,6 +1,9 @@
 #fishSim CKMR loop
 #Constant abundance, one estimate
 #Presently, estimating one abundance for males and one for females, and calling the "truth" the mean for the range of years covered by the estimate (aka earliest year for which we have an estimate)
+
+#6/26/2020 update: made new indiv dataframe to select only cohorts from the years we're estimating. However, when we subset for only the years of interest, then we can't get an estimate for the first year ... need to think about this more and troubleshoot ... 
+
 rm(list=ls())
 
 library(fishSim)
@@ -21,7 +24,7 @@ library(tidyverse)
 ####Time series - 3 years of estimates, 2 years of samples####
 t_start = 40 #First year we take samples
 t_end = 41 #Last year we take samples
-min_est_cohort <- 39 #First year we are estimating abundance
+min_est_cohort <- 40 #First year we are estimating abundance
 max_est_cohort <- t_end #Last year we are estimating abundance
 est_yrs <- min_est_cohort:max_est_cohort #All years for which we are estimating abundance
 est_ages <- length(est_yrs)
@@ -134,6 +137,9 @@ for (y in c(t_start:t_end)) {
   indiv <- birthdays(indiv) #Age each individual by one year
 }
 
+#Subset indiv for only animals born in the cohorts of interest
+indiv2 <- subset(indiv, BirthY >= min_est_cohort)
+
 #Store truth values as vectors (dplyr makes them a list)
 Mom_truth <- unlist(Mom_truth) 
 Dad_truth <- unlist(Dad_truth)
@@ -145,7 +151,7 @@ non_POPs <- pairs[pairs$OneTwo == 0,1:2] ##pairs that are not POPs
 non_HSPs <- pairs[pairs$TwoTwo == 0,1:2] ##pairs that are not half-sibs
 
 # think of this dataframe as a renaming of indiv - specifically, the ID column is renamed "younger" so it can be joined with HSPs_tbl below)
-youngerbirthyears <- indiv %>%
+youngerbirthyears <- indiv2 %>%
   select(Me, BirthY, Mum, Dad) %>% 
   rename("younger" = Me, "Young_sib_birth" = BirthY, "Young_sib_mom" = Mum, "Young_sib_dad" = Dad)
 
@@ -160,7 +166,7 @@ HSPs_tbl <- HSPs %>%
 #Join all the information from indiv with the IDs of the sampled individuals in HSPs_2_tbl. 
 #Inner join returns all rows from x where there are matching values in y, so returns all rows of indiv that correspond with the older sib IDs stored in HSPs_tbl
 #left_join returns all rows from x and all columns from x and y, so grabs all the information from the renamed indiv dataframe (above) for all the younger sampled individuals
-HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
+HSPs_2_tbl <- inner_join(indiv2, HSPs_tbl, by = "Me") %>%
   left_join(youngerbirthyears, by = "younger")  %>%
   rename(Old_sib_birth = BirthY, "Old_sib_mom" = Mum, "Old_sib_dad" = Dad) %>% 
   select(c(Old_sib_birth, Young_sib_birth, Old_sib_mom, Young_sib_mom, Old_sib_dad, Young_sib_dad))
@@ -169,14 +175,14 @@ HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
 #Filter out 1) intra-cohort comparisons, 2) comparisons where the younger individual is outside the range of years we're estimating, & 3) 
 mom_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
+    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
 
 dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
+    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
@@ -194,18 +200,18 @@ non_HSPs_tbl <- non_HSPs %>%
 
 ##Extract the values of indiv for the older individual in each comparison.
 #Join all the information from indiv with the IDs of the sampled individuals in non_HSPs_2_tbl. 
-non_HSPs_2_tbl <- inner_join(indiv, non_HSPs_tbl, by = "Me") %>%
+non_HSPs_2_tbl <- inner_join(indiv2, non_HSPs_tbl, by = "Me") %>%
   left_join(youngerbirthyears, by = "younger")  %>%
   rename(Old_sib_birth = BirthY) %>% 
   select(c(Old_sib_birth, Young_sib_birth))
 
 #Create table of all negative comparisons, count occurences, and filter intracohort comparisons
 mom_negatives <- non_HSPs_2_tbl %>%   
-  filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
+  filter(Young_sib_birth != Old_sib_birth) %>% 
   plyr::count()
 
 dad_negatives <- non_HSPs_2_tbl %>%   
-  filter(Young_sib_birth != Old_sib_birth & Young_sib_birth >= min_est_cohort & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
+  filter(Young_sib_birth != Old_sib_birth) %>% 
   plyr::count()
 
 ##Define variables and functions
