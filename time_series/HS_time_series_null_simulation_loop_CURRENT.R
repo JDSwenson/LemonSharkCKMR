@@ -44,7 +44,7 @@ study_yrs = c(t_start:t_end)
 
 #Set Estimated_truth and number of males and females
 #n_yrs
-total_abundance <- c(5000, 5000, 5000, 5000) #Can't estimate for yr=1 because abundance is calculated at time of younger sibling's birth, and there is no scenario where the younger sibling was born in yr1. Also unlikely to get estimate for yr=2 because there are relatively few pairwise comparisons where the younger sibling was born in yr2. So length of vector should be n_yrs-2
+total_abundance <- c(5000, 5500, 6000, 6500) #Can't estimate for yr=1 because abundance is calculated at time of younger sibling's birth, and there is no scenario where the younger sibling was born in yr1. Also unlikely to get estimate for yr=2 because there are relatively few pairwise comparisons where the younger sibling was born in yr2. So length of vector should be n_yrs-2
 N_f <- c(total_abundance/2.5)
 N_m <- c(total_abundance-N_f)
 Pars=c(log(N_f),log(N_m))
@@ -55,8 +55,9 @@ estimated_truth <- max(total_abundance)
 n_samples <- round(10*sqrt(estimated_truth)*2, 0)
 #n_samples_per_yr <- round(n_samples/length(study_yrs),0) #Total number of samples taken over length of study
 
-source("./time_series/models/get_P_lemon_HS_time_series_4yrs.R")
-source("./likelihood_functions/lemon_neg_log_like_HS.R")
+#Below are for HP laptop
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/time_series/models/get_P_lemon_HS_time_series_4yrs.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R")
 
 P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 #P$P_Mother
@@ -66,7 +67,7 @@ P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=
 sim_start_time <- Sys.time()
 print(paste0("Simulation started at ", Sys.time()))
 
-iterations <- 300 #Set number of iterations to run in the loop
+iterations <- 100 #Set number of iterations to run in the loop
 sim_results <- matrix(0, nrow = iterations, ncol = 39)
 
 for(iter in 1:iterations) {
@@ -201,7 +202,7 @@ Data_mom_no <- Data_mom_no[,c(1:3)]
     sim_results[iter, 38] <- sum(Samples==6)
     sim_results[iter, 39] <- sum(Samples==7)
     
-    save(CK_fit, file=paste0("../Results/model_objects/Lemon_CKModel_HS_time_series_null_iteration_", iter))
+    #save(CK_fit, file=paste0("../Results/model_objects/Lemon_CKModel_HS_time_series_null_iteration_", iter))
     #  } else {
     #sim_results[iter, 1]=NA
     #sim_results[iter, 2]=NA
@@ -230,4 +231,4 @@ colnames(sim_results) <- c("Nf_yr4", "NfSE_yr4", "NfTruth_yr4", "Moms_detected_y
                            "Nm_yr7", "NmSE_yr7", "NmTruth_yr7", "Dads_detected_yr7", "Yr1_samples", "Yr2_samples", "Yr3_samples", "Yr4_samples", "Yr5_samples", "Yr6_samples", "Yr7_samples")
 #head(sim_results, 30)
 
-write.table(sim_results, file = paste0("../Results/HS_time_series_null_5.04.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(sim_results, file = paste0("~/R/R_working_dir/CKMR/Results/HS_time_series_changingPopSize_null_6.25.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)

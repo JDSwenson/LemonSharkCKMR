@@ -56,10 +56,10 @@ survCurv <- Prop_age #Sets probability of founder cohort belonging to each age c
 #Set parameters for altMate
 batchSize = 6 #average size of brood -- assumes Poisson distribution for fecundity (which is default for altMate)
 mat_m <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
-mat_m[13:maxAge]=1  #Knife-edge maturity for males, beginning at age 12 - add 1 (so 13) because individuals are born to age 0 cohort
+mat_m[12:maxAge]=1  #Knife-edge maturity for males, beginning at age 12
 
 mat_f <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
-mat_f[14:maxAge] <- 1  #Knife-edge maturity for females, beginning at age 13 - add 1 (so 14) because individuals are born to age 0 cohort
+mat_f[13:maxAge] <- 1  #Knife-edge maturity for females, beginning at age 13
 
 maleCurve <- c(mat_m, rep(max(mat_m), 5000)) #Set male age at maturity
 femaleCurve <- c(mat_f, rep(max(mat_f), 5000)) #Set female age at maturity
@@ -100,6 +100,7 @@ indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, surv
 
 Dad_truth <- c()
 Mom_truth <- c()
+
 for (y in 1:length(sim_yrs)) {
   indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve, firstBreed = 0)
   
@@ -132,13 +133,13 @@ for (y in c(t_start:t_end)) {
   
   indiv <- capture(indiv, n=n_samples_per_yr, year=y, fatal = FALSE) #Capture individuals
   
+  indiv <- indiv %>% 
+    mutate(SampY=replace(SampY, BirthY < (min_est_cohort-1), NA))
+  
   indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
   
   indiv <- birthdays(indiv) #Age each individual by one year
 }
-
-#Subset indiv for only animals born in the cohorts of interest
-indiv2 <- subset(indiv, BirthY >= (min_est_cohort - 1))
 
 #Store truth values as vectors (dplyr makes them a list)
 Mom_truth <- unlist(Mom_truth) 
@@ -152,11 +153,11 @@ non_HSPs <- pairs[pairs$TwoTwo == 0,1:2] ##pairs that are not half-sibs
 #relatives <- namedRelatives(pairs)
 
 # think of this dataframe as a renaming of indiv - specifically, the ID column is renamed "younger" so it can be joined with HSPs_tbl below)
-youngerbirthyears <- indiv2 %>%
+youngerbirthyears <- indiv %>%
   select(Me, BirthY, Mum, Dad) %>% 
   rename("younger" = Me, "Young_sib_birth" = BirthY, "Young_sib_mom" = Mum, "Young_sib_dad" = Dad)
 
-#Create dataframe with IDs of sampled half-sibs and columns named appropriately for joins
+#Create dataframe with IDs of sampled half-sibs and columns named appropriately for joins. The second column is the younger individual in each comparison. We name this column "younger" so we can retrieve the appropriate information from the youngerbirthyears dataframe above. We name the first column Me so we can retrieve the appropriate information from the indiv dataframe.
 HSPs_tbl <- HSPs %>% 
   rename(
     Me = Var1,
@@ -164,26 +165,27 @@ HSPs_tbl <- HSPs %>%
   mutate_all(as.character)
 
 #Extract the values of indiv for the older individual in each comparison.
-#Join all the information from indiv with the IDs of the sampled individuals in HSPs_2_tbl. 
-#Inner join returns all rows from x where there are matching values in y, so returns all rows of indiv that correspond with the older sib IDs stored in HSPs_tbl
-#left_join returns all rows from x and all columns from x and y, so grabs all the information from the renamed indiv dataframe (above) for all the younger sampled individuals
-HSPs_2_tbl <- inner_join(indiv2, HSPs_tbl, by = "Me") %>%
+#Inner join returns all rows from x where there are matching values in y, so returns all rows of indiv that correspond with the older sib IDs stored in HSPs_tbl. Also returns the ID for all the younger individuals in the comparison.
+
+#Join the information from above with the IDs of the sampled individuals in HSPs_2_tbl.
+#left_join returns all rows from x and all columns from x and y, so grabs all the information from the renamed indiv dataframe (above) for all the younger sampled individuals. 
+HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
   left_join(youngerbirthyears, by = "younger")  %>%
-  rename(Old_sib_birth = BirthY, "Old_sib_mom" = Mum, "Old_sib_dad" = Dad) %>% 
+  rename("Old_sib_birth" = BirthY, "Old_sib_mom" = Mum, "Old_sib_dad" = Dad) %>% 
   select(c(Old_sib_birth, Young_sib_birth, Old_sib_mom, Young_sib_mom, Old_sib_dad, Young_sib_dad))
 
 #Split HSPs dataframe into MHS and PHS pairs
-#Filter out 1) intra-cohort comparisons, 2) comparisons where the younger individual is outside the range of years we're estimating, & 3) 
+#Filter out 1) intra-cohort comparisons, 2) comparisons where the younger individual is outside the range of years we're estimating, & 3)
 mom_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth-Old_sib_birth <= maxAge - m_mat) %>% 
+    filter(Young_sib_birth != Old_sib_birth) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
 
 dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,] %>% 
     select(Old_sib_birth, Young_sib_birth) %>% 
-    filter(Young_sib_birth != Old_sib_birth & Young_sib_birth-Old_sib_birth <= maxAge - f_mat) %>% 
+    filter(Young_sib_birth != Old_sib_birth) %>% 
     plyr::count() %>% 
     select(Old_sib_birth, Young_sib_birth, freq)
 
@@ -199,9 +201,12 @@ non_HSPs_tbl <- non_HSPs %>%
   mutate_all(as.character) # convert columns to characters since not all levels of indiv$Me are present in non_POPs_tbl
 #head(non_HSPs_tbl)
 
-##Extract the values of indiv for the older individual in each comparison.
-#Join all the information from indiv with the IDs of the sampled individuals in non_HSPs_2_tbl. 
-non_HSPs_2_tbl <- inner_join(indiv2, non_HSPs_tbl, by = "Me") %>%
+#Extract the values of indiv for the older individual in each comparison.
+#Inner join returns all rows from x where there are matching values in y, so returns all rows of indiv that correspond with the older sib IDs stored in non_HSPs_tbl. Also returns the ID for all the younger individuals in the comparison.
+
+#Join the information from above with the IDs of the sampled individuals in non_HSPs_2_tbl.
+#left_join returns all rows from x and all columns from x and y, so grabs all the information from the renamed indiv dataframe (above) for all the younger sampled individuals. 
+non_HSPs_2_tbl <- inner_join(indiv, non_HSPs_tbl, by = "Me") %>%
   left_join(youngerbirthyears, by = "younger")  %>%
   rename(Old_sib_birth = BirthY) %>% 
   select(c(Old_sib_birth, Young_sib_birth))
@@ -220,7 +225,7 @@ dad_negatives <- non_HSPs_2_tbl %>%
 #source("~/R/R_working_dir/CKMR/LemonSharkCKMR/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For desktop
 
 source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #for laptop
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For desktop
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For laptop
 
 P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
@@ -230,22 +235,22 @@ P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=
 #P$P_Mother[19,40,45] #Dimensions are parent birth year, parent capture year, offspring birth year (all of which are specified by n_yrs)
 
 #Fit model - optimx
-#CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
+CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
 
 #summary(CK_fit)
-#exp(CK_fit[1:6])
+exp(CK_fit[1:4])
 
 #compute variance covariance matrix
 #Estimating for two years
 #For optimx
-#D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1])) #derivatives of transformations
+D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1])) #derivatives of transformations
 
 #Estimating for three years
 #D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1]), exp(CK_fit$p3[1]), exp(CK_fit$p4[1]), exp(CK_fit$p5[1]), exp(CK_fit$p6[1])) #derivatives of transformations
 
-#VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
-#VC = (t(D)%*%VC_trans%*%D) #delta method
-#SE=round(sqrt(diag(VC)),0)
+VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
+VC = (t(D)%*%VC_trans%*%D) #delta method
+SE=round(sqrt(diag(VC)),0)
 
 #Rename columns - change according to years estimating
 colnames(CK_fit)[1:4] <- rep(c("N_est_F", "N_est_M"), each = 2)
@@ -256,6 +261,18 @@ yrs <- c(min(mom_positives$Young_sib_birth, dad_positives$Young_sib_birth):t_end
 
 estimates <- data.frame(cbind(t(round(exp(CK_fit[1:4]),0)), SE, rep(c("F", "M"), each = 2)), yr = yrs)
 colnames(estimates) <- c("CKMR_estimate", "SE", "sex", "yr")
+
+moms_detected <- mom_positives %>% 
+  group_by(Young_sib_birth) %>% 
+  summarize(sum(freq)) %>% 
+  pull(2)
+
+dads_detected <- dad_positives %>% 
+  group_by(Young_sib_birth) %>% 
+  summarize(sum(freq)) %>% 
+  pull(2)
+
+(estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 4), parents_detected = c(moms_detected, dads_detected)))
 
 ####Fit model - nlminb####
 CK_fit <- nlminb(start=Pars, objective=lemon_neg_log_lik, Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
@@ -305,3 +322,23 @@ sim_end_time-sim_start_time
 #Need to figure out which units for below
 #print(paste0("Run time of simulation: ", round(sim_end_time - sim_start_time, 2), ""))
 print(paste0("Simulation finished at ", Sys.time()))
+
+###Troubleshooting
+tail(indiv)
+Moms <- indiv %>% 
+  select(Mum, Dad) %>% 
+  rename(Me = Mum) %>%
+  mutate_all(as.character)
+
+Grouped_Moms <- indiv %>% 
+  inner_join(Moms, by = "Me") %>% 
+  select(AgeLast, BirthY, DeathY)
+
+Dads <- indiv %>% 
+  select(Mum, Dad) %>% 
+  rename(Me = Dad) %>%
+  mutate_all(as.character)
+
+Grouped_Dads <- indiv %>% 
+  inner_join(Dads, by = "Me") %>% 
+  select(AgeLast, BirthY, DeathY)
