@@ -33,7 +33,7 @@ maxAge = 30 #max age of lemon sharks
 adult_age <- c(12:30) 
 a_mat <- min(adult_age)
 mat_a <- rep(0, maxAge)
-mat_a[13:maxAge] <- 1 #Knife-edge maturity beginning at age 12 - add 1 (so 13) because individuals are born to age 0 cohort
+mat_a[12:maxAge] <- 1 #Knife-edge maturity beginning at age 12
 adultCurve <- c(mat_a, rep(max(mat_a), 5000)) #Set male age at maturity
 
 #Separate sexes for simulation
@@ -89,7 +89,7 @@ Pars=c(log(N_a))
 ####Start loop####
 sim_start_time <- Sys.time()
 print(paste0("Simulation started at ", Sys.time()))
-iterations <- 100
+iterations <- 50
 n_samp_yr = t_end-t_start #Number of years being sampled
 
 for(samps in 1:2){
@@ -158,13 +158,13 @@ for (y in c(t_start:t_end)) {
   
   indiv <- capture(indiv, n=n_samples_per_yr, year=y, fatal = FALSE) #Capture individuals
   
+  indiv <- indiv %>% 
+    mutate(SampY=replace(SampY, BirthY < (min_est_cohort-1), NA))
+  
   indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
   
   indiv <- birthdays(indiv) #Age each individual by one year
 }
-
-#Subset indiv for only animals born in the cohorts of interest
-indiv2 <- subset(indiv, BirthY >= (min_est_cohort - 1))
 
 #Store truth values as vectors (dplyr makes them a list)
 #Sex-specific
@@ -181,7 +181,7 @@ non_POPs <- pairs[pairs$OneTwo == 0,1:2] ##pairs that are not POPs
 non_HSPs <- pairs[pairs$TwoTwo == 0,1:2] ##pairs that are not half-sibs
 
 # think of this dataframe as a renaming of indiv - specifically, the ID column is renamed "younger" so it can be joined with HSPs_tbl below)
-youngerbirthyears <- indiv2 %>%
+youngerbirthyears <- indiv %>%
   select(Me, BirthY, Mum, Dad) %>% 
   rename("younger" = Me, "Young_sib_birth" = BirthY, "Young_sib_mom" = Mum, "Young_sib_dad" = Dad)
 
@@ -196,7 +196,7 @@ HSPs_tbl <- HSPs %>%
 #Join all the information from indiv with the IDs of the sampled individuals in HSPs_2_tbl. 
 #Inner join returns all rows from x where there are matching values in y, so returns all rows of indiv that correspond with the older sib IDs stored in HSPs_tbl
 #left_join returns all rows from x and all columns from x and y, so grabs all the information from the renamed indiv dataframe (above) for all the younger sampled individuals
-HSPs_2_tbl <- inner_join(indiv2, HSPs_tbl, by = "Me") %>%
+HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>%
   left_join(youngerbirthyears, by = "younger")  %>%
   rename(Old_sib_birth = BirthY, "Old_sib_mom" = Mum, "Old_sib_dad" = Dad) %>% 
   select(c(Old_sib_birth, Young_sib_birth, Old_sib_mom, Young_sib_mom, Old_sib_dad, Young_sib_dad))
@@ -237,7 +237,7 @@ non_HSPs_tbl <- non_HSPs %>%
 
 ##Extract the values of indiv for the older individual in each comparison.
 #Join all the information from indiv with the IDs of the sampled individuals in non_HSPs_2_tbl. 
-non_HSPs_2_tbl <- inner_join(indiv2, non_HSPs_tbl, by = "Me") %>%
+non_HSPs_2_tbl <- inner_join(indiv, non_HSPs_tbl, by = "Me") %>%
   left_join(youngerbirthyears, by = "younger")  %>%
   rename(Old_sib_birth = BirthY) %>% 
   select(c(Old_sib_birth, Young_sib_birth))
@@ -326,11 +326,11 @@ parents_detected <- adult_positives %>%
 all_est <- rbind(all_est, estimates)
 row.names(all_est) <- NULL
 
-save(CK_fit, file=paste0("models/Lemon_CKModel_HS_time_series_fishSim_TotalA_6.30.20_", iter))
+save(CK_fit, file=paste0("models/Lemon_CKModel_HS_time_series_fishSim_TotalA_7.02.20_", iter))
 print(paste0("finished iteration", iter, " at: ", Sys.time()))
 }
 
-write.table(all_est, file = paste0("fishSim_HS_time_series_null_TotalA_", n_samples, "samps_06.30.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(all_est, file = paste0("fishSim_HS_time_series_null_TotalA_", n_samples, "samps_07.02.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 
 sim_end_time <- Sys.time()

@@ -1,6 +1,4 @@
 #fishSim CKMR loop
-#Constant abundance, one estimate
-#Presently, estimating one abundance for males and one for females, and calling the "truth" the mean for the range of years covered by the estimate (aka earliest year for which we have an estimate)
 
 #6/29/2020 update: made new indiv dataframe to select only cohorts from the years we're estimating. However, when we subset for only the years of interest, then we can't get an estimate for the first year ... need to think about this more and troubleshoot ... 
 
@@ -79,7 +77,7 @@ Pars=c(log(N_f),log(N_m))
 ####Start loop####
 sim_start_time <- Sys.time()
 print(paste0("Simulation started at ", Sys.time()))
-iterations <- 100
+iterations <- 50
 n_samp_yr = t_end-t_start #Number of years being sampled
 
 for(samps in 1:2){
@@ -221,11 +219,11 @@ dad_negatives <- non_HSPs_2_tbl %>%
   plyr::count()
 
 ##Define variables and functions
-#source("~/R/R_working_dir/CKMR/LemonSharkCKMR/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #For desktop
-#source("~/R/R_working_dir/CKMR/LemonSharkCKMR/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For desktop
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #For desktop
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For desktop
 
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #for laptop
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For laptop
+#source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/time_series/models/get_P_lemon_HS_time_series_4yrs.R") #for laptop
+#source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R") #For laptop
 
 P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
@@ -275,8 +273,8 @@ dads_detected <- dad_positives %>%
 (estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 4), parents_detected = c(moms_detected, dads_detected)))
 
 ####Fit model - nlminb####
-CK_fit <- nlminb(start=Pars, objective=lemon_neg_log_lik, Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
-D=diag(length(Pars))*c(exp(CK_fit$par[1]),exp(CK_fit$par[2]), exp(CK_fit$par[3]), exp(CK_fit$par[4])) #derivatives of transformations
+#CK_fit <- nlminb(start=Pars, objective=lemon_neg_log_lik, Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
+#D=diag(length(Pars))*c(exp(CK_fit$par[1]),exp(CK_fit$par[2]), exp(CK_fit$par[3]), exp(CK_fit$par[4])) #derivatives of transformations
 
 #Estimating two years - need to edit to match nlminb function requirements
 #VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
@@ -289,32 +287,32 @@ D=diag(length(Pars))*c(exp(CK_fit$par[1]),exp(CK_fit$par[2]), exp(CK_fit$par[3])
 
 #Combine above to make dataframe with truth and estimates side-by-side
 #store years from youngest sibling in comparisons to end of study
-yrs <- c(min(mom_positives$Young_sib_birth, dad_positives$Young_sib_birth):t_end)
+#yrs <- c(min(mom_positives$Young_sib_birth, dad_positives$Young_sib_birth):t_end)
 
 #Add SE to estimates once I can compute it
-estimates <- data.frame(cbind(round(exp(CK_fit$par[1:4]),0), rep(c("F", "M"), each = 2)), yr = yrs)
-colnames(estimates) <- c("CKMR_estimate", "sex", "yr")
+#estimates <- data.frame(cbind(round(exp(CK_fit$par[1:4]),0), rep(c("F", "M"), each = 2)), yr = yrs)
+#colnames(estimates) <- c("CKMR_estimate", "sex", "yr")
 
-moms_detected <- mom_positives %>% 
-  group_by(Young_sib_birth) %>% 
-  summarize(sum(freq)) %>% 
-  pull(2)
+#moms_detected <- mom_positives %>% 
+#  group_by(Young_sib_birth) %>% 
+#  summarize(sum(freq)) %>% 
+#  pull(2)
 
-dads_detected <- dad_positives %>% 
-  group_by(Young_sib_birth) %>% 
-  summarize(sum(freq)) %>% 
-  pull(2)
+#dads_detected <- dad_positives %>% 
+#  group_by(Young_sib_birth) %>% 
+#  summarize(sum(freq)) %>% 
+#  pull(2)
 
-(estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 4), parents_detected = c(moms_detected, dads_detected)))
+#(estimates <- cbind(estimates, truth = c(Mom_truth[yrs], Dad_truth[yrs]), total_samples=rep(n_samples, 4), parents_detected = c(moms_detected, dads_detected)))
 
 all_est <- rbind(all_est, estimates)
 row.names(all_est) <- NULL
 
-save(CK_fit, file=paste0("models/Lemon_CKModel_HS_time_series_fishSim_6.29.20_", iter))
+save(CK_fit, file=paste0("models/Lemon_CKModel_HS_time_series_fishSim_07.01.20_", iter))
 print(paste0("finished iteration", iter, " at: ", Sys.time()))
 }
 
-write.table(all_est, file = paste0("fishSim_HS_time_series_null_", n_samples, "samps_06.29.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(all_est, file = paste0("fishSim_HS_time_series_null_", n_samples, "samps_07.01.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 
 sim_end_time <- Sys.time()
