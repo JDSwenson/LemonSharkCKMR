@@ -14,8 +14,56 @@ library(tidyverse)
 library(ggpubr)
 library(gridExtra)
 library(RColorBrewer)
-setwd("~/R/R_working_dir/CKMR/Results/time_series") #For HP laptop
+#setwd("~/R/R_working_dir/CKMR/Results/time_series") #For HP laptop
+setwd("~/R/R_working_dir/CKMR/LemonSharkCKMR/results/") #For desktop
 ```
+
+Null model simulations with total population size 5000, adult population size several hundred, using fishSim.
+Sex-specific + TotalA time-series giving a separate estimate for three years.
+Took sample sizes of 300 per year and 500 per year, spread over three years.
+**Eliminated all SAMPLES that were NOT from the cohorts of interest**
+```{r}
+#Sex-specific
+files <- list.files(path = "~/R/R_working_dir/CKMR/LemonSharkCKMR/results/", pattern = "*01.2020.csv", full.names = T)
+fs_hs <- sapply(files, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+head(fs_hs)
+fs_hs <- fs_hs %>% mutate(relative_bias = ((CKMR_estimate-truth)/truth)*100)
+  
+#Total Abundance
+  files_totalA <- list.files(path = "~/R/R_working_dir/CKMR/LemonSharkCKMR/results/", pattern = "*.02.2020.csv", full.names = T)
+fs_hs_totalA <- sapply(files_totalA, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+fs_all <- fs_hs_totalA %>% mutate(relative_bias = ((CKMR_estimate-truth)/truth)*100) %>% 
+  mutate(sex = "All") %>% 
+  full_join(fs_hs)
+
+#Plot relative bias by year and sex
+G <- ggplot(data=fs_all, aes(x=factor(yr))) +
+  geom_boxplot(aes(y=relative_bias, fill=sex)) +
+  #ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Year", y="Relative bias", title="Relative Bias By Sample Size") +
+  scale_fill_brewer(palette="Set2") #+
+  scale_x_discrete(labels = c("30", "60", "90", "120", "150"))
+
+    G + facet_wrap(~total_samples)
+    
+    #Plot relative bias by kin pairs detected - scatter plot
+G2 <- ggplot(data=fs_hs, aes(x=parents_detected, color=sex)) +
+  geom_point(aes(y=relative_bias)) +
+  ylim(-100, 100) +
+  labs(x="Parents detected", y="Relative bias", title="Relative Bias by Kin Pairs") +
+  scale_colour_brewer(palette="Set2")
+
+G2 + facet_wrap(vars(yr))
+```
+
 
 Null model simulations with total population size 5000, adult population size several hundred, using fishSim.
 TOTAL ABUNDANCE - not sex-specific.
@@ -55,7 +103,7 @@ G + facet_wrap(vars(variable))
 Null model simulations with total population size 5000, adult population size several hundred, using fishSim.
 Sex-specific, time-series giving a separate estimate for three years.
 Took sample sizes of 300 per year and 500 per year, spread over three years.
-**Eliminated all SAMPLES that were NOT from the cohorts of interest**
+**Thought I had eliminated all SAMPLES that were NOT from the cohorts of interest, but actually didn't ... missed a line in the code so it was just the pairwise comparisons that were removed**
 ```{r}
 fs_hs <- read.csv("fishSim_HS_time_series_null_900samps_06.29.2020.csv", header=TRUE)
 head(fs_hs)
