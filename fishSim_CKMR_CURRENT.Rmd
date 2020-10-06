@@ -217,6 +217,49 @@ N_A <- total_abundance
 Pars=log(N_A)
 ```
 
+```{r Define model and likelihood function: sexes combined}
+#Model for calculating prior probability of kinship for half-siblings
+#Not assessing survival - keeping constant at 0.85
+Surv <- 0.85
+
+max_age = 30 #max age of lemon sharks
+
+adult_age <- c(12:30) #Adult age of females -males assumed to be the same
+adult_mat <- c(rep(0,11), rep(1,19)) #knife-edge maturity
+
+P_Parent = array(NA,dim=c(n_yrs,n_yrs)) #creates two empty arrays, one for mother and one for father.  Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
+
+get_P_lemon <- function(Pars,P_Parent,n_yrs,t_start,t_end){
+  N_A=exp(Pars[1]) #number of mature females
+  #N_F=exp(Pars[1:n_yrs]) #number of mature females
+    for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
+    for(ys_birth in max(os_birth+1):n_yrs){
+        P_Parent[os_birth, ys_birth] <- (4/N_A)*(Surv^(ys_birth - os_birth)) #N_F is the number of females alive when the younger sibling was born
+        }
+    }
+  return(list(P_Parent=P_Parent)) #return makes sure this is moved out of the loop into the environment
+}
+#P=get_P_lemon(Pars=Pars,P_Parent,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+#P$P_Parent
+
+#Likelihood function
+lemon_neg_log_lik <- function(Pars, Negatives_Parent, Pairs_Parent, P_Parent, n_yrs, t_start, t_end){
+  
+  P=get_P_lemon(Pars=Pars,P_Parent,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+  
+  loglik=0
+  
+  #likelihood contributions for all negative comparisons
+  for(irow in 1:nrow(Negatives_Parent)){
+    loglik=loglik+Negatives_Parent[irow,3]*log(1-P$P_Parent[Negatives_Parent[irow,1],Negatives_Parent[irow,2]])
+  } 
+  #likelihood contributions for positive comparisons
+  for(irow in 1:nrow(Pairs_Parent)){
+    loglik=loglik+Pairs_Parent[irow,3]*log(P$P_Parent[Pairs_Parent[irow,1],Pairs_Parent[irow,2]])
+  }
+  -loglik
+}
+```
 
 Make Founder population and simulate into the future
 ```{r Simulate population into the future}
@@ -226,7 +269,7 @@ head(indiv)
 hist(as.numeric(indiv[,8])) #histogram of population ages
 
 #Check growth rate to find first year survival rate that produces 0 population growth
-check_growthrate(mateType = "ageSex", femaleCurve = femaleCurve, mortType = "age", ageMort = ageMort, batchSize = batchSize, firstBreed = 12, maxClutch = maxClutch)
+#check_growthrate(mateType = "ageSex", femaleCurve = femaleCurve, mortType = "age", ageMort = ageMort, batchSize = batchSize, firstBreed = 12, maxClutch = maxClutch)
 
 #PoNG(mateType = "ageSex", femaleCurve = femaleCurve, mortType = "age", ageMort = ageMort, batchSize = batchSize, firstBreed = 0, maxClutch = maxClutch)
 
@@ -375,7 +418,7 @@ Dataframes that matter:
 
 P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
-P$P_Mother
+#P$P_Mother
 
 #Check P function
 #P$P_Mother[19,40,45] #Dimensions are parent birth year, parent capture year, offspring birth year (all of which are specified by n_yrs)
