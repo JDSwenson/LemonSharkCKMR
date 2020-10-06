@@ -37,6 +37,7 @@ survCurv <- Prop_age #Sets probability of founder cohort belonging to each age c
 
 #Set parameters for altMate
 batchSize = 3 #average size of brood -- assumes Poisson distribution for fecundity (which is default for altMate). Average fecundity (6) divided by 2 for skipped-breeding
+firstBreed <- 12 #If using same knife-edge maturity for males and females
 mat_A <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
 mat_A[12:maxAge]=1  #Knife-edge maturity for males, beginning at age 12
 
@@ -99,7 +100,7 @@ lemon_neg_log_lik <- function(Pars, Negatives_Parent, Pairs_Parent, P_Parent, n_
 iterations <- 100
 
 for(samps in 1:4){
-  results <- data.frame(matrix(0, nrow = iterations*2, ncol = 6))
+  results <- data.frame(matrix(0, nrow = iterations*2, ncol = 5))
   n_samples <- c(30, 60, 90, 120)[samps]
   
   for(iter in 1:iterations) {
@@ -139,7 +140,7 @@ for (y in c(t_start:t_end)) {
   indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
   
   indiv <- birthdays(indiv) #Age each individual by one year
-  indiv <- capture(indiv, n=40, year = y, fatal = FALSE) #Capture individuals
+  indiv <- capture(indiv, n = n_samples, year = y, fatal = FALSE) #Capture individuals
 
   #Store true values for each year
   truth[y] <- indiv %>% 
