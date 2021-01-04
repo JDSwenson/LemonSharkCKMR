@@ -48,7 +48,7 @@ library(popbio)
 
 #Constant Abundance - one estimate
 
-#----------Simulation parameters-----------
+#----------General simulation parameters-----------
 t_start = 61 #First year we take samples
 t_end = 65 #Last year we take samples
 #min_est_cohort <- 42 #First year we are estimating abundance
@@ -61,7 +61,7 @@ n_samp_yr = t_end-t_start #Number of years being sampled
 n_samples_per_yr = 75
 n_samples_total <- n_samples_per_yr * n_samp_yr + n_samples_per_yr #because sampling starts in year t_start, we need to add one more year
 
-#----------------Leslie Matrix and makeFounder parameters---------------
+#----------------Leslie Matrix---------------
 s_YOY = 0.6    # YOY survival
 s_adult = 0.85  # Adult (mature) survival 
 
@@ -71,7 +71,7 @@ a_m = 12         # Age at sexual maturity
 b_max = 2     #Females recruited into the population. Assume equal sex ratio. Calculated from: average fecundity (6) divided by two (for skipped-breeding) divided by two (for females vs males)
 max_age = maxAge = age_x  <- 30
 
-init_matrix = function(s_j, s_a, a_mat, age_xx, b_maxx){
+init_matrix <- function(s_j, s_a, a_mat, age_xx, b_maxx){
   A_matrix = matrix(data = 0, nrow = age_xx, ncol = age_xx) # dimension matrix and fill with zeros
   A_matrix[1, (a_mat:age_xx)] = b_maxx # assign birth rates to mature ages in first row of matrix
   A_matrix[2,1] <- s_YOY
@@ -82,7 +82,7 @@ init_matrix = function(s_j, s_a, a_mat, age_xx, b_maxx){
   return(A_matrix)
 }
 
-A = init_matrix(s_j = s_juv, s_a = s_adult, a_mat = a_m, 
+A <- init_matrix(s_j = s_juv, s_a = s_adult, a_mat = a_m, 
                 age_xx = age_x, b_maxx = b_max) # Call function to initialize matrix A
 #View(A)
 #ncol(A)
@@ -92,6 +92,7 @@ A[30,30] <- 0
 #Calculate dominant eigenvalue (i.e. population growth rate) from transition matrix
 lambda(A)
 
+#------------------makeFounders parameters--------------
 #Calculate stable age structure of the population
 stable_age = stable.stage(A)
 #stable_age
@@ -104,17 +105,7 @@ Surv_age[2] <- s_juv[2] #Set survival for second year to 70%
 osr <- c(0.5, 0.5) #Operating sex ratio
 stocks <- c(1) #stocks (empty for now)
 
-########### Old way of calculating "stable age distribution"#############
-#Surv_age <- rep(0.85,maxAge) #Set survival for each age to 85%
-#Surv_age[1] <- 0.6 #Set survival for first year to 60%
-#Surv_age[2] <- 0.72 #Set survival for second year to 70%
-#Prop_age <- rep(1:maxAge)
-#for(iage in 2:maxAge)Prop_age[iage]=Prop_age[iage-1]*Surv_age[iage-1]
-#Prop_age <- Prop_age/sum(Prop_age)  #stable age distribution ... supposedly
-#survCurv <- Prop_age #Sets probability of founder cohort belonging to each age class
-
-
-#----------------Set parameters for altMate-------------------------
+#----------------altMate parameters-------------------------
 batchSize = 4 #average size of brood. Fecundity divided by 2 (for skipped breeding). Value of 3.5 gives almost 0 population growth; value of 4 gives positive population growth, value of 3 gives negative population growth
 firstBreed <- 12 #If using same knife-edge maturity for males and females
 
@@ -129,7 +120,7 @@ femaleCurve <- c(mat_f, rep(max(mat_m), 1000)) #Set female age at maturity
 maxClutch <- 18 #Maximum number of offspring one individual can possibly produce
 mat_type <- "ageSex"
 
-#-------------------Set parameters for mort-------------------------
+#-------------------mort parameters-------------------------
 ageMort <- c(1 - Surv_age)
 
 #ageMort[maxAge+1] <- ageMort[maxAge]
@@ -431,7 +422,7 @@ library(tidyverse)
 library(popbio)
 
 set.seed(47)
-#----------Simulation parameters-----------
+#----------General simulation parameters-----------
 t_start = 61 #First year we take samples
 t_end = 65 #Last year we take samples
 #min_est_cohort <- 42 #First year we are estimating abundance
@@ -444,7 +435,7 @@ n_samp_yr = t_end-t_start #Number of years being sampled
 #n_samples_per_yr = 75
 #n_samples_total <- n_samples_per_yr * n_samp_yr + n_samples_per_yr #because sampling starts in year t_start, we need to add one more year
 
-#----------------Leslie Matrix and makeFounder parameters---------------
+#----------------Leslie Matrix---------------
 s_YOY = 0.6    # YOY survival
 s_adult = 0.85  # Adult (mature) survival 
 
@@ -474,6 +465,7 @@ A = init_matrix(s_j = s_juv, s_a = s_adult, a_mat = a_m,
 #Calculate dominant eigenvalue (i.e. population growth rate) from transition matrix
 #lambda(A)
 
+#-------------------makeFounders parameters--------------------
 #Calculate stable age structure of the population
 stable_age = stable.stage(A)
 stable_age
@@ -485,17 +477,7 @@ Surv_age[2] <- s_juv[2] #Set survival for second year to 70%
 osr <- c(0.5, 0.5) #Operating sex ratio
 stocks <- c(1) #stocks (empty for now)
 
-########### Old way of calculating "stable age distribution"#############
-#Surv_age <- rep(0.85,maxAge) #Set survival for each age to 85%
-#Surv_age[1] <- 0.6 #Set survival for first year to 60%
-#Surv_age[2] <- 0.72 #Set survival for second year to 70%
-#Prop_age <- rep(1:maxAge)
-#for(iage in 2:maxAge)Prop_age[iage]=Prop_age[iage-1]*Surv_age[iage-1]
-#Prop_age <- Prop_age/sum(Prop_age)  #stable age distribution ... supposedly
-#survCurv <- Prop_age #Sets probability of founder cohort belonging to each age class
-
-
-#----------------Set parameters for altMate-------------------------
+#----------------altMate parameters-------------------------
 batchSize = 3.5 #average size of brood. Fecundity divided by 2 (for skipped breeding). Value of 3.5 gives almost 0 population growth; value of 4 gives positive population growth, value of 3 gives negative population growth
 firstBreed <- 12 #If using same knife-edge maturity for males and 
 
@@ -506,7 +488,7 @@ matCurve <- c(mat_A, rep(max(mat_A), 1000)) #Set female age at maturity
 maxClutch <- 18 #Maximum number of offspring one individual can possibly produce
 mat_type <- "age"
 
-#Set parameters for mort()
+#-----------------mort parameters--------------------
 ageMort <- (1 - Surv_age)
 death_type <- "age"
 
@@ -642,6 +624,7 @@ min_est_cohort <- min(HSP_positives$Young_sib_birth)
 ```
 
 ```{r Define model and likelihood function: sexes combined}
+#---------------Kinship probabilities - Half-sib------------------
 #Model for calculating prior probability of kinship for half-siblings
 #Not assessing survival - keeping constant at 0.85
 Surv <- 0.85
@@ -669,7 +652,7 @@ get_P_lemon <- function(Pars,P_Parent,n_yrs,t_start,t_end){
 #P=get_P_lemon(Pars=Pars,P_Parent,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 #P$P_Parent
 
-#Likelihood function
+#---------------Likelihood function-----------------
 lemon_neg_log_lik <- function(Pars, Negatives_Parent, Pairs_Parent, P_Parent, n_yrs, t_start, t_end){
   
   P=get_P_lemon(Pars=Pars,P_Parent,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
