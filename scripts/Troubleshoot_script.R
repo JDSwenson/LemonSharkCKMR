@@ -1,4 +1,61 @@
 #TRoubleshoot model
+os_birth <- 52
+ys_birth <- 56
+
+get_P_lemon <- function(Pars,P_Mother,P_Father,n_yrs,t_start,t_end){
+  N_F=exp(Pars[1]) #number of mature females (assume time constant)
+  for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
+    for(ys_birth in (os_birth+1):n_yrs){
+      if((ys_birth - os_birth) <= (max_age - min(f_adult_age)+1)){
+        P_Mother[os_birth, ys_birth] <- (Surv^(ys_birth - os_birth))/(N_F*pop_growth^(ys_birth-min_est_cohort_F))
+      } else P_Mother[os_birth, ys_birth] <- 0
+    }
+  }
+  N_M=exp(Pars[2]) #number of mature males (time constant) - (total reproductive output from males)
+  for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
+    for(ys_birth in (os_birth+1):n_yrs){
+      if((ys_birth - os_birth) <= (max_age - min(m_adult_age)+1)){
+        P_Father[os_birth,ys_birth] <- (Surv^(ys_birth - os_birth))/(N_M*pop_growth^(ys_birth-min_est_cohort_M))
+      } else P_Father[os_birth,ys_birth] <- 0
+    }
+  }
+  return(list(P_Mother=P_Mother, P_Father=P_Father)) #return makes sure this is moved out of the loop into the environment
+}
+
+P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+P$P_Mother[41,59]
+
+#------------------Likelihood function--------------------------
+lemon_neg_log_lik <- function(Pars,mom_negatives,dad_negatives,mom_positives,dad_positives,P_Mother,P_Father,n_yrs,t_start,t_end){
+  
+  P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+  
+  loglik=0
+  
+  #likelihood contributions for all negative comparisons
+  for(irow in 1:nrow(mom_negatives)){
+    loglik=loglik+mom_negatives[irow,3]*log(1-P$P_Mother[mom_negatives[irow,1],mom_negatives[irow,2]])
+  }
+  loglik
+  
+  for(irow in 1:nrow(dad_negatives)){
+    loglik=loglik+dad_negatives[irow,3]*log(1-P$P_Father[dad_negatives[irow,1],dad_negatives[irow,2]])
+  loglik
+    }  
+  loglik
+  #likelihood contributions for positive comparisons
+  for(irow in 1:nrow(mom_positives)){
+    loglik=loglik+mom_positives[irow,3]*log(P$P_Mother[mom_positives[irow,1],mom_positives[irow,2]])
+  }
+  loglik
+  for(irow in 1:nrow(dad_positives)){
+    loglik=loglik+dad_positives[irow,3]*log(P$P_Father[dad_positives[irow,1],dad_positives[irow,2]])
+  }  
+  -loglik
+}
+
+
+
 
 ################### MOTHERS #################################
 #Assign values to variables in loop for troubleshooting

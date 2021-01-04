@@ -163,7 +163,7 @@ for (y in c(t_start:t_end)) {
   indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
   
   indiv <- birthdays(indiv) #Age each individual by one year
-  indiv <- capture(indiv, n=40, year = y, fatal = FALSE) #Capture individuals
+  indiv <- capture(indiv, n=n_samples, year = y, fatal = FALSE) #Capture individuals
   #Store true values for each year
   Dad_truth[y] <- indiv %>% 
     filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 

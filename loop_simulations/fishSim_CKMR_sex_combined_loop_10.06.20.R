@@ -37,6 +37,8 @@ survCurv <- Prop_age #Sets probability of founder cohort belonging to each age c
 
 #Set parameters for altMate
 batchSize = 3 #average size of brood -- assumes Poisson distribution for fecundity (which is default for altMate). Average fecundity (6) divided by 2 for skipped-breeding
+firstBreed <- 12
+
 mat_A <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
 mat_A[12:maxAge]=1  #Knife-edge maturity for males, beginning at age 12
 
@@ -139,7 +141,7 @@ for (y in c(t_start:t_end)) {
   indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
   
   indiv <- birthdays(indiv) #Age each individual by one year
-  indiv <- capture(indiv, n=40, year = y, fatal = FALSE) #Capture individuals
+  indiv <- capture(indiv, n=n_samples, year = y, fatal = FALSE) #Capture individuals
 
   #Store true values for each year
   truth[y] <- indiv %>% 
@@ -231,5 +233,5 @@ colnames(results) <- c("N_est", "SE", "Mean_truth", "Parents_detected", "Samples
  results <- results %>% 
     mutate(Relative_bias = round(((N_est - Mean_truth)/Mean_truth)*100,1))
   
-  write.table(results, file = paste0("NEW_fishSim_sexes-combined_single_est_", n_samples, "_samples_10.06.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(results, file = paste0("results/NEW_fishSim_sexes-combined_single_est_", n_samples, "_samples_10.06.2020.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
