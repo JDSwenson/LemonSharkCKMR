@@ -18,13 +18,100 @@ library(RColorBrewer)
 setwd("~/R/R_working_dir/CKMR/Results/")
 ```
 
+01/08/2021
+```{r}
+#----------------------Viz script-----------------------
+#Sex-specific
+files <- list.files(path = "~/R/R_working_dir/CKMR/Results/Single_est_N/2020.12.23_and_2021.01.04/pop_growth_est_together/", pattern = "*.2020.csv", full.names = T)
+fs_hs <- sapply(files, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+head(fs_hs)
+tail(fs_hs)
+
+#fs_hs <- fs_hs %>% mutate(relative_bias =((CKMR_estimate-truth)/truth)*100)
+  
+#Total Abundance
+  files_totalA <- list.files(path = "~/R/R_working_dir/CKMR/Results/Single_est_N/2020.12.23_and_2021.01.04/pop_growth_est_together/", pattern = "*.2021.csv", full.names = T)
+fs_hs_totalA <- sapply(files_totalA, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+head(fs_hs_totalA)
+tail(fs_hs_totalA)
+
+
+fs_all <- fs_hs_totalA %>%
+  full_join(fs_hs)
+
+#Plot relative bias by sample size and sex
+G <- ggplot(data=fs_all, aes(x=factor(Samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  #ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative Bias By Sample Size (pop growth fixed for whole population)") +
+  scale_fill_brewer(palette="Set2") #+
+  scale_x_discrete(labels = c("150", "450"))
+
+    G + facet_wrap(~Sex)
+    
+    #Plot relative bias by kin pairs detected - scatter plot
+G2 <- ggplot(data=fs_all, aes(x=Parents_detected, color=Sex)) +
+  geom_point(aes(y=Relative_bias)) +
+  ylim(-100, 100) +
+  labs(x="Parents detected", y="Relative bias", title="Relative Bias by Kin Pairs") +
+  scale_colour_brewer(palette="Set2")
+
+G2 + facet_wrap(vars(Sample))
+
+    #Plot relative bias by population growth - scatter plot
+G3 <- ggplot(data=fs_all, aes(x=Pop_growth, color=Sex)) +
+  geom_point(aes(y=Relative_bias)) +
+  ylim(-100, 100) +
+  labs(x="Population growth", y="Relative bias", title="Relative Bias by Population Growth (pop growth fixed for whole population)") +
+  scale_colour_brewer(palette="Set2")
+
+
+#-----------------Using sex-specific population growth ---------------
+#Sex-specific
+files2 <- list.files(path = "~/R/R_working_dir/CKMR/Results/Single_est_N/2020.12.23_and_2021.01.04/pop_growth_est_separate/", pattern = "*.2020.csv", full.names = T)
+fs_hs2 <- sapply(files2, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+head(fs_hs2)
+tail(fs_hs2)
+
+#Plot relative bias by sample size and sex
+G4 <- ggplot(data=fs_hs2, aes(x=factor(Samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  #ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Samples per year (over 6 years)", y="Relative bias", title="Relative Bias By Sample Size (pop growth fixed for adult sexes separately)") +
+  scale_fill_brewer(palette="Set2") #+
+  scale_x_discrete(labels = c("150", "450"))
+  
+  G4 + facet_wrap(~Sex)
+  
+   #Plot relative bias by population growth - scatter plot
+ggplot(data=fs_hs2, aes(x=Pop_growth, color=Sex)) +
+  geom_point(aes(y=Relative_bias)) +
+  ylim(-100, 100) +
+  labs(x="Population growth", y="Relative bias", title="Relative Bias by Population Growth (pop growth fixed for adult sexes separately)") +
+  scale_colour_brewer(palette="Set2")
+```
+
+
 12/03/2020
 Simulations with varying population growth scenarios: one with positive population growth; one with negative, and one with no population growth.
 Sex-specific, varied numbers of samples taken per year
 ```{r}
 #----------------------Viz script-----------------------
 #Sex-specific
-files <- list.files(path = "~/R/R_working_dir/CKMR/Results/Single_est_N/", pattern = "*.2020.csv", full.names = T)
+files <- list.files(path = "~/R/R_working_dir/CKMR/Results/Single_est_N/2020.12.01_and_2020.12.03/", pattern = "*.2020.csv", full.names = T)
 fs_hs <- sapply(files, read_csv, simplify=FALSE) %>% 
 bind_rows() #%>% 
   #drop_na()
