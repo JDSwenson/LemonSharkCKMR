@@ -1,0 +1,3 @@
+These scripts and results are from efforts to examine the effect of mis-assigning ages on CKMR estimates. I stopped before I had gotten the script to actually do this, however. I changed the AgeLast column in indiv, but didn't not change the birthY to match, and it's the birth year that matters in CKMR.
+
+When/if I pick this back up, start by making sure the birth year matches AgeLast (and that it doesn't go over the max age or below 0/1).
