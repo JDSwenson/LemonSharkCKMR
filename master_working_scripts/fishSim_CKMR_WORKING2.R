@@ -92,20 +92,20 @@ for(samps in 1:4){
   survival_at_age <- NULL
   
   for(iter in 1:iterations) {
-    index <- (iter*2)-1 #Index for filling in the matrix at the end of each loop over n_samples
-    
-    #-------------Loop start-------------------------    
+        index <- (iter*2)-1 #Index for filling in the matrix at the end of each loop over n_samples
+        
+#-------------Loop start-------------------------    
     #makeFounders creates a matrix of specified size (pop) where each row is an individual in the founder popualtion.
     indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, survCurv=survCurv)
-    
+
     #Calculate mortality for year 0 individuals to give 0 population growth
     #PoNG(mateType = "ageSex", femaleCurve = femaleCurve, mortType = "age", ageMort = ageMort, batchSize = batchSize, firstBreed = 0, maxClutch = maxClutch)
     
-    #Initialize truth vectors
+#Initialize truth vectors
     Dad_truth <- c()
     Mom_truth <- c()
     All_truth <- c()
-    
+
     #-----------Proportion-at-age-----------------
     #initialize and fill in first year
     age_p <- indiv %>% filter(is.na(DeathY) == TRUE) %>% 
@@ -120,18 +120,18 @@ for(samps in 1:4){
     
     #-----------------Start fishSim loop--------------------  
     for (y in 1:length(sim_yrs)) {
-      year <- y
-      
-      ###Truth###
-      All_truth[year] <- nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
-      
-      #Store true number of living mature males and females
-      Dad_truth[year] <- indiv %>% filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>%
-        summarize(n())
-      
-      Mom_truth[year] <- indiv %>% filter(Sex == "F" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 
-        summarize(n())
-      
+        year <- y
+
+        ###Truth###
+        All_truth[year] <- nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
+        
+        #Store true number of living mature males and females
+        Dad_truth[year] <- indiv %>% filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>%
+          summarize(n())
+
+        Mom_truth[year] <- indiv %>% filter(Sex == "F" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 
+          summarize(n())
+
       ###Proportion-at-age###
       #Save age distribution at the beginning of each year. Column corresponds to age
       ap <- indiv %>% filter(is.na(DeathY) == TRUE) %>% 
@@ -147,13 +147,13 @@ for(samps in 1:4){
       aa <- indiv %>% filter(is.na(DeathY) == TRUE) %>% 
         group_by(AgeLast) %>% 
         summarize(N = n()) 
-      
+    
       names(aa)[2] <- paste0("N_yr", year)
       
-      alive_at_age <- full_join(alive_at_age, aa, by = "AgeLast") #Do this separate so columns are added in the right order
+        alive_at_age <- full_join(alive_at_age, aa, by = "AgeLast") #Do this separate so columns are added in the right order
       
-      #altMate: use poisson distribution to vary fecudinty around batchsize
-      #maleCurve and femaleCurve specify age at maturity (12)
+        #altMate: use poisson distribution to vary fecudinty around batchsize
+        #maleCurve and femaleCurve specify age at maturity (12)
       indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
       
       #Kill individuals from the population based on the probability specific in ageMort
@@ -162,61 +162,61 @@ for(samps in 1:4){
       #Age every individual one year
       indiv <- birthdays(indiv)
     }
-    
+
     All_truth <- unlist(All_truth)
-    
+        
     #Remove duplicate value from first year for proportion-at-age and alive_at_age dataframes
     age_p <- age_p[,-2] 
     alive_at_age <- alive_at_age[,-3]
     colnames(alive_at_age)[2] <- "N_yr1"
+
+    
+# #Repeats the above loop for the time period between t_start and t_end, assigning offspring, deaths, and birthdays, but this time also draws samples each year and records which animals were sampled in indiv
+     for(y in c(t_start:t_end)) {
+    indiv <- capture(indiv, n=n_samples, year = y, fatal = FALSE) #Capture individuals
+
+        year <- y
+    
+        ###Truth###
+    All_truth[year] <- nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
+    
+    Dad_truth[year] <- indiv %>% filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>%
+      summarize(n())
+    
+    Mom_truth[year] <- indiv %>% filter(Sex == "F" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 
+      summarize(n())
+    
+    ###Proportion-at-age###
+     ap <- indiv %>% filter(is.na(DeathY) == TRUE) %>% 
+       group_by(AgeLast) %>% 
+       summarize(age_prop = n()/All_truth[year]) 
+     
+     names(ap)[2] <- paste0("age_prop_yr", year)
+     
+     age_p <- full_join(age_p, ap, by = "AgeLast") %>% 
+       mutate_all(round, 4) #Do this separate so columns are added in the right order
+    
+    ###Survival-at-age### 
+    #Numbers alive at age after mating but before dying - to calculate survival
+    aa <- indiv %>% filter(is.na(DeathY) == TRUE) %>% 
+      group_by(AgeLast) %>% 
+      summarize(N = n()) 
+    
+    names(aa)[2] <- paste0("N_yr", year)
+    
+    alive_at_age <- full_join(alive_at_age, aa, by = "AgeLast") #Do this separate so columns are added in the right order
     
     
-    # #Repeats the above loop for the time period between t_start and t_end, assigning offspring, deaths, and birthdays, but this time also draws samples each year and records which animals were sampled in indiv
-    for(y in c(t_start:t_end)) {
-      indiv <- capture(indiv, n=n_samples, year = y, fatal = FALSE) #Capture individuals
-      
-      year <- y
-      
-      ###Truth###
-      All_truth[year] <- nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
-      
-      Dad_truth[year] <- indiv %>% filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>%
-        summarize(n())
-      
-      Mom_truth[year] <- indiv %>% filter(Sex == "F" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 
-        summarize(n())
-      
-      ###Proportion-at-age###
-      ap <- indiv %>% filter(is.na(DeathY) == TRUE) %>% 
-        group_by(AgeLast) %>% 
-        summarize(age_prop = n()/All_truth[year]) 
-      
-      names(ap)[2] <- paste0("age_prop_yr", year)
-      
-      age_p <- full_join(age_p, ap, by = "AgeLast") %>% 
-        mutate_all(round, 4) #Do this separate so columns are added in the right order
-      
-      ###Survival-at-age### 
-      #Numbers alive at age after mating but before dying - to calculate survival
-      aa <- indiv %>% filter(is.na(DeathY) == TRUE) %>% 
-        group_by(AgeLast) %>% 
-        summarize(N = n()) 
-      
-      names(aa)[2] <- paste0("N_yr", year)
-      
-      alive_at_age <- full_join(alive_at_age, aa, by = "AgeLast") #Do this separate so columns are added in the right order
-      
-      
-      #altMate: use poisson distribution to vary fecudinty around batchsize
-      #maleCurve and femaleCurve specify age at maturity (12)
-      indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
-      
-      #kill individuals at each age with the probability specified in ageMort
-      indiv <- mort(indiv, type = death_type, year=y, ageMort = ageMort, maxAge = maxAge)
-      
-      #Age every individual one year
-      indiv <- birthdays(indiv)
-    }
+    #altMate: use poisson distribution to vary fecudinty around batchsize
+    #maleCurve and femaleCurve specify age at maturity (12)
+    indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+    
+    #kill individuals at each age with the probability specified in ageMort
+    indiv <- mort(indiv, type = death_type, year=y, ageMort = ageMort, maxAge = maxAge)
+    
+    #Age every individual one year
+    indiv <- birthdays(indiv)
+  }
     #If wanting to capture all in one year
     #indiv <- capture(indiv, n=100, year = 59, fatal = FALSE) #Capture individuals
     
@@ -225,20 +225,20 @@ for(samps in 1:4){
     Dad_truth <- unlist(Dad_truth)
     Adult_truth <- Mom_truth + Dad_truth
     All_truth <- unlist(All_truth)
-    
+
     #Calculate observed population growth
     pop_growth_all <- All_truth[2:t_end]/All_truth[1:(t_end-1)]
     #pop_growth_F <- Mom_truth[2:65]/Mom_truth[1:64]
     #pop_growth_M <- Dad_truth[2:65]/Dad_truth[1:64]
     
-    
+
     #Here, my understanding is that findRelativesPar creates a pairwise comparison matrix comparing every sampled individual to every other one. So I can extract the positive comparisons by setting pairs$TwoTwo to 1 and extract the negative comparisons by setting pairs$TwoTwo to 0.
     pairs <- findRelativesPar(indiv = indiv, sampled = TRUE)
     POPs <- pairs[pairs$OneTwo == 1,1:2] ##Parent-Offspring pairs
     HSPs <- pairs[pairs$TwoTwo == 1,1:2] ##Half-Sibling pairs - verified from fishSim vignette
     non_POPs <- pairs[pairs$OneTwo == 0,1:2] ##pairs that are not POPs
     non_HSPs <- pairs[pairs$TwoTwo == 0,1:2] ##pairs that are not half-sibs
-    
+
     # Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins. These dataframes will be used input to the CKMR model.
     youngerbirthyears <- indiv %>%
       select(Me, BirthY, Mum, Dad) %>% #select relevant columns only
@@ -257,23 +257,23 @@ for(samps in 1:4){
     
     #--Make a dataframe with the values from indiv that correspond to each individual ID in the pairwise comparison matrix--
     HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>% #Retain only the rows in which the individual in the "Me" column is present in both dataframes; the column "Me" corresponds to the older individual in the pairwise comparisons.
-      left_join(youngerbirthyears, by = "younger")  %>% #Retain all the columns from above and add data for the younger individual from each comparison
+    left_join(youngerbirthyears, by = "younger")  %>% #Retain all the columns from above and add data for the younger individual from each comparison
       rename("Old_sib_birth" = BirthY, "Old_sib_mom" = Mum, "Old_sib_dad" = Dad) %>%   select(c(Old_sib_birth, Young_sib_birth, Old_sib_mom, Young_sib_mom, Old_sib_dad, Young_sib_dad)) #Rename columns for clarity
     
     #Split HSPs dataframe into MHS and PHS pairs
     #Mothers first
     mom_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
-      select(Old_sib_birth, Young_sib_birth) %>% 
-      filter(Young_sib_birth != Old_sib_birth) %>% #Remove intra-cohort comparisons
-      plyr::count() %>% #Count number of matches based on birth years
-      select(Old_sib_birth, Young_sib_birth, freq)
+        select(Old_sib_birth, Young_sib_birth) %>% 
+        filter(Young_sib_birth != Old_sib_birth) %>% #Remove intra-cohort comparisons
+        plyr::count() %>% #Count number of matches based on birth years
+        select(Old_sib_birth, Young_sib_birth, freq)
     
     #Now fathers
     dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,] %>% 
-      select(Old_sib_birth, Young_sib_birth) %>% 
-      filter(Young_sib_birth != Old_sib_birth) %>% 
-      plyr::count() %>% 
-      select(Old_sib_birth, Young_sib_birth, freq)
+        select(Old_sib_birth, Young_sib_birth) %>% 
+        filter(Young_sib_birth != Old_sib_birth) %>% 
+        plyr::count() %>% 
+        select(Old_sib_birth, Young_sib_birth, freq)
     
     #Now all parents (for sex-aggregated model) - double-checked that it matches mothers and fathers combined 02/03/21
     parent_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad | HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
@@ -325,7 +325,7 @@ for(samps in 1:4){
     min_est_cohort <- min(non_HSPs_2_tbl$Old_sib_birth, HSPs_2_tbl$Old_sib_birth)
     
     
-    #------------Set up required parameters for model------------
+#------------Set up required parameters for model------------
     #Not assessing survival - keeping constant at 0.85
     #surv <- 0.85
     m_adult_age <- c(12:maxAge) #Set ages at which males and females are mature.
@@ -337,7 +337,7 @@ for(samps in 1:4){
     pop_growth_all_mean <- mean(pop_growth_all[min_est_cohort:length(pop_growth_all)], na.rm = TRUE)
     #lam <- lambda1(A1_pre)
     lam <- pop_growth_all_mean #Fix this value for use in CKMR model
-    
+
     
     #Calculate mean survival-at-age
     mean_alive_at_age <- alive_at_age[1:30,] %>% rowMeans() %>% 
@@ -346,14 +346,14 @@ for(samps in 1:4){
     mean_adult_surv <- mean(mean_alive_at_age[13:30]/mean_alive_at_age[12:29], na.rm = TRUE)
     #surv <- 0.85
     surv <- mean_adult_surv #Fix this value for use in CKMR model
-    
-    
+
+        
     #Set the year of abundance estimate to the oldest youngest sib in a positive comparison ... better to do this for the oldest individual measured (did earlier in script)
     #min_est_cohort_F <- min(mom_positives$Young_sib_birth)
     #min_est_cohort_M <- min(dad_positives$Young_sib_birth)
     #min_est_cohort <- min(min_est_cohort_F, min_est_cohort_M)
     
-    #Source models and likelihood functions
+#Source models and likelihood functions
     #For PC
     setwd(".")
     source("./functions/get_P_lemon_HS_sex-specific.R")
@@ -366,8 +366,8 @@ for(samps in 1:4){
     # source("/home/js16a/R/working_directory/CKMR_simulations/scripts/functions/lemon_neg_log_lik_HS_Sex_specific.R")
     # source("/home/js16a/R/working_directory/CKMR_simulations/scripts/functions/get_P_lemon_HS_TotalA.R")
     # source("/home/js16a/R/working_directory/CKMR_simulations/scripts/functions/lemon_neg_log_lik_HS_TotalA.R")
-    
-    #Fit model
+
+#Fit model
     
     #Fit sex-specific model
     CK_fit1 <- optimx(par=Pars1,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
@@ -404,64 +404,64 @@ for(samps in 1:4){
     #Store number of parents detected, observed lambda, and number of samples
     metrics <- cbind(c(sum(mom_positives[,3]), sum(dad_positives[,3]), sum(parent_positives[,3])), c(rep(lam, times = 3)), c(rep(n_samples, times=3)))
     colnames(metrics) <- c("Parents_detected", "Pop_growth", "Samples")
-    
+
     #-----------------Loop end-----------------------------    
     results <- rbind(results, cbind(estimates, metrics))
-    
-    ###Re-structure proportion-at-age dataframe for visualization###
+
+###Re-structure proportion-at-age dataframe for visualization###
     #Remove any random age 31 individuals
     age_p <- age_p %>%
       filter(AgeLast <= 30)
-    
+
     ##Transpose proportion-at-age so ages are different columns
-    age_pT <- data.frame(t(age_p[,-1]))
-    colnames(age_pT) <- paste0("Age_", unlist(age_p[,1]))
-    age_pT$iter <- iter #add iteration
-    
-    #Store proportion-at-age for each year of the fishSim simulation for each iteration of the loop.
-    age_dist <- rbind(age_dist, age_pT)
-    
-    
-    ###calculate survival for each age###
-    alive_at_age2 <- data.frame(alive_at_age[-31,-1])
-    
-    obs_survival <- data.frame()
-    for(i in 1:(nrow(alive_at_age2)-1)){
-      for(j in 1:(ncol(alive_at_age2)-1)){
-        obs_survival[i, j] <- round(alive_at_age2[i+1, j+1]/alive_at_age2[i,j], digits=2)
-      }
-    }
-    
-    obs_survivalT <- data.frame(t(obs_survival))
-    colnames(obs_survivalT) <- paste0("Age_", c(1:29))
-    obs_survivalT$iter <- iter
-    survival_at_age <- rbind(survival_at_age, obs_survivalT)
-    #rownames(survival_at_age) <- paste0("sim_yr_", c(1:(n_yrs-1)))
-    
-    print(paste0("finished iteration", iter, " at: ", Sys.time()))
+age_pT <- data.frame(t(age_p[,-1]))
+colnames(age_pT) <- paste0("Age_", unlist(age_p[,1]))
+age_pT$iter <- iter #add iteration
+
+#Store proportion-at-age for each year of the fishSim simulation for each iteration of the loop.
+age_dist <- rbind(age_dist, age_pT)
+
+
+###calculate survival for each age###
+alive_at_age2 <- data.frame(alive_at_age[-31,-1])
+
+obs_survival <- data.frame()
+for(i in 1:(nrow(alive_at_age2)-1)){
+  for(j in 1:(ncol(alive_at_age2)-1)){
+    obs_survival[i, j] <- round(alive_at_age2[i+1, j+1]/alive_at_age2[i,j], digits=2)
+  }
+}
+
+obs_survivalT <- data.frame(t(obs_survival))
+colnames(obs_survivalT) <- paste0("Age_", c(1:29))
+obs_survivalT$iter <- iter
+survival_at_age <- rbind(survival_at_age, obs_survivalT)
+#rownames(survival_at_age) <- paste0("sim_yr_", c(1:(n_yrs-1)))
+  
+print(paste0("finished iteration", iter, " at: ", Sys.time()))
   }
   
   #Calculate relative bias and add to results dataframe
-  results <- results %>% 
+ results <- results %>% 
     mutate(Relative_bias = round(((CKMR_estimate - Truth)/Truth)*100,1))
-  
-  #Median relative bias by sex
+ 
+ #Median relative bias by sex
   results %>% group_by(Sex) %>% 
     summarize(median = median(Relative_bias), n = n())
   
-  #Write results (on cluster)
-  write.table(results, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_null", n_samples, ".samples_02.16.2021_ages.correct_fishSim.N.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-  
-  write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", n_samples, ".samples_02.03.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-  
-  write.table(survival_at_age, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_survival.at.age_", n_samples, ".samples_02.03.2021_ages.correct_surv.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+ #Write results (on cluster)
+  write.table(results, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_null", n_samples, ".samples_02.03.2021_ages.correct_fishSim.N.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+
+    write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", n_samples, ".samples_02.03.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+
+    write.table(survival_at_age, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_survival.at.age_", n_samples, ".samples_02.03.2021_ages.correct_surv.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 
 #-------------------Write/look at results (home computer)-----------
 #For home computer
-write.table(results, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/fishSim_simulations/null_model_tests/results/fishSim_null", n_samples, ".samples_02.16.2021_ages.correct_fishSim.N.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/fishSim/results//fishSim_null", n_samples, ".samples_02.10.2021_ages.correct_fishSim.N.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
-write.table(age_dist, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/fishSim_simulations/null_model_tests/results/fishSim_age.distributions_", n_samples, ".samples_02.16.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(age_dist, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/fishSim/results/fishSim_age.distributions_", n_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #Quick viz of results
 library(ggpubr)
