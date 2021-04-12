@@ -9,7 +9,7 @@ surv <- 0.85
 m_age_at_mat <- min(m_adult_age)
 f_age_at_mat <- min(f_adult_age)
 
-get_P_lemon <- function(Pars1,P_Mother,P_Father,t_start,t_end){
+get_P_cownose <- function(Pars1,P_Mother,P_Father,t_start,t_end){
   N_F=exp(Pars1[1]) #number of mature females (assume time constant)
   
   for(os_birth in min_est_cohort:(n_yrs-1)){  #> = after, < = before
@@ -58,7 +58,7 @@ get_P_lemon <- function(Pars1,P_Mother,P_Father,t_start,t_end){
   return(list(P_Mother=P_Mother, P_Father=P_Father)) #return makes sure this is moved out of the loop into the environment
 }
 
-P=get_P_lemon(Pars1=Pars1,P_Mother=P_Mother,P_Father=P_Father,t_start=t_start,t_end=t_end)
+P=get_P_cownose(Pars1=Pars1,P_Mother=P_Mother,P_Father=P_Father,t_start=t_start,t_end=t_end)
 
 #Model for calculating prior probability of kinship for half-siblings
 #Not assessing survival - keeping constant at 0.85

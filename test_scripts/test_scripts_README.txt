@@ -1,0 +1,2 @@
+This folder is for random scripts to try things. It's meant to be a messy folder.
+When adding a script to this directory to test something, also update the simulation summary README to explain what I'm doing and why.
