@@ -1,17 +1,12 @@
-#NEXT as of 2/26/2021
-#Re-run this simulation but make init pop size 5000 and take 300-400 samples
+#rm(list=ls())
 
-rm(list=ls())
-
+#Load packages
 library(optimx)
-
-#Load individual packages because tidyverse won't load on cluster
-library(plyr)
 library(tidyverse)
 library(popbio)
 library(mpmtools)
 
-####---------Parameters---------####
+####---------Simulation parameters---------####
 init.pop.size <- 3000 # Initial population size
 init.prop.female <- .5 # proportion of the initial population size that is female
 repro.age <- 7 #set age of reproductive maturity
@@ -27,25 +22,22 @@ burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
 
-# decide which years to subtract from n_yrs for sampling and include in the vector below (currently 3:0)
+#Decide which years to subtract from n_yrs for sampling and include in the vector below (currently 3:0, which means sample the last four years of the simulation)
 sample.years <- c(n_yrs - c(3:0))
-sample.size <- 100
+sample.size <- 100 #sample size per year
 
+iterations <- 40 #Number of iterations to loop over
 
-#Saves a dataframe for each year of the simulation so I can go back and sample specific years
-
-iterations <- 40
-
+#--------------Start simulation loop--------------
 for(samps in 1:4){
   #set.seed(47)
-  results <- NULL
-  #results <- data.frame(matrix(0, nrow = iterations*2, ncol = 7))
-  sample.size <- c(200, 400, 600, 800)[samps]
+  results <- NULL #initialize results array
+  sample.size <- c(200, 400, 600, 800)[samps] #To loop over different sample sizes, draw a different number of samples each time
   
   for(iter in 1:iterations) {
   
 ####---------Set up initial population-----####
-init.pop <- data.frame() # create a bank data frame which will become the initial popualation
+init.pop <- data.frame() # create a blank data frame which will become the initial popualation
 
 for(i in 1:init.pop.size){ # Loop that creates the below data for each individual in a population the size of "init.pop.size"
   indv.name <- paste(sample(letters, size = 20, replace = T), collapse="") # generate a random name that is 20 letters long
@@ -113,7 +105,7 @@ loopy.pop <- year.end.pop.0
 ####-------Loop for all other breeding--------####
 pop.size <- data.frame()
 
-loopy.list <- list()
+loopy.list <- list() #Make list to store dataframe of population for each year, where each element corresponds to the year e.g. loopy.list[[1]] is the population from the first year
 
 for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulation - the burn in and the years that matter
 
@@ -171,6 +163,7 @@ pop.size.vec <- cbind.data.frame(year=v, population_size=nrow(loopy.pop), Male.a
 pop.size <- rbind(pop.size, pop.size.vec)
 }
 
+#Label the list elements with the year
 names(loopy.list) <- paste0("year.end.pop.", seq(1:(burn.in + Num.years)))
 
 
@@ -202,57 +195,64 @@ nrow(loopy.pop[loopy.pop$Survival=='M' & loopy.pop$age.x>=12, ])+
   nrow(loopy.pop[loopy.pop$Survival=='M' & loopy.pop$age.x==0, ])/nrow(loopy.pop[loopy.pop$age.x==0,])
 
 nrow(YOY.df)
-
-#Once I've formatted the data and fit the CKMR model, I can add parameters to the top of the script to make it more customizable.
 #The number of rows in a dataframe are the number of individuals in the population
 
+#The initial adult population size
 init.adult_pop.size <- loopy.list[[1]] %>% filter(age.x >= repro.age) %>% 
   nrow()
 
+#Set initial parameters for model based on initial abundance of males and females
 f.init = m.init <- init.adult_pop.size/2
+Pars1 <- c(log(f.init), log(m.init)) #Pars1 is for the sex-specific model
+Pars2 <- log(init.adult_pop.size) #Pars2 is for the sex-aggregated model
 
-Pars1 <- c(log(f.init), log(m.init))
-Pars2 <- log(init.adult_pop.size)
+####------------------------Collect samples---------------------####
 
-####--------------Find full sibs and same cohort sibs to filter---------####
 #Initialize dataframes
 sample.df_all.info <- NULL
 sample.df_temp <- NULL
 
-#Make dataframe of samples with all metadata
+#Sample population during last three years and make dataframe of samples with all metadata
 for(i in sample.years){
   sample.df_temp <- loopy.list[[i]] %>% dplyr::slice_sample(n = sample.size)
   sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
 }
 
+#Keep just one instance of each individual (to avoid self-recapture) and sort by birth year so when we make the pairwise comparison matrix, Ind_1 is always older than Ind_2 (bc it comes first)
 sample.df_all.info <- sample.df_all.info %>% distinct(indv.name, .keep_all = TRUE) %>% 
-  dplyr::arrange(birth.year, desc()) #Keep just one of each individual (to avoid self-recapture) and sort by birth year so when we make the pairwise comparison matrix, Ind_1 is always older than Ind_2
+  dplyr::arrange(birth.year, desc()) 
+
+
+####-------------Construct pairwise comparison matrix--------------####
 
 #Create dataframe of pairwise comparisons with just individual IDs
 pairwise.df <- data.frame(t(combn(sample.df_all.info$indv.name, m=2)))
-colnames(pairwise.df) <- c("Ind_1", "indv.name")
+colnames(pairwise.df) <- c("Ind_1", "indv.name") #Rename columns so they can easily be joined
+
 head(pairwise.df)
 
-# Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
+#Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
 Ind1_birthyears <- sample.df_all.info %>%
   select(indv.name, birth.year, age.x, mother.x, father.x) %>% #select relevant columns only
   dplyr::rename("Ind_1" = indv.name, "Ind_1_birth" = birth.year, "Ind_1_age" = age.x, "Ind_1_mom" = mother.x, "Ind_1_dad" = father.x) #Rename columns for join and also so younger sib birth year and parents are distinguishable from older sib data when joined below.
 
-#Combine the two dataframes above to extract birth year and parents for each individual in the pairwise comparison matrix
+#Combine the two dataframes above to extract birth year and parents for each individual in the pairwise comparison matrix. 
+#This is the main pairwise comparison matrix with all (relevant) comparisons and individual data.
 pairwise.df_all.info <- pairwise.df %>% left_join(Ind1_birthyears, by = "Ind_1") %>% 
   left_join(sample.df_all.info, by = "indv.name") %>% 
   dplyr::rename("Ind_2" = indv.name, "Ind_2_birth" = birth.year, "Ind_2_age" = age.x, "Ind_2_mom" = mother.x, "Ind_2_dad" = father.x) %>% 
   select(Ind_1, Ind_1_birth, Ind_1_age, Ind_2, Ind_2_birth, Ind_2_age, Ind_1_mom, Ind_2_mom, Ind_1_dad, Ind_2_dad) %>% 
   filter(Ind_1_birth != Ind_2_birth) #Filter same cohort comparisons; unlikely to happen, but can when a male fathers multiple offspring in a year
 
-#Extract positive HS comparisons and exclude full sibs
+#Extract positive HS comparisons and exclude make sure there are no full sibs
 positives <- pairwise.df_all.info %>% filter(Ind_1_mom == Ind_2_mom | Ind_1_dad == Ind_2_dad)
 
 #Identify self-recaptures
 self <- positives %>% filter(Ind_1 == Ind_2)
 
-nrow(self) #Check if there are self-recaptures; they should have been filtered earlier
+nrow(self) #Check if there are self-recaptures; they should have been filtered earlier so should be 0
 
+####----------------Old section not needed-------------------####
 #Split into positive comparisons for moms and dads
 #mom_positives_same_cohort <- positives %>% filter(Ind_1_mom == Ind_2_mom & Ind_1_birth == Ind_2_birth) 
 
@@ -285,6 +285,9 @@ nrow(self) #Check if there are self-recaptures; they should have been filtered e
 # #Extract positive HS comparisons and exclude full sibs
 # positives2 <- pairwise.df_all.info2 %>% filter(Ind_1_mom == Ind_2_mom | Ind_1_dad == Ind_2_dad)
 
+####----------------Split dataframes into final form for model----------####
+
+#Sex-specific
 mom_positives <- positives %>% filter(Ind_1_mom == Ind_2_mom) %>% 
 select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
@@ -293,12 +296,14 @@ dad_positives <- positives %>% filter(Ind_1_dad == Ind_2_dad) %>%
   select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
 
+#Sex-aggregated
 parent_positives <- positives %>% filter(Ind_1_dad == Ind_2_dad | Ind_1_mom == Ind_2_mom) %>% 
   select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
 
 
-#Make dataframe for negative comparisons
+#Make dataframes for negative comparisons
+#Sex-specific
 mom_negatives <- pairwise.df_all.info %>% filter(Ind_1_mom != Ind_2_mom & Ind_1_birth != Ind_2_birth) %>% #filter for same cohort is repetitive
   select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
@@ -307,17 +312,17 @@ dad_negatives <- pairwise.df_all.info %>% filter(Ind_1_dad != Ind_2_dad & Ind_1_
   select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
 
+#Sex-aggregated
 parent_negatives <- pairwise.df_all.info %>% filter(Ind_1_dad != Ind_2_dad & Ind_1_mom != Ind_2_mom & Ind_1_birth != Ind_2_birth) %>% 
   select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
 
-#-------------Kinship probabilities - Half-sib-------------------
-#Set the first cohort to the first year for which we have data
-#min_est_cohort <- min(sample.df_all.info$birth.year)
-min_est_cohort <- n_yrs-5
+####----------------Parameters for kinship probabilities-------------------####
+#Set the year for which we will estimate abundance
+#min_est_cohort <- min(sample.df_all.info$birth.year) #First year of data
+min_est_cohort <- n_yrs-5 #set reference year so it's close to present
 
-#Not assessing survival - keeping constant at 0.85
-m_adult_age = f_adult_age <- c(repro.age:max.age) #Set ages at which males and females are mature.
+m_adult_age = f_adult_age <- c(repro.age:max.age) #Set ages at which males and females are mature. Called by kinship probability function.
 
 pop_growth_all_mean <- mean(pop.size$Lambda[1:nrow(pop.size)], na.rm=T)
 
@@ -326,26 +331,16 @@ mean_adult_surv <- mean(survival_vec[40:(n_yrs-1)]) #survival of adults
 
 
 ###Used in model###
-#surv <- 0.85
-surv <- mean_adult_surv
-#lam <- lambda1(A1_pre)
-lam <- mean(pop.size$Lambda[min_est_cohort:n_yrs], na.rm=T) #Mean Lambda
-#lam <- 1
+surv <- Adult.survival #Set value
+#surv <- mean_adult_surv #Observed value
 
-#Wrong way of doing it ...
-#What is the first year for which we have a positive comparison for CKMR
-#CKMR estimates abundance for the younger cohort of each comparison, so we use the younger sibling birth year
-#min_est_cohort_F <- min(mom_positives$Young_sib_birth)
-#min_est_cohort_M <- min(dad_positives$Young_sib_birth)
-#min_est_cohort <- min(min_est_cohort_F, min_est_cohort_M)
-
-#Right way of doing it
+lam <- mean(pop.size$Lambda[min_est_cohort:n_yrs], na.rm=T) #Mean Lambda over years of estimation
 
 #For PC
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/functions/get_P_cownose_HS_sex-specific.R")
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/functions/cownose_neg_log_lik_HS_sex-specific.R")
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/functions/get_P_cownose_HS_sex-aggregated.R")
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/functions/cownose_neg_log_lik_HS_sex-aggregated.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/00_functions/get_P_cownose_HS_sex-specific.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/00_functions/cownose_neg_log_lik_HS_sex-specific.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/00_functions/get_P_cownose_HS_sex-aggregated.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/00_functions/cownose_neg_log_lik_HS_sex-aggregated.R")
 
 # #For cluster
 # source("/home/js16a/R/working_directory/CKMR_simulations/scripts/functions/get_P_lemon_HS.R")
@@ -360,6 +355,8 @@ CK_fit2 <- optimx(par=Pars2,fn=cownose_neg_log_lik_TotalA,hessian=TRUE, method="
 
 #summary(CK_fit1)
 #exp(CK_fit1[1:2])
+
+####----#Need to check and work on script for calculating SE below----####
 
 #compute variance covariance matrix - optimx
 D1=diag(length(Pars1))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
@@ -379,42 +376,46 @@ SE1=round(sqrt(diag(VC1)),0)
 #store years from youngest sibling in comparisons to end of study
 yrs <- c(min(mom_positives$Ind_2_birth, dad_positives$Ind_2_birth, parent_positives$Ind_2_birth):t_end)
 
+#Extract true values from year of estimation (ie min_est_cohort)
 Mom_truth <- pop.size$Female.adult.pop[min_est_cohort]
 Dad_truth <- pop.size$Male.adult.pop[min_est_cohort]
 Adult_truth <- Mom_truth + Dad_truth
 
+#Create dataframe of estimates and truth
 estimates <- data.frame(cbind(round(exp(c(CK_fit1$p1[1], CK_fit1$p2[1], CK_fit2$p1[1])),0)), c(SE1, SE2), c("F", "M", "All"))
 estimates <- cbind(estimates, c(Mom_truth, Dad_truth, Adult_truth))
 colnames(estimates) <- c("CKMR_estimate", "SE", "Sex", "Truth")
 estimates
 
+#Extract more metrics that can help with troubleshooting
 total_samples <- sample.size * length(sample.years)
 
 metrics <- cbind(c(sum(mom_positives[,3]), sum(dad_positives[,3]), sum(parent_positives[,3])), c(rep(lam, times = 3)), c(rep(total_samples, times=3)))
 colnames(metrics) <- c("Parents_detected", "Pop_growth", "Samples")
 
 #-----------------Loop end-----------------------------    
+#Bind results from previous iterations with current iteration
 results <- rbind(results, cbind(estimates, metrics))
-
-
 
 
 print(paste0("finished iteration", iter, " at: ", Sys.time()))
 }
+
+#Calculate relative bias for all estimates
 results <- results %>% 
   mutate(Relative_bias = round(((CKMR_estimate - Truth)/Truth)*100,1))
 
  results %>% group_by(Sex) %>% 
    dplyr::summarize(median = median(Relative_bias), n = n())
 
-write.table(results, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/IBS_simulations/Dovi_IBS_results/Dovi.IBS_", total_samples, ".samples_Cownose.Ray_03.25.2021_N.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/IBS_simulations/Dovi_IBS_results/Dovi.IBS_", total_samples, ".samples_Cownose.Ray_04.21.2021_N.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(survival_at_age, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_survival.at.age_", total_samples, ".samples_02.10.2021_ages.correct_surv.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 
-#Quick viz of results
+####-------Quick viz of results--------####
 library(ggpubr)
 
 #Box plot of relative bias

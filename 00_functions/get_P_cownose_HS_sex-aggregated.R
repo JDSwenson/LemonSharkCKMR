@@ -10,7 +10,7 @@ P_Parent = array(0, dim=c(n_yrs,n_yrs)) #Dimensions are older sib birth year and
 get_P_cownose_TotalA <- function(Pars2,P_Parent,t_start,t_end){
   N_A=exp(Pars2[1]) #number of mature adults
 
-  for(os_birth in min_est_cohort:(n_yrs-1)){  #Loop over possible ages of older sibs
+  for(os_birth in 1:(n_yrs-1)){  #Loop over possible ages of older sibs
     for(ys_birth in max(os_birth+1):n_yrs){ #Loop over possible ages of younger sibs
       if((ys_birth - os_birth) <= ((maxAge+1) - adult_age_at_mat)){ #If the adult could have been mature in the birth year of both individual, then fill the array with the appropriate probability of kinship
         

@@ -1,11 +1,11 @@
 P$P_Father[36, 40]
-ys_birth <- 40
-os_birth <- 36
+ys_birth <- 90
+os_birth <- 80
 
 
 P_Mother = P_Father = array(0,dim=c(n_yrs,n_yrs))
 
-surv <- 0.85
+surv <- 0.9
 m_age_at_mat <- min(m_adult_age)
 f_age_at_mat <- min(f_adult_age)
 

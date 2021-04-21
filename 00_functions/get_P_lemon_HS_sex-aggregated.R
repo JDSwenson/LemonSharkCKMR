@@ -1,6 +1,6 @@
 #Sex-aggregated model for calculating prior probability of kinship for half-siblings based on birth years
 
-adult_mat_age <- c(12:30) #Adult age of females -males assumed to be the same
+adult_mat_age <- c(7:max.age) #Adult age of females -males assumed to be the same
 adult_age_at_mat <- min(adult_mat_age) #minimum age an adult could be mature
 
 #Set up empty array that will be filled with function below
