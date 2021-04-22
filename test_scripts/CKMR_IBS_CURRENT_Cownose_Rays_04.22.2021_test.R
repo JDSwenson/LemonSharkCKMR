@@ -22,6 +22,7 @@ juvenile.survival <- .86 #juvenile survival
 YOY.survival <- .75 # young of year survival
 burn.in <- 50 # number of years to use as simulation burn in period
 Num.years <- 40 # The number of years to run in the simulation beyond the burn in
+
 n_yrs = t_end <- burn.in + Num.years
 
 # decide which years to subtract from n_yrs for sampling and include in the vector below (currently 3:0)
@@ -336,8 +337,10 @@ mean_lam <- mean(pop.size$Lambda[min_cohort:n_yrs], na.rm=T) #Mean Lambda
 
 
 ###Used in model###
+surv <- Adult.survival
 surv <- mean_adult_surv + surv_setting[sv]
 lam <- mean_lam + lam_setting[lm]
+lam <- mean_lam
 
 #lam <- 1
 
@@ -351,10 +354,10 @@ lam <- mean_lam + lam_setting[lm]
 #Right way of doing it
 
 #For PC
-source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/get_P_cownose_HS_sex-specific_test.R")
-source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/cownose_neg_log_lik_HS_sex-specific.R")
-source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/get_P_cownose_HS_sex-aggregated_test.R")
-source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/cownose_neg_log_lik_HS_sex-aggregated.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/00_functions/get_P_cownose_HS_sex-specific_test.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/00_functions/cownose_neg_log_lik_HS_sex-specific.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/00_functions/get_P_cownose_HS_sex-aggregated_test.R")
+source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/00_functions/cownose_neg_log_lik_HS_sex-aggregated.R")
 
 # #For cluster
 # source("/home/js16a/R/working_directory/CKMR_simulations/scripts/functions/get_P_lemon_HS.R")
