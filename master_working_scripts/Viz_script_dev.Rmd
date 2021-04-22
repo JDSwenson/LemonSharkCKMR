@@ -28,21 +28,26 @@ options(tibble.width = Inf)
 
 Dovi's IBS code
 ```{r}
-## 03/11/2021
+## 04/22/2021
 
 #null model results
-IBS.null_CNR <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/IBS_simulations/Dovi_IBS_results/*03.26.2021_N.csv")
+IBS.null_CNR <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/abundance_estimates/*04.13.2021_N.csv")
 IBS.null_results_CNR <- sapply(IBS.null_CNR, read_csv, simplify=FALSE) %>% 
 bind_rows() #%>% 
   #drop_na()
 
-IBS.null_2 <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/IBS_simulations/Dovi_IBS_results/*03.02.2021.N.csv")
-IBS.null_results_2 <- sapply(IBS.null_2, read_csv, simplify=FALSE) %>% 
+IBS_null_demo <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/demographic_output/*04.13.2021_demographic.out.csv")
+IBS.null_demo <- sapply(IBS_null_demo, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+#IBS.null_2 <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/IBS_simulations/Dovi_IBS_results/*03.02.2021.N.csv")
+#IBS.null_results_2 <- sapply(IBS.null_2, read_csv, simplify=FALSE) %>% 
 bind_rows() #%>% 
   #drop_na()
 
 
-NullIBS1 <- ggplot(data=IBS.null_results_CNR, aes(x=factor(Samples))) +
+NullIBS1 <- ggplot(data=IBS.null_results_CNR, aes(x=factor(Total_samples))) +
   geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
   ylim(-50, 160) +
   geom_hline(yintercept=0, col="black", size=1.25) +
@@ -51,14 +56,17 @@ NullIBS1 <- ggplot(data=IBS.null_results_CNR, aes(x=factor(Samples))) +
   scale_fill_brewer(palette="Set2") +
   font("title", size = 10, face = "bold")
 
-NullIBS2 <- ggplot(data=IBS.null_results_2, aes(x=factor(Samples))) +
-  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
-  ylim(-50, 160) +
-  geom_hline(yintercept=0, col="black", size=1.25) +
-  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Sample size", y="Relative bias", title="Relative bias of IBS Simulations") +
-  scale_fill_brewer(palette="Set2") +
-  font("title", size = 10, face = "bold")
+# NullIBS2 <- ggplot(data=IBS.null_results_2, aes(x=factor(Samples))) +
+#   geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+#   ylim(-50, 160) +
+#   geom_hline(yintercept=0, col="black", size=1.25) +
+#   annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+#   labs(x="Sample size", y="Relative bias", title="Relative bias of IBS Simulations") +
+#   scale_fill_brewer(palette="Set2") +
+#   font("title", size = 10, face = "bold")
+
+head(IBS.null_demo)
+head(IBS.null_results_CNR)
 
 ggarrange(NullIBS1, NullIBS2, common.legend = TRUE)
 ```

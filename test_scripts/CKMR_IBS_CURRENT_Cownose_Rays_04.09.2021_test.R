@@ -23,7 +23,7 @@ birth.sex.ratio <- c(.5,.5) # The probability that each baby is F:M - has to add
 Adult.survival <- .9 #Adult survival
 juvenile.survival <- .86 #juvenile survival
 YOY.survival <- .75 # young of year survival
-burn.in <- 40 # number of years to use as simulation burn in period
+burn.in <- 50 # number of years to use as simulation burn in period
 Num.years <- 40 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
 
@@ -34,13 +34,14 @@ sample.size <- 100
 
 #Saves a dataframe for each year of the simulation so I can go back and sample specific years
 
-iterations <- 40
+iterations <- 100
 
 for(samps in 1:4){
   #set.seed(47)
   results <- NULL
   #results <- data.frame(matrix(0, nrow = iterations*2, ncol = 7))
-  sample.size <- c(200, 400, 600, 800)[samps]
+  demo <- NULL
+  sample.size <- c(50, 100, 150, 200)[samps]
   
   for(iter in 1:iterations) {
   
@@ -327,13 +328,13 @@ m_adult_age = f_adult_age <- c(repro.age:max.age) #Set ages at which males and f
 pop_growth_all_mean <- mean(pop.size$Lambda[1:nrow(pop.size)], na.rm=T)
 
 #Calculate mean survival-at-age
-mean_adult_surv <- mean(survival_vec[40:60]) #survival of adults
+mean_adult_surv <- mean(survival_vec[(n_yrs-max.age):n_yrs]) #survival of adults
 
 ###Used in model###
-#surv <- 0.85
-surv <- mean_adult_surv
+surv <- 0.9
+#surv <- mean_adult_surv
 #lam <- lambda1(A1_pre)
-lam <- mean(pop.size$Lambda[min_est_cohort:t_end], na.rm=T) #Mean Lambda
+lam <- mean(pop.size$Lambda[(n_yrs-max.age):t_end], na.rm=T) #Mean Lambda
 #lam <- 1
 
 #Wrong way of doing it ...
@@ -346,10 +347,10 @@ lam <- mean(pop.size$Lambda[min_est_cohort:t_end], na.rm=T) #Mean Lambda
 #Right way of doing it
 
 #For PC
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/functions/get_P_cownose_HS_sex-specific_test.R")
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/functions/cownose_neg_log_lik_HS_sex-specific.R")
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/functions/get_P_cownose_HS_sex-aggregated_test.R")
-source("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/functions/cownose_neg_log_lik_HS_sex-aggregated.R")
+source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/get_P_cownose_HS_sex-specific_test.R")
+source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/cownose_neg_log_lik_HS_sex-specific.R")
+source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/get_P_cownose_HS_sex-aggregated_test.R")
+source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/cownose_neg_log_lik_HS_sex-aggregated.R")
 
 # #For cluster
 # source("/home/js16a/R/working_directory/CKMR_simulations/scripts/functions/get_P_lemon_HS.R")
@@ -396,12 +397,13 @@ estimates
 total_samples <- sample.size * length(sample.years)
 
 metrics <- cbind(c(sum(mom_positives[,3]), sum(dad_positives[,3]), sum(parent_positives[,3])), c(rep(lam, times = 3)), c(rep(total_samples, times=3)))
-colnames(metrics) <- c("Parents_detected", "Pop_growth", "Samples")
+colnames(metrics) <- c("Parents_detected", "Pop_growth", "Total_samples")
 
 #-----------------Loop end-----------------------------    
 results <- rbind(results, cbind(estimates, metrics))
 
-
+pop.size$iter <- iter
+demo <- rbind(demo, pop.size)
 
 
 print(paste0("finished iteration", iter, " at: ", Sys.time()))
@@ -412,7 +414,9 @@ results <- results %>%
  results %>% group_by(Sex) %>% 
    dplyr::summarize(median = median(Relative_bias), n = n())
 
-write.table(results, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/IBS_simulations/Dovi_IBS_results/Dovi.IBS_", total_samples, ".samples_Cownose.Ray_03.25.2021_N.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/abundance_estimates/Dovi.IBS_", total_samples, ".samples_Cownose.Ray_04.13.2021_N.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+
+write.table(demo, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/demographic_output/Dovi.IBS_", total_samples, ".samples_Cownose.Ray_04.13.2021_demographic.out.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
