@@ -65,7 +65,7 @@ NullIBS1 <- ggplot(data=IBS.null_results_CNR, aes(x=factor(Total_samples))) +
 #   scale_fill_brewer(palette="Set2") +
 #   font("title", size = 10, face = "bold")
 
-head(IBS.null_demo)
+head(IBS.null_demo, 10)
 head(IBS.null_results_CNR)
 
 ggarrange(NullIBS1, NullIBS2, common.legend = TRUE)

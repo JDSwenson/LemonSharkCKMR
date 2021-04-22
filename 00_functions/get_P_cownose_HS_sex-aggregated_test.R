@@ -1,8 +1,5 @@
 #Sex-aggregated model for calculating prior probability of kinship for half-siblings based on birth years
 
-adult_mat_age <- c(repro.age:max.age) #Adult age of females -males assumed to be the same
-adult_age_at_mat <- min(adult_mat_age) #minimum age an adult could be mature
-
 #Set up empty array that will be filled with function below
 P_Parent = array(0, dim=c(n_yrs,n_yrs)) #Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
 
@@ -10,9 +7,9 @@ P_Parent = array(0, dim=c(n_yrs,n_yrs)) #Dimensions are older sib birth year and
 get_P_cownose_TotalA <- function(Pars2,P_Parent,t_start,t_end){
   N_A=exp(Pars2[1]) #number of mature adults
 
-  for(os_birth in min_est_cohort:(n_yrs-1)){  #Loop over possible ages of older sibs
+  for(os_birth in 1:(n_yrs-1)){  #Loop over possible ages of older sibs
     for(ys_birth in max(os_birth+1):n_yrs){ #Loop over possible ages of younger sibs
-      if((ys_birth - os_birth) <= ((maxAge+1) - adult_age_at_mat)){ #If the adult could have been mature in the birth year of both individual, then fill the array with the appropriate probability of kinship
+      if((ys_birth - os_birth) <= (max.age - repro.age)){ #If the adult could have been mature in the birth year of both individual, then fill the array with the appropriate probability of kinship
         
         #Probability of kinship based on birth year
         #See Hillary et al (2018) equation (3)
