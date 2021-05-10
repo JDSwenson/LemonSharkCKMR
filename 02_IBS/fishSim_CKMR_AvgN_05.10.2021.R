@@ -9,7 +9,7 @@ library(plyr)
 library(dplyr)
 library(tidyr)
 
-set.seed(47)
+set.seed(4747)
 #---------------Set up experiment parameters--------------------
 #Constant Abundance - one estimate
 t_start = 41 #First year we take samples
@@ -20,7 +20,7 @@ t_end = 45 #Last year we take samples
 n_yrs <- t_end #Number of years of study
 
 #Set up the simulation parameters
-sim_yrs = c(1:39)
+sim_yrs = c(1:(t_start-1))
 n_samp_yr = t_end-t_start #Number of years being sampled
 n_samples_per_yr = 40
 n_samples_total <- n_samples_per_yr * n_samp_yr + n_samples_per_yr #because sampling starts in year t_start, we need to add one more year
@@ -40,7 +40,7 @@ Prop_age <- Prop_age/sum(Prop_age)  #stable age distribution
 survCurv <- Prop_age #Sets probability of founder cohort belonging to each age class
 
 #Set parameters for altMate
-batchSize = 3 #average size of brood -- assumes Poisson distribution for fecundity (which is default for altMate). Average fecundity (6) divided by 2 for skipped-breeding
+batchSize = 3.5 #average size of brood -- assumes Poisson distribution for fecundity (which is default for altMate). Average fecundity (6) divided by 2 for skipped-breeding
 firstBreed <- 12 #If using same knife-edge maturity for males and females
 
 mat_m <- rep(0,maxAge) #creates an empty vector that has the length of n_ages
@@ -68,15 +68,15 @@ Pars2=c(log(total_abundance))
 #-------------Kinship probabilities - Half-sib-------------------
 #Not assessing survival - keeping constant at 0.85
 surv <- 0.85
-m_adult_age <- c(12:max_age) #Set ages at which males and females are mature.
-f_adult_age <- c(12:max_age)
+m_adult_age <- c(12:maxAge) #Set ages at which males and females are mature.
+f_adult_age <- c(12:maxAge)
 
-iterations <- 100
+iterations <- 50
 
 source("~/R/R_working_dir/LemonSharkCKMR_GitHub/00_functions/lemon_funcs_05.10.2021.R")
 
 for(samps in 1:3){
-  results <- data.frame(matrix(0, nrow = iterations*2, ncol = 6))
+  results <- NULL
   n_samples <- c(50, 75, 100)[samps]
   sampled_ages <- data.frame(matrix(0, nrow = n_samples, ncol = iterations))
   for(iter in 1:iterations) {
@@ -97,6 +97,8 @@ indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, surv
 
 Dad_truth <- c()
 Mom_truth <- c()
+All_truth <- c()
+
 for (y in 1:length(sim_yrs)) {
   #Store true values for each year
   Dad_truth[y] <- indiv %>% 
@@ -180,6 +182,12 @@ dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,]
     plyr::count() %>% 
     dplyr::select(Old_sib_birth, Young_sib_birth, freq, Father)
 
+parent_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad | HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
+  select(Old_sib_birth, Young_sib_birth) %>% 
+  filter(Young_sib_birth != Old_sib_birth) %>% 
+  plyr::count() %>% 
+  select(Old_sib_birth, Young_sib_birth, freq)
+
 
 nrow(HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad & HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,]) #Should be 0 or there are full sibs
 
@@ -200,7 +208,7 @@ non_HSPs_2_tbl <- inner_join(indiv, non_HSPs_tbl, by = "Me") %>%
   dplyr::select(c(Old_sib_birth, Young_sib_birth))
 
 #Create table of all negative comparisons, count occurences, and filter intracohort comparisons
-mom_negatives = dad_negatives <- non_HSPs_2_tbl %>% 
+mom_negatives = dad_negatives = parent_negatives <- non_HSPs_2_tbl %>% 
     plyr::count() %>% 
     dplyr::filter(Young_sib_birth != Old_sib_birth)
 
@@ -208,7 +216,7 @@ mom_negatives = dad_negatives <- non_HSPs_2_tbl %>%
 #source("~/R/R_working_dir/CKMR/LemonSharkCKMR/constant_abundance/models/get_P_lemon_HS_fishSim.R")
 #source("~/R/R_working_dir/CKMR/LemonSharkCKMR/likelihood_functions/lemon_neg_log_like_HS_Sex_specific.R")
 
-P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+#P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
 #P$P_Mother
 
@@ -216,16 +224,26 @@ P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=
 #P$P_Mother[19,40,45] #Dimensions are parent birth year, parent capture year, offspring birth year (all of which are specified by n_yrs)
 
 #Fit model
-CK_fit <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
+CK_fit1 <- optimx(par=Pars1,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, n_yrs=n_yrs, t_start=t_start, t_end=t_end)
 
-summary(CK_fit)
-#exp(CK_fit[1:2])
+CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="BFGS", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
 
-#compute variance covariance matrix
-D=diag(length(Pars))*c(exp(CK_fit$p1[1]),exp(CK_fit$p2[1])) #derivatives of transformations
-VC_trans = solve(attr(CK_fit, "details")["BFGS" ,"nhatend"][[1]])
-VC = (t(D)%*%VC_trans%*%D) #delta method
-SE=round(sqrt(diag(VC)),0)
+summary(CK_fit1)
+exp(CK_fit1[1:2])
+exp(CK_fit2[1])
+
+#compute variance covariance matrix - sex-specific model
+D1=diag(length(Pars1))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
+VC_trans1 = solve(attr(CK_fit1, "details")["BFGS" ,"nhatend"][[1]])
+VC1 = (t(D1)%*%VC_trans1%*%D1) #delta method
+SE1=round(sqrt(diag(VC1)),0)
+
+
+#compute variance covariance matrix - sex-aggregated model
+D2=diag(length(Pars2))*exp(CK_fit2$p1[1]) #derivatives of transformations
+VC_trans2 = solve(attr(CK_fit2, "details")["BFGS" ,"nhatend"][[1]])
+VC2 = (t(D2)%*%VC_trans2%*%D2) #delta method
+SE2 = round(sqrt(diag(VC2)),0)
 
 #Rename columns
 #colnames(CK_fit)[1:2] <- c("N_est_F", "N_est_M")
@@ -234,15 +252,28 @@ SE=round(sqrt(diag(VC)),0)
 #store years from youngest sibling in comparisons to end of study
 yrs <- c(min(mom_positives$Young_sib_birth, dad_positives$Young_sib_birth):t_end)
 
-estimates <- data.frame(cbind(t(round(exp(CK_fit[1:2]),0)), SE, c("F", "M")))
-colnames(estimates) <- c("CKMR_estimate", "SE", "Sex")
-estimates <- cbind(estimates, truth = c(round(mean(Mom_truth[yrs]),0), round(mean(Dad_truth[yrs]),0)))
-estimates
+sampled_indvs <- indiv %>% filter(is.na(SampY) == FALSE)
 
-#-----------------Loop end-----------------------------
-results[index,] <- c(round(exp(CK_fit$p1[1]),0), round(SE[1],0), round(mean(Mom_truth[yrs]),0), "F", sum(mom_positives[,3]), n_samples)
-results[index+1,] <- c(round(exp(CK_fit$p2[1]),0), round(SE[2],0), round(mean(Dad_truth[yrs]),0), "M", sum(dad_positives[,3]), n_samples)
-colnames(results) <- c("N_est", "SE", "Mean_truth", "Sex", "Parents_detected", "Samples")
+#Set minimum cohort
+min_cohort <- n_yrs - maxAge
+
+Mom_truth_mean <- mean(Mom_truth[min_cohort:n_yrs])
+Dad_truth_mean <- mean(Dad_truth[min_cohort:n_yrs])
+All_truth_mean <- mean(All_truth[min_cohort:n_yrs])
+
+estimates <- data.frame(cbind(round(exp(c(CK_fit1$p1[1], CK_fit1$p2[1], CK_fit2$p1[1])),0)), c(SE1, SE2), c("F", "M", "All"))
+estimates <- cbind(estimates, c(Mom_truth_mean, Dad_truth_mean, All_truth_mean))
+colnames(estimates) <- c("N_est", "SE", "Sex", "Mean_truth")
+#estimates
+
+
+
+#Store number of parents detected, observed lambda, and number of samples
+metrics <- cbind(c(sum(mom_positives[,3]), sum(dad_positives[,3]), sum(parent_positives[,3])), c(rep(n_samples_total, times=3)))
+colnames(metrics) <- c("Parents_detected", "Total_samples")
+
+#-----------------Loop end-----------------------------    
+results <- rbind(results, cbind(estimates, metrics))
 
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 }
@@ -252,10 +283,10 @@ results <- results %>%
           SE = as.numeric(SE),
           Mean_truth = as.numeric(Mean_truth),
           Parents_detected = as.numeric(Parents_detected),
-          Samples = as.numeric(Samples)) %>%
+          Samples = as.numeric(Total_samples)) %>%
     mutate(Relative_bias = round(((N_est - Mean_truth)/Mean_truth)*100,1))
   
-  write.table(results, file = paste0("fishSim_sex-specific_single_est_", n_samples, "_samples_05.10.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(results, file = paste0("fishSim_AvgN_", n_samples, "_samples_05.10.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 
 #Quick viz of results

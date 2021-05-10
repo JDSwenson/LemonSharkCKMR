@@ -1,7 +1,7 @@
 P_Mother = P_Father = array(NA,dim=c(n_yrs,n_yrs)) #creates two empty arrays, one for mother and one for father.  Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
 ### Maybe come back and use a truncated distribution instead (package truncnorm)
 
-get_P_lemon <- function(Pars,P_Mother,P_Father,n_yrs,t_start,t_end){
+get_P_lemon <- function(Pars1,P_Mother,P_Father,n_yrs,t_start,t_end){
   N_F=exp(Pars1[1]) #number of mature females (assume time constant)
   for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
     for(ys_birth in (os_birth+1):n_yrs){
@@ -21,7 +21,7 @@ get_P_lemon <- function(Pars,P_Mother,P_Father,n_yrs,t_start,t_end){
   return(list(P_Mother=P_Mother, P_Father=P_Father)) #return makes sure this is moved out of the loop into the environment
 }
 
-P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+P=get_P_lemon(Pars=Pars1,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
 
 
 
@@ -40,7 +40,7 @@ get_P_lemon_TotalA <- function(Pars2,P_Parent,t_start,t_end){
         
         #Probability of kinship based on birth year
         #See Hillary et al (2018) equation (3)
-        P_Parent[os_birth, ys_birth] <- (4/(N_A^(ys_birth - os_birth)))*(surv^(ys_birth - os_birth))
+        P_Parent[os_birth, ys_birth] <- (4/N_A)*(surv^(ys_birth - os_birth))
       } else P_Parent[os_birth, ys_birth] <- 0 #If it's not possible, set kinship probability to 0
     }
   }
@@ -53,9 +53,9 @@ P_TotalA=get_P_lemon_TotalA(Pars2=Pars2,P_Parent,t_start=t_start,t_end=t_end)
 
 #------------------Likelihood functions--------------------------
 #For sex-specific model
-lemon_neg_log_lik <- function(Pars,Negatives_Mother,Negatives_Father,Pairs_Mother,Pairs_Father,P_Mother,P_Father,n_yrs,t_start,t_end){
+lemon_neg_log_lik <- function(Pars1,Negatives_Mother,Negatives_Father,Pairs_Mother,Pairs_Father,P_Mother,P_Father,n_yrs,t_start,t_end){
   
-  P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+  P=get_P_lemon(Pars=Pars1,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
   
   loglik=0
   
