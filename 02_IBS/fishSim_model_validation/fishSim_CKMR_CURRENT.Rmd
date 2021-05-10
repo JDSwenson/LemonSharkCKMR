@@ -22,7 +22,7 @@ set.seed(47)
 
 install.packages("devtools")
 library(devtools)
-install_github("SMBaylis/fishSim/fishSim")
+install_github("SMBaylis/fishSim")
 ```
 
 
