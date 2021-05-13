@@ -1,0 +1,3 @@
+The files in the "new_model" folder here are from a model that doesn't work as well as the "old_model".
+
+Background: In late 2020, I had a model that seemed to be working well. In early 2021, the model stopped performing as expected. I was unable to troubleshoot this "new model", so in May 2021, I returned to the old script and ran some comparative tests, finding that the "old model" works better than the "new model" (see images in this folder). So, I started working with the old model code at that point and moved files related to the "new model" here.
