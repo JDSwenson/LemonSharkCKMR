@@ -31,7 +31,7 @@ Dovi's IBS code
 ## 04/22/2021
 
 #null model results
-IBS.null_CNR <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/abundance_estimates/*04.13.2021_N.csv")
+IBS.null_CNR <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/results/*6_yrs_05.12.2021.csv")
 IBS.null_results_CNR <- sapply(IBS.null_CNR, read_csv, simplify=FALSE) %>% 
 bind_rows() #%>% 
   #drop_na()
@@ -46,13 +46,27 @@ bind_rows() #%>%
 bind_rows() #%>% 
   #drop_na()
 
+head(IBS.null_results_CNR)
+years_sampled <- 6
 
-NullIBS1 <- ggplot(data=IBS.null_results_CNR, aes(x=factor(Total_samples))) +
+IBS.null_results_CNR <- IBS.null_results_CNR %>% mutate(Samples_per_year = Total_samples/years_sampled) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+NullIBS_Box <- ggplot(data=IBS.null_results_CNR, aes(x=factor(Total_samples))) +
   geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
   ylim(-50, 160) +
   geom_hline(yintercept=0, col="black", size=1.25) +
   annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Sample size", y="Relative bias", title="Relative bias of IBS Simulations w/ Filtered Litters") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias fishSim sex-combined and sex-aggregated") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+NullIBS_Scatter <- ggplot(data=IBS.null_results_CNR, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_results_CNR$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias fishSim sex-combined and sex-aggregated") +
   scale_fill_brewer(palette="Set2") +
   font("title", size = 10, face = "bold")
 
