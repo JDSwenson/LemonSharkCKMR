@@ -1,0 +1,309 @@
+---
+title: "For knitting viz"
+author: "JDS"
+date: "5/13/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggpubr)
+```
+
+The half-sibling CKMR model has been producing biased results for the last several months. So, I returned to old code where the model appeared to be working better. I compared bias from the new and old scripts and determined that the old script works better. However, it still suffers from a positive bias. So, I started testing some basic considerations to see if I could drive the bias down and gain an understanding of what went wrong with the "new" code.
+
+New vs old model
+```{r echo = FALSE}
+#null model results
+IBS.null_Lemon_new <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/results/z_old/new_model/*05.10.2021.csv")
+IBS.null_Lemon_new.df <- sapply(IBS.null_Lemon_new, read_csv, simplify=FALSE) %>% 
+bind_rows() %>%
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+#Use pre-mort script for old version
+IBS.null_Lemon_old <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/results/pre_vs_post-census/sex-specific_capture_before_mort/*05.11.2021.csv")
+IBS.null_Lemon_old.df <- sapply(IBS.null_Lemon_old, read_csv, simplify=FALSE) %>% 
+bind_rows() %>%
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+#IBS_null_demo <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/demographic_output/*04.13.2021_demographic.out.csv")
+#IBS.null_demo <- sapply(IBS_null_demo, read_csv, simplify=FALSE) %>% 
+#bind_rows() #%>% 
+  #drop_na()
+
+#IBS.null_2 <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/IBS_simulations/Dovi_IBS_results/*03.02.2021.N.csv")
+#IBS.null_results_2 <- sapply(IBS.null_2, read_csv, simplify=FALSE) %>% 
+#bind_rows() #%>% 
+  #drop_na()
+
+new.plot <- ggplot(data=IBS.null_Lemon_new.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias fishSim \"new\" model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+old.plot <- ggplot(data=IBS.null_Lemon_old.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias fishSim \"old\" model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+ggarrange(new.plot, old.plot, common.legend = TRUE)
+```
+
+Back to the basics: Compare pre- vs post-breeding census i.e. capture before mortality vs after
+```{r}
+#null model results
+IBS.null_Lemon_b4_mort <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/results/pre_vs_post-census/sex-specific_capture_before_mort/*05.11.2021.csv")
+IBS.null_Lemon_b4_mort.df <- sapply(IBS.null_Lemon_b4_mort, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+IBS.null_Lemon_after_mort <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/results/pre_vs_post-census/sex-specific_capture_after_mort/*05.11.2021.csv")
+IBS.null_Lemon_after_mort.df <- sapply(IBS.null_Lemon_after_mort, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+head(IBS.null_Lemon_b4_mort.df)
+head(IBS.null_Lemon_after_mort.df)
+years_sampled <- 6
+
+IBS.null_results_Lemon <- IBS.null_results_Lemon %>% mutate(Samples_per_year = Total_samples/years_sampled) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+
+b4_mort_Box <- ggplot(data=IBS.null_Lemon_b4_mort.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias fishSim old model: capture before mort") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+after_mort_Box <- ggplot(data=IBS.null_Lemon_after_mort.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias fishSim old model: capture after mort") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+# NullIBS_Scatter <- ggplot(data=IBS.null_results_Lemon, aes(x=Percent_sampled)) +
+#   geom_jitter(aes(y=Relative_bias, color=Sex)) +
+#   ylim(-50, 100) +
+#   geom_hline(yintercept=0, col="black", size=1.25) +
+#   annotate("rect", xmin = min(IBS.null_results_Lemon$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+#   labs(x="Percent sampled", y="Relative bias", title="Relative bias fishSim sex-combined and sex-aggregated") +
+#   scale_fill_brewer(palette="Set2") +
+#   font("title", size = 10, face = "bold")
+
+ggarrange(b4_mort_Box, after_mort_Box, common.legend = TRUE)
+```
+
+
+Compare length of sampling: 6 years vs 10 years
+```{r}
+#null model results
+IBS.null_Lemon_6yrs <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/results/length_of_sampling/six_year_sampling/*05.12.2021.csv")
+IBS.null_Lemon_6yrs.df <- sapply(IBS.null_Lemon_6yrs, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+IBS.null_Lemon_10yrs <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/results/length_of_sampling/ten_year_sampling/*05.12.2021.csv")
+IBS.null_Lemon_10yrs.df <- sapply(IBS.null_Lemon_10yrs, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+head(IBS.null_Lemon_6yrs.df)
+head(IBS.null_Lemon_10yrs.df)
+#years_sampled <- 6
+
+IBS.null_Lemon_6yrs.df <- IBS.null_Lemon_6yrs.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_Lemon_10yrs.df <- IBS.null_Lemon_10yrs.df %>% mutate(Samples_per_year = Total_samples/10) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_Lemon_6yrs.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+IBS.null_Lemon_10yrs.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+
+
+Six_yrs_Box <- ggplot(data=IBS.null_Lemon_6yrs.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias 6 year sample scheme") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Ten_yrs_Box <- ggplot(data=IBS.null_Lemon_10yrs.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias 10 year sample scheme") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Six_yrs_Scatter <- ggplot(data=IBS.null_Lemon_6yrs.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_6yrs.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias 6 year sample scheme") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+Ten_yrs_Scatter <- ggplot(data=IBS.null_Lemon_10yrs.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_10yrs.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias 10 year sample scheme") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+ggarrange(Six_yrs_Box, Ten_yrs_Box, Six_yrs_Scatter, Ten_yrs_Scatter)
+
+
+
+#Compare old and new scripts
+#Finish ordering files
+```
+
+CNR vs Lemon Sharks - 6 years
+```{r}
+#null model results
+IBS.null_CNR_6yrs <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/Cownose_Rays/*05.14.2021.csv")
+IBS.null_CNR_6yrs.df <- sapply(IBS.null_CNR_6yrs, read_csv, simplify=FALSE) %>%
+bind_rows()  %>% 
+    mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+IBS.null_Lemon_6yrs <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/Lemon_Sharks/results/length_of_sampling/six_year_sampling/*05.12.2021.csv")
+IBS.null_Lemon_6yrs.df <- sapply(IBS.null_Lemon_6yrs, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+#Calculate percent of population sampled
+IBS.null_Lemon_10yrs.df <- IBS.null_Lemon_10yrs.df %>% mutate(Samples_per_year = Total_samples/10) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_CNR_20yrs.df <- IBS.null_CNR_20yrs.df %>% mutate(Samples_per_year = Total_samples/20) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+#Make graphs
+Ten_yrs_Box_Lemon <- ggplot(data=IBS.null_Lemon_10yrs.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias 10 year sample scheme - Lemon Sharks") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Twenty_yrs_Box_CNR <- ggplot(data=IBS.null_CNR_20yrs.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias 20 year sample scheme - CNR") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Ten_yrs_Scatter_Lemon <- ggplot(data=IBS.null_Lemon_10yrs.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_10yrs.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias 10 year sample scheme - Lemon Sharks") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Twenty_yrs_Scatter_CNR <- ggplot(data=IBS.null_CNR_20yrs.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_CNR_20yrs.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias 20 year sample scheme - CNR") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+ggarrange(Ten_yrs_Box_Lemon, Twenty_yrs_Box_CNR, Ten_yrs_Scatter_Lemon, Twenty_yrs_Scatter_CNR)
+```
+
+CNR vs Lemon Sharks - 10/20 years
+```{r}
+#null model results
+IBS.null_CNR_20yrs <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/Cownose_Rays/results/length_of_sampling/twenty_year_sampling/*05.17.2021.csv")
+IBS.null_CNR_20yrs.df <- sapply(IBS.null_CNR_20yrs, read_csv, simplify=FALSE) %>%
+bind_rows()  %>% 
+    mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+IBS.null_Lemon_10yrs <- Sys.glob("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/Lemon_Sharks/results/length_of_sampling/ten_year_sampling/*05.12.2021.csv")
+IBS.null_Lemon_10yrs.df <- sapply(IBS.null_Lemon_10yrs, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+#Calculate percent of population sampled
+IBS.null_Lemon_6yrs.df <- IBS.null_Lemon_6yrs.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_CNR_6yrs.df <- IBS.null_CNR_6yrs.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+#Make graphs
+Six_yrs_Box_Lemon <- ggplot(data=IBS.null_Lemon_6yrs.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias 6 year sample scheme - Lemon Sharks") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Six_yrs_Box_CNR <- ggplot(data=IBS.null_CNR_6yrs.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias 6 year sample scheme - CNR") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Six_yrs_Scatter_Lemon <- ggplot(data=IBS.null_Lemon_6yrs.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_6yrs.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias 6 year sample scheme - Lemon Sharks") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Six_yrs_Scatter_CNR <- ggplot(data=IBS.null_CNR_6yrs.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_6yrs.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias 6 year sample scheme - CNR") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+ggarrange(Six_yrs_Box_Lemon, Six_yrs_Box_CNR, Six_yrs_Scatter_Lemon, Six_yrs_Scatter_CNR)
+```
+The bias is much greater for CNR life history than for Lemon Sharks. Could this be due to the binomial distribution for altMate?
+
+NEXT: Compare Dovi's IBS script: Lemon vs CNR

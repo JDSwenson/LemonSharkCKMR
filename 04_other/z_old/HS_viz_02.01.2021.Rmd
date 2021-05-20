@@ -1,0 +1,478 @@
+---
+title: "CKMR Null Model Validation"
+author: "John Swenson"
+date: "1/20/2021"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+#knitr::opts_chunk$set(echo = TRUE)
+require("knitr")
+opts_knit$set(root.dir = "~/R")
+#options(tinytex.verbose = TRUE)
+
+library(data.table)
+library(tidyverse)
+library(ggpubr)
+library(gridExtra)
+library(RColorBrewer)
+options(tibble.width = Inf)
+```
+
+
+<br>
+**Overview:** A population of Lemon Sharks was simulated using a Leslie Matrix. Empirically-derived survival and fecundity values were used, and then 20,000 year-0 animals were perpetuated through the matrix for 120 time steps until the stable age distribution was reached. (Note: the final true abundance of mature adults was way less than 20,000 in all cases; 20,000 was just the starting number of year-0 animals).
+<br>
+Samples were drawn from the population with ages proportional to the stable age distribution.
+<br>
+Sampling was assumed to occur in a single year, but spanned multiple cohorts.
+<br>
+Five hundred iterations were run for each sample size.
+<br>
+Kinship was assigned among pairs of samples based on the probabilities of kinship specified in the CKMR models.
+<br>
+Two *separate* CKMR models were fit to the data: one that estimated abundance for males and females separately, and one that estimated abundance for males and females together (labeled "All" in the graphs). 
+
+<br><br>
+```{r Read in files, echo=FALSE, include=FALSE}
+## 01/19/2021 - null model validation
+#Assumes csv files have output from sex-specific and sex-aggregated results
+files <- list.files(path = "~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/null/results", pattern = "*.csv", full.names = T)
+fs_hs <- sapply(files, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+#head(fs_hs)
+#tail(fs_hs)
+
+fs_hs <- fs_hs %>% mutate(Pop_trend = ifelse(Pop_growth > 1.01, "positive (1.7%) lambda", ifelse(Pop_growth > 1.008, "slight positive (1%) lambda", ifelse(Pop_growth < 1, "negative (-0.6%) lambda", "neutral lambda")))) %>%
+  mutate(Pop_trend = fct_relevel(Pop_trend, "negative (-0.6%) lambda", "neutral lambda", "slight positive (1%) lambda", "positive (1.7%) lambda"))
+
+fs_hs %>% filter(Pop_trend == "neutral") %>% 
+  summarize(n())
+
+fs_hs %>% filter(Relative_bias > 100)
+```
+
+
+
+```{r box plot and violin plot of bias by sample size and pop trend, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+G <- ggplot(data=fs_hs, aes(x=factor(Samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  #ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="A) Relative Bias By Sample Size (lambda fixed)") +
+  scale_fill_brewer(palette="Set2") #+
+  scale_x_discrete(labels = c("150", "450"))
+
+    G + facet_wrap(~Pop_trend)
+    
+        #Violin plot
+G2 <- ggplot(data=fs_hs, aes(x=factor(Samples))) +
+  geom_violin(aes(y = Relative_bias, fill=Sex)) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  ylim(-100, 100) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="B) Relative Bias By Sample Size (lambda fixed)") +
+  scale_fill_brewer(palette="Set2")
+
+G2 + facet_wrap(~Pop_trend, nrow = 2)
+``` 
+<br>
+<font size=2> **Figure 1:** The null CKMR models are unbiased when data are simulated from the model, and precision increases with sample size. Precision is highest when population growth is negative or neutral, relative to positive population growth. **A)** A box plot of **all values** showing that when population growth is positive and sampling is low, there is a small probability (2/500) of obtaining a wildly biased estimate (~800%), though the median remains unbiased. **B)** A violin plot truncated to +/-100% relative bias, showing that estimates cluster near the median. </font>
+<br>
+<br>
+<br>
+
+```{r scatter plot of bias by kin pairs, echo=FALSE}
+G3 <- ggplot(data=fs_hs, aes(x=Parents_detected, color=Sex)) +
+  geom_point(aes(y=Relative_bias)) +
+  #ylim(-100, 100) +
+  labs(x="Parents detected", y="Relative bias", title="Relative Bias by Kin Pairs and Sample Size") +
+  scale_colour_brewer(palette="Set2")
+
+G3 + facet_wrap(vars(Samples))
+```  
+<br>
+<font size=2> **Figure 2:** Precision of CKMR abundance estimates increases as more kin are identified. When far fewer kin are observed than expected (see top left corner of top left graph), bias increases sharply. This is more likely to happen with small sample sizes and large populations, underlining the importance of unbiased and robust sampling when using CKMR. </font>
+
+
+
+```{r fishSim bias, eval=FALSE, echo=FALSE }
+#01/14/2021
+#Sex-specific
+files <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/fishSim/results/Trial_N*")
+fs_hs <- sapply(files, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+files_age <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/fishSim/results/Trial_age*")
+fs_age <- sapply(files_age, read_csv, simplify=FALSE) %>% 
+bind_rows()
+
+files_surv <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/fishSim/results/Trial_survival*")
+fs_surv <- sapply(files_surv, read_csv, simplify=FALSE) %>% 
+bind_rows()
+
+head(fs_hs)
+tail(fs_hs)
+head(fs_age)
+tail(fs_age)
+head(fs_surv)
+tail(fs_surv)
+
+
+#Plot relative bias by sample size and sex
+G <- ggplot(data=fs_hs, aes(x=factor(Samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  #ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative Bias By Sample Size (pop growth fixed for whole population)") +
+  scale_fill_brewer(palette="Set2") #+
+  scale_x_discrete(labels = c("150", "450"))
+
+    G + facet_wrap(~Sex)
+
+#Age distributions
+    fs_age <- fs_age[1:6500,] #bc I set the seed before each simulation, the repeats will be the same
+options(tibble.width = Inf)
+
+fs_ageT <- t(fs_age)
+colnames(fs_ageT) <- paste0("rep_", c(1:ncol(fs_ageT)))
+fs_ageT <- fs_ageT[-32,]
+fs_ageT <- fs_ageT %>% as_tibble() %>% 
+  pivot_longer(cols = starts_with("rep"), names_to = "replicate", values_to = "proportion") %>% 
+  mutate(age = rep(c(1:31), each = 6500))
+
+stable <- data.frame(stable_age)
+stable <- cbind(stable, c(1:30))
+colnames(stable) <- c("proportion", "age")
+
+#Look at subset of data
+fs_ageT_sub <- fs_ageT %>% filter(replicate == "rep_1" | replicate == "rep_2" | replicate == "rep_3" | replicate == "rep_4" | replicate == "rep_5")
+#Plot age distributions
+    ggplot(data=fs_ageT, aes(x=age, y = proportion)) +
+      geom_line(aes(group = replicate)) +
+      geom_line(data = stableT, aes(x=age, y = proportion), color="red", size=2) +
+      labs(title="Age structure from fishSim")
+
+    
+    
+#Distribution of survival values
+    fs_surv2 <- fs_surv[1:6400,] #bc I set the seed before each simulation, the repeats will be the same
+options(tibble.width = Inf)
+
+fs_survT <- t(fs_surv2)
+colnames(fs_survT) <- paste0("rep_", c(1:ncol(fs_survT)))
+fs_survT <- fs_survT[-30,]
+fs_survT <- fs_survT %>% as_tibble() %>% 
+  pivot_longer(cols = starts_with("rep"), names_to = "replicate", values_to = "survival") %>% 
+  mutate(age = rep(c(1:29), each = 6400))
+
+
+surv_fix <- data.frame(Surv_age[1:29])
+surv_fix <- cbind(surv_fix, c(1:29))
+colnames(surv_fix) <- c("survival", "age")
+surv_fix$replicate <- "rep_6401"
+
+
+fs_survT_sub <- fs_survT %>% filter(replicate == "rep_1" | replicate == "rep_2" | replicate == "rep_3" | replicate == "rep_4" | replicate == "rep_5")
+#Plot survival
+    ggplot(data=fs_survT, aes(x=age, y = survival, group = replicate)) +
+      geom_line() +
+      geom_line(data = surv_fix, aes(x=age, y = survival), color="red", size=2) +
+      labs(title="Yearly survival from fishSim")    
+    
+    
+    
+    
+    
+        #Plot relative bias by kin pairs detected - scatter plot
+G2 <- ggplot(data=fs_hs, aes(x=Parents_detected, color=Sex)) +
+  geom_point(aes(y=Relative_bias)) +
+  ylim(-100, 100) +
+  labs(x="Parents detected", y="Relative bias", title="Relative Bias by Kin Pairs") +
+  scale_colour_brewer(palette="Set2")
+
+G2 + facet_wrap(vars(Samples))
+
+
+
+
+
+
+
+
+
+    #Plot relative bias by population growth - scatter plot
+G3 <- ggplot(data=fs_all, aes(x=Pop_growth, color=Sex)) +
+  geom_point(aes(y=Relative_bias)) +
+  ylim(-100, 100) +
+  labs(x="Population growth", y="Relative bias", title="Relative Bias by Population Growth (pop growth fixed for whole population)") +
+  scale_colour_brewer(palette="Set2")
+
+
+#-----------------Using sex-specific population growth ---------------
+#Sex-specific
+files2 <- list.files(path = "~/R/R_working_dir/CKMR/Results/Single_est_N/2020.12.23_and_2021.01.04/pop_growth_est_separate/", pattern = "*.2020.csv", full.names = T)
+fs_hs2 <- sapply(files2, read_csv, simplify=FALSE) %>% 
+bind_rows() #%>% 
+  #drop_na()
+
+head(fs_hs2)
+tail(fs_hs2)
+
+#Plot relative bias by sample size and sex
+G4 <- ggplot(data=fs_hs2, aes(x=factor(Samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  #ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Samples per year (over 6 years)", y="Relative bias", title="Relative Bias By Sample Size (pop growth fixed for adult sexes separately)") +
+  scale_fill_brewer(palette="Set2") #+
+  scale_x_discrete(labels = c("150", "450"))
+  
+  G4 + facet_wrap(~Sex)
+  
+   #Plot relative bias by population growth - scatter plot
+ggplot(data=fs_hs2, aes(x=Pop_growth, color=Sex)) +
+  geom_point(aes(y=Relative_bias)) +
+  ylim(-100, 100) +
+  labs(x="Population growth", y="Relative bias", title="Relative Bias by Population Growth (pop growth fixed for adult sexes separately)") +
+  scale_colour_brewer(palette="Set2")
+```
+
+
+
+
+
+
+
+```{r HS time-series null model, eval=FALSE, echo=FALSE}
+library(data.table)
+library(tidyverse)
+library(ggpubr)
+library(gridExtra)
+library(RColorBrewer)
+
+# HS time-series null model simulations
+# - Took 1414 samples total
+# - Just simulated sampling of cohorts; didn't bother repeating over years (don't need year of capture in the final model anyway)
+# - With seven cohorts represented (years 1:7)
+# - Same abundance each year: 5000 total: 3000 male and 2000 female
+# - Estimated abundance for years 4:7. Abundance is estimated for the youngest sibling.
+
+#Set working directory
+getwd()
+#setwd("~/R/R_working_dir/CKMR/Results/time_series")
+list.files("~/R/R_working_dir/CKMR/Results/time_series")
+HS_ts <- read.csv(file="~/R/R_working_dir/CKMR/Results/time_series/HS_time_series_null_poisson_05.01.2020.csv", header=TRUE)
+HS_ts2 <- read.csv(file="~/R/R_working_dir/CKMR/Results/time_series/HS_time_series_null_5.04.2020.csv", header=TRUE)
+
+HS_ts <- rbind(HS_ts, HS_ts2)
+
+head(HS_ts)
+tail(HS_ts)
+
+#Make vectors of column names
+col_f_yrs <- paste0("Nf_yr",4:7)
+col_f_se <- paste0("NfSE_yr",4:7)
+col_f_truth <- paste0("NfTruth_yr",4:7)
+col_m_yrs <- paste0("Nm_yr",4:7)
+col_m_se <- paste0("NmSE_yr",4:7)
+col_m_truth <- paste0("NmTruth_yr",4:7)
+colname <- paste0(col_f_yrs[1],"_rel_bias")
+
+#This syntax works for subsetting ... for reference.
+#HS_ts[,col_f_yrs[1]]
+#And this works for assigning a name with a variable
+#assign(paste0(col_f_yrs[1],"_rel_bias"), c(11:20))
+
+#Create columns for relative bias for each abundance estimate
+for(i in 1:length(col_f_yrs)){ #years analyzed
+  colname_f <- paste0(col_f_yrs[i],"_rel_bias")
+  colname_m <- paste0(col_m_yrs[i],"_rel_bias")
+  for(j in 1:nrow(HS_ts)){
+    HS_ts[j, colname_f] <- ((HS_ts[j, col_f_yrs[i]] - HS_ts[j,col_f_truth[i]])/HS_ts[j,col_f_truth[i]])*100
+        HS_ts[j, colname_m] <- ((HS_ts[j, col_m_yrs[i]] - HS_ts[j,col_m_truth[i]])/HS_ts[j,col_m_truth[i]])*100
+  }
+}
+
+#Create columns for CV for each abundance estimate
+#for(i in 1:length(col_f_yrs)){ #years analyzed
+#  colname_f <- paste0(col_f_yrs[i],"_cv")
+#  colname_m <- paste0(col_m_yrs[i],"_cv")
+#  for(j in 1:nrow(HS_ts)){
+#    HS_ts[j, colname_f] <- (HS_ts[j, col_f_se[i]]/HS_ts[j,col_f_yrs[i]])*100
+#        HS_ts[j, colname_m] <- (HS_ts[j, col_m_se[i]]/HS_ts[j,col_m_yrs[i]])*100
+#  }
+#}
+
+
+head(HS_ts)
+tail(HS_ts)
+str(HS_ts)
+colnames(HS_ts)
+
+#### Combine relative bias, parents detected, and truth into one dataframe for Viz ####
+total_abundance <- c(rep(5000, 4)) #Can't estimate for yr=1 because abundance is calculated at time of younger sibling's birth, and there is no scenario where the younger sibling was born in yr1. Also unlikely to get estimate for yr=2 because there are relatively few pairwise comparisons where the younger sibling was born in yr2. So length of vector should be n_yrs-2
+N_f <- c(total_abundance/2.5)
+N_m <- c(total_abundance-N_f)
+
+#Create dataframe where females and males are combined into the same column - females first
+HS_ts2 <- NULL
+
+HS_ts2 <- data.frame(cbind(Yr4_rel_bias=c(HS_ts[,40], HS_ts[,41]), parents_detected_yr4=c(HS_ts[,4],HS_ts[,20]), Yr5_rel_bias=c(HS_ts[,42], HS_ts[,43]), parents_detected_yr5=c(HS_ts[,8],HS_ts[,24]), Yr6_rel_bias=c(HS_ts[,44], HS_ts[,45]), parents_detected_yr6=c(HS_ts[,12],HS_ts[,28]), Yr7_rel_bias=c(HS_ts[,46], HS_ts[,47]), parents_detected_yr7=c(HS_ts[,16],HS_ts[,32]), sex_truth=rep(c(N_f[1],N_m[1]), each=500), total_truth=total_abundance[1]))
+
+HS_ts2$sex <- rep(c("F","M"), each=500) #Add column for sex
+
+head(HS_ts)
+head(HS_ts2)
+tail(HS_ts)
+tail(HS_ts2)
+
+#to melt multiple columns, need to convert dataframe to data.table
+HS_ts2 <- as.data.table(HS_ts2) 
+head(HS_ts2)
+colnames(HS_ts2)
+
+#Melt columns together so different years are factors
+var1 <- colnames(HS_ts2)[c(1,3,5,7)] #store column names for relative bias
+var2 <- colnames(HS_ts2)[c(2, 4, 6, 8)] #store column names for parents detected
+#var3 <- colnames(HS_ts2)[c(9:12)] #store column names for cv
+
+HS.m1 <- reshape2::melt(HS_ts2, id.vars='sex', measure.vars=var1, value.name="relative_bias")
+HS.m2 <- reshape2::melt(HS_ts2, id.vars='sex', measure.vars=var2, value.name="parents_detected")
+#HS.m3 <- reshape2::melt(HS_ts2, id.vars='sex', measure.vars=var3, value.name="cv")
+
+HS.m <- NULL
+HS.m <- cbind(HS.m1, parents_detected=HS.m2$parents_detected, sex_truth=HS_ts2$sex_truth, total_truth=HS_ts2$total_truth)
+
+#check that values match
+head(HS.m)
+head(HS_ts2) #line above should match first rows of females
+tail(HS.m)
+tail(HS_ts2) #line above should match last rows of males
+nrow(HS.m) #should be iterations x 2(M+F) x number of years estimated (e.g. 500 iterations estimating 4 years should be 4,000 rows long)
+
+#Use dataframe HS.m; HS_ts is the original
+apply(HS_ts[, grep("^Dads", colnames(HS_ts))], 2, mean) #Calculate mean detected dads
+apply(HS_ts[, grep("^Moms", colnames(HS_ts))], 2, mean) #Calculate mean detected moms
+
+
+#### Examine and compare means of bias and parents detected ####
+
+#Compare relative bias and parents detected for positive, negative and un-biased estimates
+HS_unbiased <- HS.m[which(abs(HS.m$relative_bias) < 1),]
+HS_pos_bias <- HS.m[which(HS.m$relative_bias > 50),]
+HS_neg_bias <- HS.m[which(HS.m$relative_bias < -20),]
+HS_pos_bias$bias <- c("positive")
+HS_neg_bias$bias <- c("negative")
+HS_unbiased$bias <- c("unbiased")
+HS_bias <- cbind(HS_unbiased, HS_pos_bias, HS_neg_bias)
+
+HS_unbiased %>% group_by(variable) %>% summarize(mean_parents = mean(parents_detected))
+HS_pos_bias %>% group_by(variable) %>% summarize(mean_parents = mean(parents_detected))
+HS_neg_bias %>% group_by(variable) %>% summarize(mean_parents = mean(parents_detected))
+
+#mean(HS_ts$Nm_yr7_rel_bias[HS_ts$Dads_detected_yr7>40])
+
+#Calculate mean relative bias and samples per year
+HS_ts_sub <- HS_ts[, grep("rel_bias$", colnames(HS_ts))] #Subset for relative bias columns
+apply(HS_ts_sub, 2, mean) #Calculate mean relative bias
+
+HS_ts_sub <- HS_ts[, grep("samples$", colnames(HS_ts))] #Subset for samples per year
+apply(HS_ts_sub, 2, mean) #Calculate mean samples per year
+
+
+###################### Plot #################################
+#Plot relative bias by year
+ggplot(data=HS.m, aes(x=variable)) +
+  geom_boxplot(aes(y=relative_bias, fill=sex)) +
+  ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Year", y="Relative bias", title="Relative Bias Per Year") +
+  scale_fill_brewer(palette="Set2") +
+  scale_x_discrete(labels = c("Year 4", "Year 5", "Year 6", "Year 7"))
+
+
+#Plot relative bias by kin pairs detected - scatter plot
+G <- ggplot(data=HS.m, aes(x=parents_detected)) +
+  geom_point(aes(y=relative_bias, color=sex)) +
+  ylim(-100, 100) +
+  labs(x="Parents detected", y="Relative bias", title="Relative Bias by Kin Pairs") +
+  scale_colour_brewer(palette="Set2")
+
+G + facet_wrap(vars(variable))
+
+#Plot sex-specific and sex-combined results together
+#Create dataframe with sex-specific info and also total abundance so they can be plotted together
+TA.m$sex <- "combined sex"
+nrow(HS.m)
+all.m <- HS.m %>% 
+  full_join(TA.m) %>% 
+  select(c(variable, relative_bias, sex, parents_detected))
+
+nrow(all.m)
+tail(all.m)
+head(all.m)
+
+#Plot relative bias by year
+ggplot(data=all.m, aes(x=variable)) +
+  geom_boxplot(aes(y=relative_bias, fill=sex)) +
+  ylim(-100, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Year", y="Relative bias", title="Relative Bias Per Year") +
+  scale_fill_brewer(palette="Set2") +
+  scale_x_discrete(labels = c("Year 4", "Year 5", "Year 6", "Year 7"))
+
+
+#Plot cv by year
+#ggplot(data=HS.m, aes(x=variable)) +
+#  geom_boxplot(aes(y=cv, fill=sex)) +
+#  geom_hline(yintercept=20, col="red", size=1.25) +
+#  labs(x="Year", y="CV", title="CV Per Year") +
+#  scale_fill_brewer(palette="Set2") +
+#  scale_x_discrete(labels = c("Year 4", "Year 5", "Year 6", "Year 7"))
+
+
+#Plot CV by kin pairs detected - scatter plot
+#ggplot(data=HS.m, aes(x=parents_detected)) +
+#  geom_point(aes(y=cv)) +
+#  labs(x="Parents detected", y="CV", title="CV by Kin Pairs") +
+#  scale_colour_brewer(palette="Set2")
+
+#facet_wrap(vars(variable))
+
+#Plot CV by relative bias
+#G <- ggplot(data=HS.m, aes(x=cv)) +
+#  geom_point(aes(y=relative_bias, color=sex)) +
+#  labs(x="CV", y="Relative Bias", title="Relative Bias by CV") +
+#  scale_colour_brewer(palette="Set2") +
+#  geom_hline(yintercept=0, col="black", size=1.25)
+
+#G + facet_wrap(vars(variable))
+
+#Plot relative bias by year - split by negative and positive bias
+G <- ggplot() +
+  geom_boxplot(data = HS_unbiased, aes(x = variable, y=parents_detected)) +
+  ylim(0, 150) +
+  labs(x="Year", y="parents detected", title="Parents detected by year and bias") +
+  scale_x_discrete(labels = c("Year 4", "Year 5", "Year 6", "Year 7")) +
+  geom_point(data = HS_pos_bias, aes(x = variable, y = parents_detected, color="yellow")) + 
+  geom_point(data = HS_neg_bias, aes(x = variable, y = parents_detected, color="green")) +
+    theme(legend.position="none")
+                                                                                      
+#Plot parents detected - box plot is unbiased estimates, points above box plot are negative biased estimates; points below are positive biased estimates
+G + facet_wrap(vars(sex)) + 
+  aes(fill=sex) + 
+  scale_fill_brewer(palette="Set2", direction=-1, guide=FALSE)
+```

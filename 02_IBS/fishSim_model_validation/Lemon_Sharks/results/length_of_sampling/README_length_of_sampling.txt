@@ -1,0 +1,1 @@
+These simulations were conducted with the seed set at 444777 to test whether the length of sampling matters. For now, I compared six years of sampling to ten years of sampling, keeping everything else even.

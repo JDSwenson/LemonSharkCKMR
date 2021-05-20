@@ -1,0 +1,337 @@
+Sample Size Simulation Results
+========================================================
+
+author: John Swenson
+date: 4/1/2019
+autosize: true
+
+```{r setup, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require("knitr")
+opts_knit$set(root.dir = "~/R/working_directory/Lemon_shark_CKMR")
+```
+
+Maturity age vs. Sample size simulations
+Import results
+```{r, echo=FALSE}
+library(data.table)
+library(tidyverse)
+
+#Read all the csv files at once -- must be in the directory where the files are stored
+setwd("../Results/non_lethal_POP/mat_age_vs_samp_size/")
+temp <- list.files(pattern="*.csv")
+POPlist <- lapply(temp, read.csv)
+setwd("../../HS/mat_age_vs_samp_size/")
+temp2 <- list.files(pattern="*.csv")
+HSlist <- lapply(temp2, read.csv)
+
+#Merge all simulations into one dataframe
+POP_df <- data.table::rbindlist(POPlist)
+HS_df <- data.table::rbindlist(HSlist)
+
+#Remove N/As
+POP_df <- POP_df[which(is.na(POP_df[,1])==FALSE),]
+HS_df <- HS_df[which(is.na(HS_df[,1])==FALSE),]
+
+#Calculate relative bias for each estimate
+truth=1500
+POP_df$m_rel_bias <- ((POP_df$Nm - truth)/truth)*100
+HS_df$m_rel_bias <- ((HS_df$Nm - truth)/truth)*100
+POP_df$f_rel_bias <- ((POP_df$Nf - truth)/truth)*100
+HS_df$f_rel_bias <- ((HS_df$Nf - truth)/truth)*100
+
+#Add column for method
+POP_df$method <- factor("Parent-offspring")
+HS_df$method <- factor("Half-sibling")
+
+#Apparently rounded to different numbers in simulation script, so fix here ...
+POP_df$prop_mature <- round(POP_df$prop_mature, 2)
+HS_df$prop_mature <- round(HS_df$prop_mature, 2)
+
+#Examine how relative bias varies with kin pairs found
+#Count number of observations with relative bias < x
+nrow(HS_df[HS_df$f_rel_bias < abs(10),])
+nrow(POP_df[POP_df$f_rel_bias < abs(10),])
+nrow(HS_df[HS_df$m_rel_bias < abs(10),])
+nrow(POP_df[POP_df$m_rel_bias < abs(10),])
+
+#Get mean relative bias of observations with x number kin paris found, and count number of those observations
+#Half-sibling
+mean(HS_df$f_rel_bias[HS_df$POPs_found < 50 & HS_df$POPs_found >= 40])
+nrow(HS_df[HS_df$POPs_found == 40,])
+
+#Parent-offspring
+mean(POP_df$f_rel_bias[POP_df$POPs_found < 50 & POP_df$POPs_found >= 40])
+nrow(POP_df[POP_df$POPs_found == 40,])
+
+#Group mat age and samp prop for histogram - POP
+POP_df$perc <- cut(POP_df$prop_sampled, breaks=c(0, 0.1, 0.2), labels=c("1-10%","11-20%"))
+POP_df$mat <- cut(POP_df$prop_mature, breaks=c(0, 0.25, 0.6), labels=c("<25%", ">25%"))
+POP_lines <- POP_df %>%
+  dplyr::group_by(perc, mat) %>% 
+  summarise(mean = mean(POPs_found))
+
+#Group mat age and samp prop for histogram - HS
+HS_df$perc <- cut(HS_df$prop_sampled, breaks=c(0, 0.04, 0.08, 0.12, 0.16, 0.2), labels=c("4%","8%", "12%", "16%", "20%"))
+HS_df$mat <- cut(HS_df$prop_mature, breaks=c(0, 0.25, 0.6), labels=c("<25%", ">25%"))
+HS_mean_kin <- HS_df %>%
+  dplyr::group_by(prop_sampled) %>% 
+  summarise(mean = mean(POPs_found))
+
+#Check values in this column
+levels(factor(HS_df$prop_mature))
+levels(factor(POP_df$prop_mature))
+
+#Subset for different species
+#Scalloped hammerhead, thorny skate
+Group1 <- rbind(HS_df[which(HS_df$prop_mature == 0.08 | HS_df$prop_mature == 0.1),], POP_df[which(POP_df$prop_mature == 0.08 | POP_df$prop_mature == 0.1),])
+#Categories for plotting
+Group1$perc <- cut(Group1$prop_sampled, breaks=c(0, 0.05, 0.1, 0.15, 0.2), labels=c("1-5%","6-10%","11-15%","16-20%"))
+Group1$Group <- "S. lewini"
+
+#Blue shark, cownose ray
+Group2 <- rbind(HS_df[which(HS_df$prop_mature == 0.34),], POP_df[which(POP_df$prop_mature == 0.34),])
+#Categories for plotting
+Group2$perc <- cut(Group2$prop_sampled, breaks=c(0, 0.05, 0.1, 0.15, 0.2), labels=c("1-5%","6-10%","11-15%","16-20%"))
+Group2$Group <- "P. glauca"
+
+#Group2$kin_pairs <- cut(Group2$POPs_found, breaks=c(0, 25, 35, 45, 55, 65, 75, 85, 95, 150), labels=c("<25","26-35","36-45","46-55", "55-65", "65-75", "75-85", "85-95", ">95"))
+#Calculate CV
+Group2 %>%
+  dplyr::group_by(kin_pairs) %>% 
+  summarise(sd = sd(Nf), mean = mean(Nf), CV = sd/mean*100)
+
+#Thresher shark
+Group3 <- rbind(HS_df[which(HS_df$prop_mature == 0.4),], POP_df[which(POP_df$prop_mature == 0.4),])
+#Categories for plotting
+Group3$perc <- cut(Group3$prop_sampled, breaks=c(0, 0.05, 0.1, 0.15, 0.2), labels=c("1-5%","6-10%","11-15%","16-20%"))
+Group3$Group <- "A. vulpinus"
+
+#Combine groups
+All_groups <- rbind(Group1, Group2, Group3)
+nrow(All_groups)
+```
+
+Visualize results
+Lattice plot
+```{r, echo=FALSE}
+library(gridExtra)
+library(ggpubr)
+library(RColorBrewer)
+
+#Proportion sampled by relative bias for different life histories
+G <- ggplot(data=All_groups, aes(x=perc)) +
+  geom_boxplot(aes(y=f_rel_bias, fill=Group)) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-10, ymax=10, alpha=.5, col="red") +
+  labs(x="Proportion sampled", y="Relative bias", title="Relative Bias by Sample Size") +
+  ylim(-100, 100) +
+  theme(legend.position="none", plot.title = element_text(hjust=0.5)) +
+  scale_fill_brewer(palette="Set2")
+
+G + facet_grid(rows=vars(Group), cols=vars(method))
+
+#Relative bias by kin pairs found - cownose rays
+ggplot(data=Group2, aes(x=kin_pairs)) +
+  geom_boxplot(aes(y=m_rel_bias)) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-10, ymax=10, alpha=.5, col="red") +
+  labs(x="Kin pairs found", y="Relative bias", title="Relative Bias by Kin Pairs Detected") +
+  ylim(-100, 200) +
+  theme(legend.position="none", plot.title = element_text(hjust=0.5)) +
+  scale_fill_brewer(palette="Dark2")
+
+#Histogram of kin pairs
+P_hist <- ggplot(data=POP_df, aes(x=POPs_found, y=..density..)) + 
+  geom_histogram(binwidth=1, color="black", fill="white") +
+  labs(x="Kin pairs detected", title="Number kin pairs detected - Parent-offspring") +
+  geom_density(alpha=.3, fill="red") +
+  xlim(0, max(HS_df$POPs_found)) +
+  scale_y_continuous(limits = c(0,0.07), expand = c(0, 0))
+P_hist
+  
+H_hist <- ggplot(data=HS_df, aes(x=POPs_found, y=..density..)) + 
+  geom_histogram(binwidth=1, color="black", fill="white") +
+  labs(x="Kin pairs detected", title="Number kin pairs detected - Half-sib") +
+  geom_density(alpha=.4, fill="light blue") +
+    xlim(0, max(HS_df$POPs_found)) +
+  scale_y_continuous(limits = c(0,0.03), expand = c(0, 0))
+H_hist
+
+grid.arrange(P_hist, H_hist, nrow=2)
+
+```
+
+
+
+
+GGplot
+```{r, echo=FALSE}
+library(ggplot2)
+library(lattice)
+
+#Scatter plot with POPs_found
+ggplot(data=HS_df, aes(x=prop_sampled, y=POPs_found)) +
+  geom_point() +
+  geom_smooth() +
+  labs(x="Proportion sampled", y="Kin pairs found", title="Bias by kin pairs Half-Sib")
+  
+
+ggplot(data=POP_df, aes(x=POPs_found, y=f_rel_bias)) +
+  geom_point() + 
+  labs(x="Kin pairs detected", y="Relative bias", title="Bias by kin pairs Parent-offspring") +
+  ylim(-100, 200)
+
+```
+
+
+
+Test some other methods ... 
+```{r, echo=FALSE}
+library(ggplot2)
+library(lattice)
+
+#Edit values so they're more friendly for the heat map (maybe do log of values?)
+HS_df$m_log_bias <- log(abs(HS_df$m_rel_bias))
+HS_df$f_log_bias <- log(abs(HS_df$f_rel_bias))
+
+for(i in 1:nrow(HS_df)){
+  if(abs(HS_df$f_rel_bias) > 10) HS_df$f_rel_bias2[i] <- 10 else HS_df$f_rel_bias2[i] <- HS_df$f_rel_bias[i]
+}
+
+#Heat map
+f_heatmap <- ggplot(data=HS_df, mapping=aes(x=as.character(round(prop_mature,2)),
+                                           y=as.character(round(POPs_found,2)),
+                                           fill=f_log_bias)) +
+  geom_tile() +
+  xlab(label = "prop_mature")
+f_heatmap
+
+#Box plot of relative bias of abundance estimate
+ggplot(data=HS_df, aes(x=factor(prop_mature), y=f_rel_bias)) +
+  geom_boxplot() +
+  geom_abline(intercept = 0, slope = 0, color="dark red") +
+  ggtitle("CKMR Non-lethal Null Model Simulations") +
+  xlab("Proportion mature") +
+  ylab("Relative bias") #+
+  geom_label(aes(label=paste0("Relative bias: ",non_m_rel_bias_mean), x=2, y=50), fill="lightskyblue1", colour="darkslategray", fontface="bold", show.legend=NA) +
+  geom_label(aes(label=paste0("Relative bias: ",non_f_rel_bias_mean), x=1, y=50), fill="indianred1", colour="darkred", fontface="bold", show.legend=NA)
+
+```
+
+
+
+
+
+
+500 iteration simulations
+Import results - Non-lethal POP
+```{r, echo=FALSE}
+f_truth <- 1000
+m_truth <- 1500
+non_sim <- read.csv("results/Nonlethal_sim_500_samps_11.30.19.csv")
+
+head(non_sim)
+
+#Check for NAs
+length(which(is.na(non_sim[,1])==TRUE))
+
+#Calculate means
+non_m_mean <- mean(non_sim$Nm)
+non_m_SE <- mean(non_sim$NmSE)
+non_f_mean <- mean(non_sim$Nf)
+non_f_SE <- mean(non_sim$NfSE)
+
+#Reformat dataframes for ggplot
+F_truth <- 1000
+M_truth <- 1500
+
+non_m_df <- non_sim[,3:6]
+non_m_df$Sex <- "M"
+non_m_df$rel_bias <- ((non_sim$Nm - M_truth)/M_truth)*100
+non_m_rel_bias_mean <- round(mean(non_m_df$rel_bias, na.rm=TRUE),1)
+
+non_f_df <- non_sim[,c(1:2, 5:6)]
+non_f_df$Sex <- "F"
+non_f_df$rel_bias <- ((non_sim$Nf - F_truth)/F_truth)*100
+non_f_rel_bias_mean <- round(mean(non_f_df$rel_bias, na.rm=TRUE),1)
+
+colnames(non_f_df)[1:2] = colnames(non_m_df)[1:2] <-  c("Abund","SE")
+head(non_f_df)
+head(non_m_df)
+
+non_sim_plot <- rbind(non_m_df, non_f_df)
+```
+
+Visualize results - Non-lethal POP
+```{r, echo=FALSE}
+library(ggplot2)
+head(non_sim_plot)
+#Box plot of relative bias of abundance estimate
+ggplot(data=non_sim_plot, aes(x=Sex, y=rel_bias)) +
+  geom_boxplot() +
+  geom_abline(intercept = 0, slope = 0, color="dark red") +
+  ggtitle("CKMR Non-lethal Null Model Simulations (500 samples)") +
+  xlab("Sex") +
+  ylab("Relative bias") +
+  geom_label(aes(label=paste0("Relative bias: ",non_m_rel_bias_mean), x=2, y=50), fill="lightskyblue1", colour="darkslategray", fontface="bold", show.legend=NA) +
+  geom_label(aes(label=paste0("Relative bias: ",non_f_rel_bias_mean), x=1, y=50), fill="indianred1", colour="darkred", fontface="bold", show.legend=NA)  
+
+####Visualize relative bias by POPs detected
+ggplot(data=non_sim_plot)
+```
+
+Import results - Half-sib
+```{r, echo=FALSE}
+f_truth <- 1000
+m_truth <- 1500
+half_sim <- read.csv("results/Halfsib_sim_500samps_11.30.2019.csv")
+head(half_sim)
+
+#Check for NAs
+length(which(is.na(half_sim[,1])==TRUE))
+
+#Calculate means
+half_m_mean <- mean(half_sim$Nm)
+half_m_SE <- mean(half_sim$NmSE)
+half_f_mean <- mean(half_sim$Nf)
+half_f_SE <- mean(half_sim$NfSE)
+
+#Reformat dataframes for ggplot
+F_truth <- 1000
+M_truth <- 1500
+
+half_m_df <- half_sim[,c(3:5,7)]
+half_m_df$Sex <- "M"
+half_m_df$rel_bias <- ((half_sim$Nm - M_truth)/M_truth)*100
+half_m_rel_bias_mean <- round(mean(half_m_df$rel_bias, na.rm=TRUE),1)
+
+half_f_df <- half_sim[,c(1:2,6:7)]
+half_f_df$Sex <- "F"
+half_f_df$rel_bias <- ((half_sim$Nf - F_truth)/F_truth)*100
+half_f_rel_bias_mean <- round(mean(half_f_df$rel_bias, na.rm=TRUE),1)
+
+colnames(half_f_df)[1:3] = colnames(half_m_df)[1:3] <-  c("Abund","SE", "Parent_detected") #For rows where the sex of the parent is female, "Parent detected" will refer to the mothers detected only, and same with males and fathers
+head(half_f_df)
+head(half_m_df)
+
+half_sim_plot <- rbind(half_m_df, half_f_df)
+```
+
+Visualize results
+```{r, echo=FALSE}
+library(ggplot2)
+head(half_sim_plot)
+#Box plot of relative bias of abundance estimate
+ggplot(data=half_sim_plot, aes(x=Sex, y=rel_bias)) +
+  geom_boxplot() +
+  geom_abline(intercept = 0, slope = 0, color="dark red") +
+  ggtitle("CKMR half-lethal Null Model Simulations (500 samples)") +
+  xlab("Sex") +
+  ylab("Relative bias") +
+  geom_label(aes(label=paste0("Relative bias: ",half_m_rel_bias_mean), x=2, y=50), fill="lightskyblue1", colour="darkslategray", fontface="bold", show.legend=NA) +
+  geom_label(aes(label=paste0("Relative bias: ",half_f_rel_bias_mean), x=1, y=50), fill="indianred1", colour="darkred", fontface="bold", show.legend=NA)  
+
+####Visualize relative bias by POPs detected
+ggplot(data=non_sim_plot)
+```

@@ -1,0 +1,1 @@
+The scripts here have been used to examine bias of CKMR when fit to fishSim data. Most of the scripts are in the z_old directory (and can prob be deleted) because they didn't work and are redundant with the WORKING script.

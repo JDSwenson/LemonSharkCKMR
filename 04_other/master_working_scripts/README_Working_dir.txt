@@ -1,0 +1,1 @@
+This folder contains the master working scripts. I do most of my work in these scripts, and then copy the relevant parts to new scripts to run on a loop.
