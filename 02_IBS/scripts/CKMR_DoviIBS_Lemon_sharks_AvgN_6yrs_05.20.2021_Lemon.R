@@ -12,13 +12,13 @@ init.pop.size <- 3000 # Initial population size
 init.prop.female <- .5 # proportion of the initial population size that is female
 repro.age <- 12 #set age of reproductive maturity
 max.age = maxAge <- 30 #set the maximum age allowed in the simulation
-mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 num.mates <- c(1:3) # vector of potential number of mates per mating
-avg.num.offspring <- 4 # set the average number of offspring per mating (from a poisson distribution)
+avg.num.offspring <- 3 # set the average number of offspring per mating (from a poisson distribution)
 birth.sex.ratio <- c(.5,.5) # The probability that each baby is F:M - has to add up to 1
-Adult.survival <- .88 #Adult survival
-juvenile.survival <- .85 #juvenile survival
-YOY.survival <- .85 # young of year survival
+Adult.survival <- .9 #Adult survival
+juvenile.survival <- .9 #juvenile survival
+YOY.survival <- .8 # young of year survival
 burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
@@ -31,10 +31,10 @@ sample.size <- 30 #sample size per year
 iterations <- 100 #Number of iterations to loop over
 
 #--------------Start simulation loop--------------
-for(samps in 1:3){
+for(samps in 1:2){
   #set.seed(47)
   results <- NULL #initialize results array
-  sample.size <- c(40, 50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
+  sample.size <- c(50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
   
   for(iter in 1:iterations) {
   
@@ -456,7 +456,7 @@ results <- results %>%
  results %>% group_by(Sex) %>% 
    dplyr::summarize(median = median(Relative_bias), n = n())
 
-write.table(results, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/length_of_sampling/six_year_sampling/Dovi_AvgN_", total_samples, "_samples_05.17.2021_",length(sample.years), "yrs.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/length_of_sampling/six_year_sampling/Dovi_AvgN_", total_samples, "_samples_05.17.2021_",length(sample.years), "yrs.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
@@ -467,7 +467,7 @@ write.table(results, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub
 library(ggpubr)
 
 #Box plot of relative bias
-ggplot(data=results, aes(x=factor(Samples))) +
+ggplot(data=results, aes(x=factor(Total_samples))) +
   geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
   ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +
