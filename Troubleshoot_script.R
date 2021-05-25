@@ -100,7 +100,7 @@ Pairs_Father <- dad_positives
     
 lemon_neg_log_lik <- function(Pars,Negatives_Mother,Negatives_Father,Pairs_Mother,Pairs_Father,P_Mother,P_Father,n_yrs,t_start,t_end){
       
-      P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,n_yrs=n_yrs,t_start=t_start,t_end=t_end)
+      P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father, t_start=t_start,t_end=t_end)
       
       loglik=0
       
