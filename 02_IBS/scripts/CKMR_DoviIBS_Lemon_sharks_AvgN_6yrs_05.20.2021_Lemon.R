@@ -31,10 +31,10 @@ sample.size <- 30 #sample size per year
 iterations <- 100 #Number of iterations to loop over
 
 #--------------Start simulation loop--------------
-for(samps in 1:2){
+for(samps in 1:3){
   #set.seed(47)
   results <- NULL #initialize results array
-  sample.size <- c(50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
+  sample.size <- c(40, 50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
   
   for(iter in 1:iterations) {
   
@@ -64,7 +64,7 @@ repro.cycle.vec <- rep(1:mating.periodicity, times = 100) # Generate a vector wh
 mothers <- which(init.pop$sex=='F' & init.pop$age.x>=repro.age & init.pop$repro.cycle == repro.cycle.vec[1]) #determine which females are available to breed in this year
 fathers <- which(init.pop$sex=='M' & init.pop$age.x>=repro.age) # determine which fathers are available to breed in this year
 
-YOY.df <- data.frame() # create an empty data frame to populate with the YOY bor in this year
+YOY.df <- data.frame() # create an empty data frame to populate with the YOY born in this year
 for(j in 1:length(mothers)){ # Loop through all of the available mothers
   num.mates.x <- sample(num.mates, size=1) # determine the number of mates for a given mother this year
   inter.df <- data.frame() # Create a data frame for the offspring born from each mother
@@ -214,7 +214,7 @@ Pars2 <- log(init.adult_pop.size) #Pars2 is for the sex-aggregated model
 sample.df_all.info <- NULL
 sample.df_temp <- NULL
 
-#Sample population during last three years and make dataframe of samples with all metadata
+#Sample population during last six years and make dataframe of samples with all metadata
 for(i in sample.years){
   sample.df_temp <- loopy.list[[i]] %>% dplyr::slice_sample(n = sample.size)
   sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
@@ -246,17 +246,21 @@ pairwise.df_all.info <- pairwise.df %>% left_join(Ind1_birthyears, by = "Ind_1")
   select(Ind_1, Ind_1_birth, Ind_1_age, Ind_2, Ind_2_birth, Ind_2_age, Ind_1_mom, Ind_2_mom, Ind_1_dad, Ind_2_dad) %>% 
   filter(Ind_1_birth != Ind_2_birth)
 
+#Check that there are no repeat comparisons -- compare number of distinct comparisons to total number of comparisons.
+#Should return TRUE
+pairwise.df_all.info %>% distinct(Ind_1, Ind_2) %>% nrow() == nrow(pairwise.df_all.info)
+
+
 #Extract positive HS comparisons and exclude make sure there are no full sibs
 positives <- pairwise.df_all.info %>% filter(Ind_1_mom == Ind_2_mom | Ind_1_dad == Ind_2_dad)
 
-#Identify self-recaptures
+#Second filter to check for self-recaptures
 self <- positives %>% filter(Ind_1 == Ind_2)
 
-nrow(self) #Check if there are self-recaptures; they should have been filtered earlier so should be 0
+nrow(self) #They should have been filtered earlier so should be 0
 
 
 ####----------------Split dataframes into final form for model----------####
-
 #Sex-specific
 mom_positives <- positives %>% filter(Ind_1_mom == Ind_2_mom) %>% 
 select(Ind_1_birth, Ind_2_birth) %>% 
@@ -267,7 +271,7 @@ dad_positives <- positives %>% filter(Ind_1_dad == Ind_2_dad) %>%
   plyr::count()
 
 #Sex-aggregated
-parent_positives <- positives %>% filter(Ind_1_dad == Ind_2_dad | Ind_1_mom == Ind_2_mom) %>% 
+parent_positives <- positives %>%
   select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
 
@@ -288,7 +292,7 @@ parent_negatives <- pairwise.df_all.info %>% filter(Ind_1_dad != Ind_2_dad & Ind
   plyr::count()
 
 #-------------Kinship probabilities - Half-sib-------------------
-min_cohort <- n_yrs-max.age #set first year for calculating mean
+min_cohort <- n_yrs-max.age #set first year for calculating mean (arbitrary)
 
 m_adult_age = f_adult_age <- c(repro.age:max.age) #Set ages at which males and females are mature. Called by kinship probability function.
 
@@ -304,14 +308,12 @@ lam <- mean(pop.size$Lambda[min_cohort:n_yrs], na.rm=T) #Mean Lambda over years 
 ####Sex-specific####
 
 P_Mother = P_Father = array(NA,dim=c(n_yrs,n_yrs)) #creates two empty arrays, one for mother and one for father.  Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
-### Maybe come back and use a truncated distribution instead (package truncnorm)
-
 
 get_P_lemon <- function(Pars,P_Mother,P_Father,t_start,t_end){
   N_F=exp(Pars[1]) #number of mature females (assume time constant)
   for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
     for(ys_birth in (os_birth+1):n_yrs){
-      if((ys_birth - os_birth) <= ((maxAge+1) - repro.age)){
+      if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
         P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/N_F
       } else P_Mother[os_birth, ys_birth] <- 0
     }
@@ -319,7 +321,7 @@ get_P_lemon <- function(Pars,P_Mother,P_Father,t_start,t_end){
   N_M=exp(Pars[2]) #number of mature males (time constant) - (total reproductive output from males)
   for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
     for(ys_birth in (os_birth+1):n_yrs){
-      if((ys_birth - os_birth) <= ((maxAge+1) - repro.age)){
+      if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
         P_Father[os_birth,ys_birth] <- (surv^(ys_birth - os_birth))/N_M
       } else P_Father[os_birth,ys_birth] <- 0
     }
@@ -338,7 +340,7 @@ get_P_lemon_TotalA <- function(Pars2,P_Parent,t_start,t_end){
   
   for(os_birth in 1:(n_yrs-1)){  #Loop over possible ages of older sibs
     for(ys_birth in max(os_birth+1):n_yrs){ #Loop over possible ages of younger sibs
-      if((ys_birth - os_birth) <= ((maxAge+1) - repro.age)){ #If the adult could have been mature in the birth year of both individual, then fill the array with the appropriate probability of kinship
+      if((ys_birth - os_birth) <= ((maxAge) - repro.age)){ #If the adult could have been mature in the birth year of both individual, then fill the array with the appropriate probability of kinship
         
         #Probability of kinship based on birth year
         #See Hillary et al (2018) equation (3)
