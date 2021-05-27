@@ -14,6 +14,82 @@ library(ggpubr)
 
 The half-sibling CKMR model has been producing biased results for the last several months. So, I returned to old code where the model appeared to be working better. I compared bias from the new and old scripts and determined that the old script works better. However, it still suffers from a positive bias. So, I started testing some basic considerations to see if I could drive the bias down and gain an understanding of what went wrong with the "new" code.
 
+
+05/27/2021 
+fishSim: set seed to one number vs random numbers.
+I ran this simulation after talking with Dovi and Charlotte to see if the persistent positive bias arises from the seed I was using. The results shown below suggest that this is not the case.
+```{r}
+#single number seed
+IBS.null_Lemon_single_seed <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/Lemon_Sharks/results/length_of_sampling/six_year_sampling/*05.12.2021.csv")
+IBS.null_Lemon_single_seed.df <- sapply(IBS.null_Lemon_single_seed, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+IBS.null_Lemon_random_seed <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/Lemon_Sharks/results/length_of_sampling/six_year_sampling/*05.26.2021.csv")
+IBS.null_Lemon_random_seed.df <- sapply(IBS.null_Lemon_random_seed, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+head(IBS.null_Lemon_single_seed.df)
+head(IBS.null_Lemon_random_seed.df)
+#years_sampled <- 6
+
+IBS.null_Lemon_single_seed.df <- IBS.null_Lemon_single_seed.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_Lemon_random_seed.df <- IBS.null_Lemon_random_seed.df %>% mutate(Samples_per_year = Total_samples/10) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_Lemon_single_seed.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+IBS.null_Lemon_random_seed.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+
+Single_seed_Box <- ggplot(data=IBS.null_Lemon_single_seed.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias single seed") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Random_seed_Box <- ggplot(data=IBS.null_Lemon_random_seed.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Relative bias random seed") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+Single_seed_Scatter <- ggplot(data=IBS.null_Lemon_single_seed.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_single_seed.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias single seed") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+Random_seed_Scatter <- ggplot(data=IBS.null_Lemon_random_seed.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_random_seed.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent sampled", y="Relative bias", title="Relative bias random seed") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+ggarrange(Single_seed_Box, Random_seed_Box, Single_seed_Scatter, Random_seed_Scatter)
+```
+
+
+
+
+
 New vs old model
 ```{r echo = FALSE}
 #null model results
@@ -215,6 +291,12 @@ DoviCNR.plot <- ggplot(data=DoviIBS.null_CNR_6yrs.df, aes(x=factor(Total_samples
 
 ggarrange(DoviLemon.plot, DoviCNR.plot, common.legend = TRUE)
 ```
+
+
+
+
+
+
 
 
 More recent model with bias
