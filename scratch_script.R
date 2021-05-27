@@ -1,3 +1,24 @@
+#Check oldest and youngest parents in fishSim
+mom_indiv <- indiv %>% select(Mum, BirthY)
+dad_indiv <- indiv %>% select(Dad, BirthY)
+
+mom_indiv %>% rename(Me = Mum, offspring_birth = BirthY) %>% 
+  left_join(indiv, by = "Me") %>% 
+  mutate(age_m = offspring_birth - BirthY) %>% 
+  arrange(age_m) %>% 
+  head(10)
+
+dad_indiv %>% rename(Me = Dad, offspring_birth = BirthY) %>% 
+  left_join(indiv, by = "Me") %>% 
+  mutate(age_m = offspring_birth - BirthY) %>% 
+  arrange(age_m) %>% 
+  head(10)
+
+
+
+
+
+
 #Check oldest and youngest parents
 head(mom_positives)
 head(indiv)

@@ -165,15 +165,17 @@ lemon_neg_log_lik_TotalA <- function(Pars2, Negatives_Parent, Pairs_Parent, P_Pa
 
 ####--------Start loop----------####
 iterations <- 100
+s <- sample(c(1:10000000, size = iterations))
 
-for(samps in 1:3){
+for(samps in 1:2){
   results <- NULL
-  n_samples <- c(40, 50, 60)[samps]
+  n_samples <- c(50, 60)[samps]
   n_samples_total <- n_samples * n_samp_yr + n_samples #because sampling starts in year t_start, we need to add one more year
   #sampled_ages <- data.frame(matrix(0, nrow = n_samples, ncol = iterations))
   for(iter in 1:iterations) {
     index <- (iter*2)-1
-
+    set.seed(s[iter])
+    
 #-------------Loop start-------------------------    
 #makeFounders creates a matrix of specified size (pop) where each row is an individual in the founder popualtion.
 indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, survCurv=survCurv)
@@ -194,9 +196,7 @@ pop_size <- c()
 
 for (y in 1:length(sim_yrs)) {
   indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve, firstBreed = firstBreed)
-  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort) 
-  indiv <- birthdays(indiv)
-  
+
   #Store true values for each year
   Dad_truth[y] <- indiv %>% 
     dplyr::filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 
@@ -211,6 +211,11 @@ for (y in 1:length(sim_yrs)) {
     dplyr::summarize(n())
   
   pop_size[y] <- nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
+  
+    indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort) 
+  indiv <- birthdays(indiv)
+  
+
 }
 
 nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
@@ -220,12 +225,7 @@ for (y in c(t_start:t_end)) {
   indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "poisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve, firstBreed = firstBreed)
   
   pop_size[y] <- nrow(indiv[is.na(indiv[,6]),]) ## the currently-alive population size.
-  
-  indiv <- capture(indiv, n=n_samples, year = y, fatal = FALSE) #Capture individuals
-  
-  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
-  
-  indiv <- birthdays(indiv) #Age each individual by one year
+
   #Store true values for each year
   Dad_truth[y] <- indiv %>% 
     dplyr::filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 
@@ -238,6 +238,12 @@ for (y in c(t_start:t_end)) {
   All_truth[y] <- indiv %>% 
     dplyr::filter(AgeLast >= firstBreed & is.na(DeathY) == TRUE) %>% 
     dplyr::summarize(n())
+  
+  indiv <- capture(indiv, n=n_samples, year = y, fatal = FALSE) #Capture individuals
+  
+  indiv <- mort(indiv, type = death_type, year=y, maxAge = maxAge, ageMort = ageMort)
+  
+  indiv <- birthdays(indiv) #Age each individual by one year
   
 }
 
@@ -392,7 +398,7 @@ results <- results %>%
           Total_samples = as.numeric(Total_samples)) %>%
     mutate(Relative_bias = round(((N_est - Mean_truth)/Mean_truth)*100,1))
   
-  write.table(results, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/results/fishSim_AvgN_", n_samples_total, "_samples_sex-specific_and_aggregated_loop_6_yrs_05.12.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(results, file = paste0("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/fishSim_model_validation/Lemon_Sharks/results/length_of_sampling/six_year_sampling/fishSim_AvgN_", n_samples_total, "_samples_sex-specific_and_aggregated_loop_6_yrs_randomSeed_05.26.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 }
 
 #Quick viz of results
