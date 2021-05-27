@@ -114,7 +114,7 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
 data1 <- loopy.pop[loopy.pop$Survival =="S", -8] #Bring in the data from the previous iteration, but only include those that survive
 data1$age.x <- data1$age.x+1 # increase each individuals age by one for the new year - happy birthday survivors!
 
-mothers <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle == repro.cycle.vec[v+1])  #determine which females are available to breed in this year
+mothers <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle == repro.cycle.vec[v+1])  #determine which females are available to breed in this year; this is an index
 fathers <- which(data1$sex=='M' & data1$age.x>=repro.age)  #determine which males are available to breed in this year
 
 YOY.df <- data.frame() # create an empty data frame to populate with the YOY born in this year
@@ -179,9 +179,10 @@ lambda <- c(NA, lambda)
 pop.size$Lambda <- lambda
 mean(pop.size$Lambda, na.rm=T) #Mean Lambda
 
+hist(lambda[30:90])
 
 ####---------Checking population parameters-------####
-nrow(YOY.df)/length(mothers) #Average fecundity for last year
+nrow(YOY.df)/length(mothers) #Average fecundity for last year; remeber they're skipped breeding
 
 nrow(loopy.pop[loopy.pop$Survival=='S' & loopy.pop$age.x>=repro.age, ])/nrow(loopy.pop[loopy.pop$age.x>=repro.age,]) #survival of adults
 nrow(loopy.pop[loopy.pop$Survival=='S' & loopy.pop$age.x>0 & loopy.pop$age.x<repro.age, ])/nrow(loopy.pop[loopy.pop$age.x>0 & loopy.pop$age.x<repro.age,]) #survival of juveniles
@@ -208,6 +209,7 @@ f.init = m.init <- init.adult_pop.size/2
 Pars <- c(log(f.init), log(m.init)) #Pars1 is for the sex-specific model
 Pars2 <- log(init.adult_pop.size) #Pars2 is for the sex-aggregated model
 
+
 ####------------------------Collect samples---------------------####
 
 #Initialize dataframes
@@ -219,6 +221,7 @@ for(i in sample.years){
   sample.df_temp <- loopy.list[[i]] %>% dplyr::slice_sample(n = sample.size)
   sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
 }
+
 
 #Keep just one instance of each individual (to avoid self-recapture) and sort by birth year so when we make the pairwise comparison matrix, Ind_1 is always older than Ind_2 (bc it comes first)
 sample.df_all.info <- sample.df_all.info %>% distinct(indv.name, .keep_all = TRUE) %>% 
@@ -253,6 +256,9 @@ pairwise.df_all.info %>% distinct(Ind_1, Ind_2) %>% nrow() == nrow(pairwise.df_a
 
 #Extract positive HS comparisons and exclude make sure there are no full sibs
 positives <- pairwise.df_all.info %>% filter(Ind_1_mom == Ind_2_mom | Ind_1_dad == Ind_2_dad)
+
+#Remove full sibs -- adjust JDS
+positives %>% filter(Ind_1_mom == Ind_2_mom & Ind_1_dad == Ind_2_dad)
 
 #Second filter to check for self-recaptures
 self <- positives %>% filter(Ind_1 == Ind_2)
