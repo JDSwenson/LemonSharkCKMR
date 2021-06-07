@@ -2,15 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-reference_scripts/.Rhistory
-master_working_scripts/.Rhistory
 Lemon_Shark/data
-Leslie_matrix_simulations/age_misassignment/figures
-Leslie_matrix_simulations/age_misassignment/results
-Leslie_matrix_simulations/pop_growth_simulations/figures
-Leslie_matrix_simulations/pop_growth_simulations/results
-fishSim_simulations/null_model_tests/results
-fishSim_simulations/null_model_tests/figures
-fishSim_simulations/age_misassignment/figures
-fishSim_simulations/age_misassignment/results
 scripts_to_send

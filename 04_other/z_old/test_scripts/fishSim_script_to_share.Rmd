@@ -1,0 +1,264 @@
+---
+title: "fishSim_CKMR"
+output: pdf_document
+---
+
+Thanks so much for looking at this, Shane.
+
+In the CKMR model, I am fixing population growth to a single value, which is why I use a Leslie matrix to find the point of no population growth in the beginning and then set up the founder population using the stable age distribution. Still, I am finding slight discrepencies between lambda from the Leslie Matrix and from fishSim. I expect the bias issue either comes from this, or because fewer kin are being found than expected given the parameters (fewer kin than expected = positively biased CKMR estimate). I am fixing the parameters in the CKMR model to the same values I'm using to set up the population in fishSim, so I'm rather baffled as to where this discrepency comes from.
+
+Lastly, just as some background: what I need in the end are dataframes corresponding to kinship - positive and negative comparisons in separate dataframes - where column 1 is birth year of the older sib, column 2 is birth year of the younger sib, and column 3 is the frequency of the comparison. The code does this, as you'll see, but just thought that background might be useful.
+
+Thanks again for any ideas you have about where the difference may be coming from; even if that feedback is just "I don't see an issue, it looks good," that would be very helpful to hear from the person who developed the program :)
+
+
+```{r setup, include=FALSE}
+#Setting global defaults for knitting -- can be overwritten in individual chunks
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+
+#install.packages("devtools")
+library(devtools)
+devtools::install_github("SMBaylis/fishSim/fishSim")
+devtools::install_github("BruceKendall/mpmtools")
+```
+
+Set variables and parameter values for fishSim
+```{r Set variables and parameter values: sex-specific}
+#Population growth fixed to observed population growth of the whole population.
+#set so R doesn't use scientific notation
+options("scipen"=100, "digits"=4)
+
+library(fishSim)
+library(foreach)
+library(parallel)
+library(doParallel)
+library(optimx)
+#Load individual packages because tidyverse won't load on cluster
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(popbio)
+library(mpmtools)
+
+set.seed(47)
+
+#----------Set up simulation parameters-----------
+t_start = 61 #First year we take samples
+t_end = 65 #Last year we take samples
+n_samp_yr = t_end-t_start #Number of years being sampled
+sim_yrs = c(1:60) #Pre-sample simulation years for fishSim loop
+n_yrs <- t_end #Total years of simulation incl. sampling
+n_samples <- 75 #Number of samples to draw per year
+
+#----------------Set parameters for altMate-------------------------
+firstBreed <- 12 #Using same knife-edge maturity for males and females; want age 12 to be the first year of breeding
+maxAge <- 30 #Age after which animals die
+
+#Set male and female curves. They're the same at present.
+mat_m = mat_f <- rep(0,maxAge) #creates an empty vector for each age that will be used for maturity
+mat_m[firstBreed:maxAge] = mat_f[firstBreed:maxAge] <- 1  #Knife-edge maturity for males and females, beginning at age 12
+maleCurve <- c(mat_m, rep(max(mat_m), 1000)) #Set male age at maturity so breeders are not exhausted
+femaleCurve <- c(mat_f, rep(max(mat_m), 1000)) #Set female age at maturity
+maxClutch <- 18 #Maximum number of offspring one individual can possibly produce
+mat_type <- "ageSex" #Set mat_type for altMate call. Could just do age but shouldn't change anything.
+
+#-----------------Leslie Matrix--------------------
+#Make a Leslie Matrix to find parameters that produce zero population growth and extract the stable age distribution
+
+batchSize <- 4 #Average size of clutch (8) divided by two for skipped breeding
+fb <- batchSize/2 #Litter size for Leslie Matrix - females only
+
+Leslie_input <- data.frame(
+  x = c(0:maxAge), #age
+  sx = c(0.6, 0.7, 0.81, rep(0.85, times = 27), 0), #survival
+  mx = c(rep(0, times = 12), rep(fb, times = 19)) #age-specific birth rates (female proportion of the population only)
+)
+
+A1_pre <- make_Leslie_matrix(Leslie_input) #Make pre-census Leslie Matrix
+#View(A1)
+A1_post <- pre_to_post(Amat = A1_pre, S0 = .6) #Convert to post-censue Leslie Matrix, using age 0 survival of 0.6; ignore warning - top row DOES contain fecundity coefficients.
+#View(A1_post)
+
+#Calculate dominant eigenvalue (i.e. population growth rate) from transition matrix
+lambda1(A1_pre)
+lambda1(A1_post) #Make sure the post-census and pre-census values match
+
+stable_age <- mpmtools::stable_stage(A1_pre) #to set a stable age distribution in fishSim with makeFounders, need to use a pre-breeding census i.e. start with age 1
+
+survCurv <- stable_age #Sets probability of founder cohort belonging to each age class
+osr <- c(0.5, 0.5) #Operating sex ratio of 50/50
+stocks <- c(1) #stocks (just one)
+
+
+#-------------------Set parameters for mort-------------------------
+Surv_age <- Leslie_input$sx #Survival values from Leslie Matrix
+ageMort <- (1 - Surv_age) #Subtract survival values from 1 to get mortality for mort
+death_type <- "age"
+
+pop <- 5000 #Set starting population size for makeFounders
+perc_adult <- sum(stable_age[12:30]) #Percent of population that is mature i.e. that will be estimated by CKMR
+N_a <- round(pop*perc_adult, 0) #Set starting parameter for number of adults (N_a)
+N_f <- round(N_a/2, 0) #Set starting parameter value for number of adult females (N_f)
+N_m <- round(N_a-N_f, 0) #Set starting parameter value for number of adult males (N_m)
+Pars1 <- c(log(N_f),log(N_m)) #Parameters for model 1 (sex-specific)
+Pars2 <- log(N_a) #Parameters for model 2 (sex-aggregated)
+```
+
+Make Founder population and simulate into the future
+```{r Simulate population into the future}
+indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, survCurv=survCurv)
+
+# Set up empty vectors to store true values for each year
+    Dad_truth <- c()
+    Mom_truth <- c()
+    All_truth <- c()
+
+
+    #-----------------Start fishSim loop--------------------  
+    #Loop over 60 years before sampling
+    for (y in 1:length(sim_yrs)) {
+        year <- y
+        
+        #Store the total living population size for each year
+        All_truth[year] <- nrow(indiv[is.na(indiv[,6]),])
+        
+        #Store the number of living mature males and females for each year
+        Dad_truth[year] <- indiv %>% filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>%
+          summarize(n())
+        
+        Mom_truth[year] <- indiv %>% filter(Sex == "F" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 
+          summarize(n())
+
+        #altMate: use truncated Poisson to ensure that no members of the population are invisible to CKMR (infertile individuals are invisible to the half-sibling CKMR model)
+      indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "truncPoisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+      
+      #Kill individuals (after mating)
+      indiv <- mort(indiv, type = death_type, year=y, ageMort = ageMort, maxAge = maxAge)
+
+      #Age each individual one year
+      indiv <- birthdays(indiv)
+    }
+
+    
+# Repeat the above loop for five years, but this time also draw samples each year and record which animals were sampled in indiv
+      for(y in c(t_start:t_end)) {
+      #Capture individuals at the beginning of each year, just before breeding
+      year <- y
+      
+      indiv <- capture(indiv, n=n_samples, year = year, fatal = FALSE)
+
+    ###Store true values for each year###
+    #Entire population
+    All_truth[year] <- nrow(indiv[is.na(indiv[,6]),])
+    
+    #Mature living males
+    Dad_truth[year] <- indiv %>% filter(Sex == "M" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>%
+      summarize(n())
+    
+    #Mature living females
+    Mom_truth[year] <- indiv %>% filter(Sex == "F" & AgeLast >= firstBreed & is.na(DeathY)==TRUE) %>% 
+      summarize(n())
+    
+    #altMate using same parameters as above    
+    indiv <- altMate(indiv, batchSize = batchSize, fecundityDist = "truncPoisson", year = y, type = mat_type, maxClutch = maxClutch, singlePaternity = FALSE, maleCurve = maleCurve, femaleCurve = femaleCurve)
+
+    #Kill individuals after mating    
+    indiv <- mort(indiv, type = death_type, year=y, ageMort = ageMort, maxAge = maxAge)
+    
+    #Age each individual by one year
+    indiv <- birthdays(indiv)
+  }
+
+    #Store truth values as vectors (dplyr makes them a list)
+    Mom_truth <- unlist(Mom_truth) 
+    Dad_truth <- unlist(Dad_truth)
+    Adult_truth <- Mom_truth + Dad_truth
+    All_truth <- unlist(All_truth)
+    
+    #Store observed population growth values for each year
+    pop_growth_all <- All_truth[2:65]/All_truth[1:64]
+```
+
+Find relatives among sampled individuals
+```{r Identify kin and construct positive and negative dataframes}
+#Here, my understanding is that findRelativesPar creates a pairwise comparison matrix comparing every sampled individual to every other one. So I can extract the positive comparisons by setting pairs$TwoTwo to 1 and extract the negative comparisons by setting pairs$TwoTwo to 0.
+    pairs <- findRelativesPar(indiv = indiv, sampled = TRUE)
+    POPs <- pairs[pairs$OneTwo == 1,1:2] ##Parent-Offspring pairs
+    HSPs <- pairs[pairs$TwoTwo == 1,1:2] ##Half-Sibling pairs - verified from fishSim vignette
+    non_POPs <- pairs[pairs$OneTwo == 0,1:2] ##pairs that are not POPs
+    non_HSPs <- pairs[pairs$TwoTwo == 0,1:2] ##pairs that are not half-sibs
+
+
+    
+    # Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins. These dataframes will be used input to the CKMR model.
+    youngerbirthyears <- indiv %>%
+      select(Me, BirthY, Mum, Dad) %>% #select relevant columns only
+      rename("younger" = Me, "Young_sib_birth" = BirthY, "Young_sib_mom" = Mum, "Young_sib_dad" = Dad) #Rename columns for join and also so younger sib birth year and parents are distinguishable from older sib data when joined below.
+
+        
+#---------------Format positive comparisons for CKMR---------------
+    #For the CKMR model, I need the birth years of each individual in the pairwise comparison matrix, with the older sib birth years in column 1, younger sib birth years in column 2, and frequency of occurrence in column 3. See mom_positives, dad_positives, mom_negatives, and dad_negatives below for an example.
+    
+    #Rename columns for join below, and convert to character
+    HSPs_tbl <- HSPs %>% 
+      rename(
+        Me = Var1,
+        younger = Var2) %>%
+      mutate_all(as.character)
+    
+    #--Make a dataframe with the values from indiv that correspond to each individual ID in the pairwise comparison matrix--
+    HSPs_2_tbl <- inner_join(indiv, HSPs_tbl, by = "Me") %>% #Retain only the rows in which the individual in the "Me" column is present in both dataframes; the column "Me" corresponds to the older individual in the pairwise comparisons.
+      left_join(youngerbirthyears, by = "younger")  %>% #Retain all the columns from above and add data for the younger individual from each comparison
+      rename("Old_sib_birth" = BirthY, "Old_sib_mom" = Mum, "Old_sib_dad" = Dad) %>%   select(c(Old_sib_birth, Young_sib_birth, Old_sib_mom, Young_sib_mom, Old_sib_dad, Young_sib_dad)) #Rename columns for clarity
+    
+    #Split HSPs dataframe into mother and father pairs
+    #Mothers first
+    mom_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
+        select(Old_sib_birth, Young_sib_birth) %>% 
+        filter(Young_sib_birth != Old_sib_birth) %>% #Filter out intra-cohort comparisons
+        plyr::count() %>% 
+        select(Old_sib_birth, Young_sib_birth, freq)
+    
+    #Now fathers
+    dad_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad,] %>% 
+        select(Old_sib_birth, Young_sib_birth) %>% 
+        filter(Young_sib_birth != Old_sib_birth) %>% 
+        plyr::count() %>% 
+        select(Old_sib_birth, Young_sib_birth, freq)
+    
+    #Now all parents (for sex-aggregated model)
+    parent_positives <- HSPs_2_tbl[HSPs_2_tbl$Old_sib_dad == HSPs_2_tbl$Young_sib_dad | HSPs_2_tbl$Old_sib_mom == HSPs_2_tbl$Young_sib_mom,] %>% 
+      select(Old_sib_birth, Young_sib_birth) %>% 
+      filter(Young_sib_birth != Old_sib_birth) %>% #Exclude intra-cohort comparisons
+      plyr::count() %>% 
+      select(Old_sib_birth, Young_sib_birth, freq)
+    
+    sum(parent_positives$freq) 
+    sum(c(mom_positives$freq, dad_positives$freq)) #Should be same as above
+    nrow(HSPs) #Will be a little different due to intra-cohort comparisons that were filtered out
+    
+    
+#-------------Format negative comparisons for CKMR--------------
+    # Rename the columns for the join function
+    non_HSPs_tbl <- non_HSPs %>% 
+      rename(
+        Me = Var1,
+        younger = Var2) %>%
+      mutate_all(as.character) # convert columns to characters since not all levels of indiv$Me are present in non_POPs_tbl
+    
+    #Make a dataframe with the values from indiv that correspond to each individual ID in the pairwise comparison matrix
+    non_HSPs_2_tbl <- inner_join(indiv, non_HSPs_tbl, by = "Me") %>% #Retain only the rows present in both datasets; the column "Me" corresponds to the older individual in the pairwise comparisons.
+      left_join(youngerbirthyears, by = "younger")  %>%
+      rename(Old_sib_birth = BirthY) %>% 
+      select(c(Old_sib_birth, Young_sib_birth))
+    
+    #Create table of all negative comparisons, count occurences, and filter intracohort comparisons
+    mom_negatives = dad_negatives = parent_negatives <- non_HSPs_2_tbl %>% 
+        plyr::count() %>% 
+        filter(Young_sib_birth != Old_sib_birth)
+
+    #Set the cohort for which I will estimate abundance to the first year for which we have data (i.e. birth year of oldest sampled individual)
+    min_est_cohort <- min(non_HSPs_2_tbl$Old_sib_birth, HSPs_2_tbl$Old_sib_birth)
+```
