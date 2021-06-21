@@ -3,11 +3,11 @@
 #Load packages
 #devtools::install_github("BruceKendall/mpmtools")
 
-# library(optimx)
-# library(tidyverse) # safe to ignore conflicts with filter() and lag()
-# library(popbio)
-# library(mpmtools)
-# library(ggpubr)
+library(optimx)
+library(tidyverse) # safe to ignore conflicts with filter() and lag()
+library(popbio)
+library(mpmtools)
+library(ggpubr)
 
 #######################################################################
 ### DATA-GENERATING MODEL
@@ -57,9 +57,9 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs = t_end <- burn.in + Num.years
 
 iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
-#rseeds <- sample(1:1000000,iterations)
+rseeds <- sample(1:1000000,iterations)
 
-set.seed(885767)
+#set.seed(885767)
 
 ####---------Sampling parameters---------####
 
@@ -75,7 +75,7 @@ sample.size <- 30 #sample size per year
 results <- NULL #initialize results array
 
 for(iter in 1:iterations) {
-#  set.seed(rseeds[iter]) #JDS Q
+  set.seed(rseeds[iter])
   
   ####---------Set up initial population-----####
   
@@ -299,7 +299,7 @@ for(iter in 1:iterations) {
   ### DATA SAMPLING
   
   for(samps in 1:3){
-  try({  
+  #try({  
      
     sample.size <- c(40, 50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
     
@@ -497,12 +497,17 @@ for(iter in 1:iterations) {
       -loglik
     }
     
-    #Fit model - optimx version
-    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
+    #Fit model - optimx version -- gives warnings but also gives the same estimate as nlminb
+#    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
     
-    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="BFGS", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
+#    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="BFGS", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
     
-    ### NO MORE WARNINGS
+    #Fit model - nlminb version
+CK_fit1 <- nlminb(start=Pars, objective = lemon_neg_log_lik, hessian = lemon_neg_log_lik,  Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
+
+CK_fit2 <- nlminb(start=Pars2, objective = lemon_neg_log_lik_TotalA, Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
+
+### NO MORE WARNINGS
     
     # summary(CK_fit1)
     # exp(CK_fit1[1:2])
@@ -511,32 +516,42 @@ for(iter in 1:iterations) {
     # exp(CK_fit2[1])
     
     ####----#Need to check and work on script for calculating SE below----####
-    
-    #compute variance covariance matrix - optimx
-    D1=diag(length(Pars))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
-    VC_trans1 = solve(attr(CK_fit1, "details")["BFGS" ,"nhatend"][[1]])
-    VC1 = (t(D1)%*%VC_trans1%*%D1) #delta method
-    SE1=round(sqrt(diag(VC1)),0)
-    
-    #compute variance covariance matrix - optimx
-    D2=diag(length(Pars2))*exp(CK_fit2$p1[1]) #derivatives of transformations
-    VC_trans2 = solve(attr(CK_fit2, "details")["BFGS" ,"nhatend"][[1]])
-    VC2 = (t(D2)%*%VC_trans2%*%D2) #delta method
-    SE2 = round(sqrt(diag(VC2)),0)
+    #Delta method calculates SE for transformations
+
+
+    # #compute variance covariance matrix - optimx
+    #  D1=diag(length(Pars))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
+    #  VC_trans1 = solve(attr(CK_fit1, "details")["BFGS" ,"nhatend"][[1]])
+    #  VC1 = (t(D1)%*%VC_trans1%*%D1) #delta method
+    #  SE1=round(sqrt(diag(VC1)),0)
+    # 
+    # #compute variance covariance matrix - optimx
+    # D2=diag(length(Pars2))*exp(CK_fit2$p1[1]) #derivatives of transformations
+    # VC_trans2 = solve(attr(CK_fit2, "details")["BFGS" ,"nhatend"][[1]])
+    # VC2 = (t(D2)%*%VC_trans2%*%D2) #delta method
+    # SE2 = round(sqrt(diag(VC2)),0)
     
     #Combine above to make dataframe with truth and estimates side-by-side
     #store years from youngest sibling in comparisons to end of study
     yrs <- c(min_cohort:t_end)
     
     #Extract true values from year of estimation (ie min_cohort)
+    pop.size <- pop.size %>% mutate(Total.adult.pop = Male.adult.pop + Female.adult.pop)
     Mom_truth <- round(mean(pop.size$Female.adult.pop[min_cohort:n_yrs]),0)
     Dad_truth <- round(mean(pop.size$Male.adult.pop[min_cohort:n_yrs]), 0)
-    Adult_truth <- round(Mom_truth + Dad_truth, 0)
+    Adult_truth <- round(mean(pop.size$Total.adult.pop[min_cohort:n_yrs]), 0)
+    Mom_min <- min(pop.size$Female.adult.pop[min_cohort:n_yrs])
+    Mom_max <- max(pop.size$Female.adult.pop[min_cohort:n_yrs])
+    Dad_min <- min(pop.size$Male.adult.pop[min_cohort:n_yrs])
+    Dad_max <- max(pop.size$Male.adult.pop[min_cohort:n_yrs])
+    Adult_min <- min(pop.size$Total.adult.pop[min_cohort:n_yrs])
+    Adult_max <- max(pop.size$Total.adult.pop[min_cohort:n_yrs])
+    
     
     #Create dataframe of estimates and truth
-    estimates <- data.frame(cbind(round(exp(c(CK_fit1$p1[1], CK_fit1$p2[1], CK_fit2$p1[1])),0)), c(SE1, SE2), c("F", "M", "All"))
-    estimates <- cbind(estimates, c(Mom_truth, Dad_truth, Adult_truth))
-    colnames(estimates) <- c("CKMR_estimate", "SE", "Sex", "Mean_truth")
+    estimates <- data.frame(cbind(round(exp(c(CK_fit1$par[1], CK_fit1$par[2], CK_fit2$par[1])),0)), c("F", "M", "All"))
+    estimates <- cbind(estimates, c(Mom_truth, Dad_truth, Adult_truth), c(Mom_min, Dad_min, Adult_min), c(Mom_max, Dad_max, Adult_max)) #Includes the minimum and maximum numbers of mothers, fathers and adults over the time period being estimated
+    colnames(estimates) <- c("CKMR_estimate", "Sex", "Mean_truth", "Minimum", "Maximum")
     estimates
     
     #Extract more metrics that can help with troubleshooting
@@ -553,7 +568,7 @@ for(iter in 1:iterations) {
     #Bind results from previous iterations with current iteration
     results <- rbind(results, cbind(estimates, metrics))
   
-  }) # end try clause    
+#  }) # end try clause    
   } # end loop over sample sizes
   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
@@ -567,10 +582,10 @@ for(iter in 1:iterations) {
 results2 <- results %>% 
   mutate(Relative_bias = round(((CKMR_estimate - Mean_truth)/Mean_truth)*100,1)) # CHANGED TABLE NAME SO CAN BUILD & CHECK RESULTS ITERATIVELY
 
- results2 %>% group_by(Sex) %>% 
+ results2 %>% group_by(Total_samples, Sex) %>% 
    dplyr::summarize(median = median(Relative_bias), n = n())
 
-#write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/length_of_sampling/six_year_sampling/Dovi_AvgN_", total_samples, "_samples_05.17.2021_",length(sample.years), "yrs.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_AvgN_rmvTry_06.09.2021_nlminb.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
@@ -590,3 +605,8 @@ ggplot(data=results2, aes(x=factor(Total_samples))) +
   font("title", size = 10, face = "bold")
 
 ##################################################################################
+# 6/9/2021
+# Ran above loop with optimx and saved results. There were warnings, though. 
+# Running now with nlminb (no SE calculation) with the same seeds to see if the results are the same.
+
+save(rseeds, file="rseeds.rda")
