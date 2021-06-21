@@ -13,7 +13,7 @@ repro.age <- 12
 Leslie_input <- data.frame(
   x = c(0:maxAge), #age
   sx = c(YOY.sx, rep(Juv.sx, times = (repro.age-1)), rep(Adult.sx, times = maxAge - repro.age), 0), #survival
-  mx = c(rep(0, times = repro.age), rep(fb, times = (maxAge+1) - repro.age))) #age-specific birth rates (female proportion of the population only)
+  mx = c(rep(0, times = repro.age), rep(fb, times = (maxAge+1) - repro.age)) #age-specific birth rates (female proportion of the population only)
 )
 
 A1_pre <- make_Leslie_matrix(Leslie_input)
@@ -26,7 +26,9 @@ lambda1(A1_pre)
 lambda1(A1_post)
 #stable_age <- mpmtools::stable_stage(A1_post)
 
-stable_age <- mpmtools::stable_stage(A1_pre) #fishSim seems to use a pre-breeding census for the age distribution
+stable_age_pre <- mpmtools::stable_stage(A1_pre) #fishSim seems to use a pre-breeding census for the age distribution
+
+stable_age_post <- mpmtools::stable_stage(A1_post)
 
 #Calculate stable age structure of the population
 # stable_age = stable.stage(A)
