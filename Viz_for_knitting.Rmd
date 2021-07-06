@@ -12,17 +12,223 @@ library(tidyverse)
 library(ggpubr)
 ```
 
+**06/23/2021**
+The simulations on 06/22/2021 show that, predictably, when we have a population that is growing or shrinking, the model that assumes constant population size starts to struggle a bit. So, I ran the same simulations as on 06/22/2021, but this time added a parameter for population growth back into the model, all with the seeds set to be the same. 
+*Note: I ran the script once, but did not put the exponent to lambda in parentheses for the sex-aggregated model, which caused it to give wild results. Re-running now (11:45am 6/23) to rectify the issue.
+```{r}
+#neutral_growth
+IBS.null_Lemon_neutral_growth_lambdaModel.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/Lambda_model/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv") %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+#negative_growth_lambdaModel
+IBS.null_Lemon_negative_growth_lambdaModel.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/Lambda_model/Dovi_lambdaModel_06_22.2021_negativePopGrowth.csv") %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+#positive_growth_lambdaModel
+IBS.null_Lemon_positive_growth_lambdaModel.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/Lambda_model/Dovi_lambdaModel_06_22.2021_positivePopGrowth.csv") %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+head(IBS.null_Lemon_neutral_growth_lambdaModel.df)
+head(IBS.null_Lemon_negative_growth_lambdaModel.df)
+head(IBS.null_Lemon_positive_growth_lambdaModel.df)
+#years_sampled <- 6
+
+#Calculate percent of population sampled
+IBS.null_Lemon_neutral_growth_lambdaModel.df <- IBS.null_Lemon_neutral_growth_lambdaModel.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_Lemon_negative_growth_lambdaModel.df <- IBS.null_Lemon_negative_growth_lambdaModel.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_Lemon_positive_growth_lambdaModel.df <- IBS.null_Lemon_positive_growth_lambdaModel.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+#Calculate median relative bias
+IBS.null_Lemon_neutral_growth_lambdaModel.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+IBS.null_Lemon_negative_growth_lambdaModel.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+IBS.null_Lemon_positive_growth_lambdaModel.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+#Plot results - Box plot
+neutral_growth_lambdaModel_Box <- ggplot(data=IBS.null_Lemon_neutral_growth_lambdaModel.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Neutral growth; lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+negative_growth_lambdaModel_Box <- ggplot(data=IBS.null_Lemon_negative_growth_lambdaModel.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Negative growth; lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+positive_growth_lambdaModel_Box <- ggplot(data=IBS.null_Lemon_positive_growth_lambdaModel.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Positive growth; lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+#Scatter plot
+neutral_growth_lambdaModel_Scatter <- ggplot(data=IBS.null_Lemon_neutral_growth_lambdaModel.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  geom_smooth(aes(x = Percent_sampled, y = Relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_neutral_growth_lambdaModel.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+negative_growth_lambdaModel_Scatter <- ggplot(data=IBS.null_Lemon_negative_growth_lambdaModel.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  geom_smooth(aes(x = Percent_sampled, y = Relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_negative_growth_lambdaModel.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+positive_growth_lambdaModel_Scatter <- ggplot(data=IBS.null_Lemon_positive_growth_lambdaModel.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  geom_smooth(aes(x = Percent_sampled, y = Relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_positive_growth_lambdaModel.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+ggarrange(neutral_growth_lambdaModel_Box, negative_growth_lambdaModel_Box, positive_growth_lambdaModel_Box, neutral_growth_lambdaModel_Scatter, negative_growth_lambdaModel_Scatter, positive_growth_lambdaModel_Scatter, ncol = 3, nrow = 2, common.legend = TRUE)
+```
+
+
+**06/22/2021**
+So far all of the simulations that have been run recently assume a constant population size, both for the data generation and data estimation models. Obviously, this is not always (or often) the case with real populations. So I want to see how the model performs when the data generation and data estimation model assume a growing (or shrinking) population. So, I fit the same model as below (which assumes constant population size) to simulated populations that are growing slightly, shrinking slightly, and neutral. 
+```{r}
+#neutral_growth
+IBS.null_Lemon_neutral_growth.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/population_growth/Dovi_AvgN_neutral_lambda_06_21.2021.csv") %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+#negative_growth
+IBS.null_Lemon_negative_growth.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/population_growth/Dovi_AvgN_negative_lambda_06_21.2021.csv") %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+#positive_growth
+IBS.null_Lemon_positive_growth.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/population_growth/Dovi_AvgN_positive_lambda_06_21.2021.csv") %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+head(IBS.null_Lemon_neutral_growth.df)
+head(IBS.null_Lemon_negative_growth.df)
+head(IBS.null_Lemon_positive_growth.df)
+#years_sampled <- 6
+
+#Calculate percent of population sampled
+IBS.null_Lemon_neutral_growth.df <- IBS.null_Lemon_neutral_growth.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_Lemon_negative_growth.df <- IBS.null_Lemon_negative_growth.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+IBS.null_Lemon_positive_growth.df <- IBS.null_Lemon_positive_growth.df %>% mutate(Samples_per_year = Total_samples/6) %>% 
+  mutate(Percent_sampled = (Samples_per_year/Pop_size_mean)*100)
+
+#Calculate median relative bias
+IBS.null_Lemon_neutral_growth.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+IBS.null_Lemon_negative_growth.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+IBS.null_Lemon_positive_growth.df %>% group_by(Sex, Total_samples) %>% summarize(median(Relative_bias))
+
+#Plot results - Box plot
+neutral_growth_Box <- ggplot(data=IBS.null_Lemon_neutral_growth.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Neutral growth; no lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+negative_growth_Box <- ggplot(data=IBS.null_Lemon_negative_growth.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Negative growth; no lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+positive_growth_Box <- ggplot(data=IBS.null_Lemon_positive_growth.df, aes(x=factor(Total_samples))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="positive growth; no lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+#Scatter plot
+neutral_growth_Scatter <- ggplot(data=IBS.null_Lemon_neutral_growth.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  geom_smooth(aes(x = Percent_sampled, y = Relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_neutral_growth.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+negative_growth_Scatter <- ggplot(data=IBS.null_Lemon_negative_growth.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  geom_smooth(aes(x = Percent_sampled, y = Relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_negative_growth.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+positive_growth_Scatter <- ggplot(data=IBS.null_Lemon_positive_growth.df, aes(x=Percent_sampled)) +
+  geom_jitter(aes(y=Relative_bias, color=Sex)) +
+  geom_smooth(aes(x = Percent_sampled, y = Relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_positive_growth.df$Percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+ggarrange(neutral_growth_Box, negative_growth_Box, positive_growth_Box, neutral_growth_Scatter, negative_growth_Scatter, positive_growth_Scatter, ncol = 3, nrow = 2, common.legend = TRUE)
+```
+
 
 **06/21/2021**
 The optimx optimizer has been producing warnings. Paul Conn said this is nothing to worry about, but Charlotte wants to get rid of them. To examine whether the two optimizers produce comparable results, I ran the same script with both optimizers, setting the seed to the same number, to compare results. It appears there are very few differences in results, which suggests that the warnings from optimx are, as Paul Conn suggested, a result of exploring parameter space and not anything paritulcarly troubling.
 ```{r}
 #optimx
-IBS.null_Lemon_optimx.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_Sharks/results/testing/Dovi_AvgN_rmvTry_06.09.2021_optimx.csv") %>% 
+IBS.null_Lemon_optimx.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_Sharks/results/nlminb_vs_optimx/Dovi_AvgN_rmvTry_06.09.2021_optimx.csv") %>% 
   mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
 
 
 #nlminb
-IBS.null_Lemon_nlminb.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_Sharks/results/testing/Dovi_AvgN_rmvTry_06.09.2021_nlminb.csv") %>% 
+IBS.null_Lemon_nlminb.df <- read_csv("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_Sharks/results/nlminb_vs_optimx/Dovi_AvgN_rmvTry_06.09.2021_nlminb.csv") %>% 
   mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
 
 head(IBS.null_Lemon_optimx.df)

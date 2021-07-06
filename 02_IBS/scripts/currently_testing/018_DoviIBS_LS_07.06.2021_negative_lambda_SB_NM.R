@@ -5,8 +5,8 @@
 
 library(optimx)
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
-library(popbio)
-library(mpmtools)
+#library(popbio) #not needed
+#library(mpmtools) #not needed
 library(ggpubr)
 
 #######################################################################
@@ -38,6 +38,7 @@ num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates p
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation #JDS Q
 ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
 ff
+ff <- ff - 0.2
 
 # stable age distribution - JDS Q
 props <- rep(NA, max.age+1)
@@ -57,7 +58,8 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs = t_end <- burn.in + Num.years
 
 iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
-rseeds <- sample(1:1000000,iterations)
+#rseeds <- sample(1:1000000,iterations)
+load("rseeds.rda")
 
 #set.seed(885767)
 
@@ -257,7 +259,7 @@ for(iter in 1:iterations) {
   # plot(lambda[(burn.in+1):n_yrs], pch=19)
   # abline(h=1, lty=3)
   
-  mean(pop.size$Lambda[(burn.in+1):n_yrs], na.rm=T) # mean Lambda
+  mean_lam <- mean(pop.size$Lambda[(burn.in+1):n_yrs], na.rm=T) # mean Lambda
   sd(pop.size$Lambda[(burn.in+1):n_yrs], na.rm=T) # sd Lambda
   
   ####---------Checking population parameters-------####
@@ -416,7 +418,7 @@ for(iter in 1:iterations) {
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
           if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
-            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/N_F
+            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_F*lam^(ys_birth-min_cohort))
           } else P_Mother[os_birth, ys_birth] <- 0
         }
       }
@@ -424,7 +426,7 @@ for(iter in 1:iterations) {
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
           if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
-            P_Father[os_birth,ys_birth] <- (surv^(ys_birth - os_birth))/N_M
+            P_Father[os_birth,ys_birth] <- (surv^(ys_birth - os_birth))/(N_M*lam^(ys_birth-min_cohort))
           } else P_Father[os_birth,ys_birth] <- 0
         }
       }
@@ -446,7 +448,7 @@ for(iter in 1:iterations) {
             
             #Probability of kinship based on birth year
             #See Hillary et al (2018) equation (3)
-            P_Parent[os_birth, ys_birth] <- (4/N_A)*(surv^(ys_birth - os_birth))
+            P_Parent[os_birth, ys_birth] <- (4/(N_A*lam^(ys_birth-min_cohort)))*(surv^(ys_birth - os_birth))
           } else P_Parent[os_birth, ys_birth] <- 0 #If it's not possible, set kinship probability to 0
         }
       }
@@ -498,14 +500,14 @@ for(iter in 1:iterations) {
     }
     
     #Fit model - optimx version -- gives warnings but also gives the same estimate as nlminb
-#    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
+    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
     
-#    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="BFGS", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
+    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="BFGS", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
     
     #Fit model - nlminb version
-CK_fit1 <- nlminb(start=Pars, objective = lemon_neg_log_lik, hessian = lemon_neg_log_lik,  Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
+#CK_fit1 <- nlminb(start=Pars, objective = lemon_neg_log_lik, hessian = lemon_neg_log_lik,  Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
 
-CK_fit2 <- nlminb(start=Pars2, objective = lemon_neg_log_lik_TotalA, Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
+#CK_fit2 <- nlminb(start=Pars2, objective = lemon_neg_log_lik_TotalA, Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
 
 ### NO MORE WARNINGS
     
@@ -520,16 +522,16 @@ CK_fit2 <- nlminb(start=Pars2, objective = lemon_neg_log_lik_TotalA, Negatives_P
 
 
     # #compute variance covariance matrix - optimx
-    #  D1=diag(length(Pars))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
-    #  VC_trans1 = solve(attr(CK_fit1, "details")["BFGS" ,"nhatend"][[1]])
-    #  VC1 = (t(D1)%*%VC_trans1%*%D1) #delta method
-    #  SE1=round(sqrt(diag(VC1)),0)
-    # 
+    D1=diag(length(Pars))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
+    VC_trans1 = solve(attr(CK_fit1, "details")["BFGS" ,"nhatend"][[1]])
+    VC1 = (t(D1)%*%VC_trans1%*%D1) #delta method
+    SE1=round(sqrt(diag(VC1)),0)
+     
     # #compute variance covariance matrix - optimx
-    # D2=diag(length(Pars2))*exp(CK_fit2$p1[1]) #derivatives of transformations
-    # VC_trans2 = solve(attr(CK_fit2, "details")["BFGS" ,"nhatend"][[1]])
-    # VC2 = (t(D2)%*%VC_trans2%*%D2) #delta method
-    # SE2 = round(sqrt(diag(VC2)),0)
+    D2=diag(length(Pars2))*exp(CK_fit2$p1[1]) #derivatives of transformations
+    VC_trans2 = solve(attr(CK_fit2, "details")["BFGS" ,"nhatend"][[1]])
+    VC2 = (t(D2)%*%VC_trans2%*%D2) #delta method
+    SE2 = round(sqrt(diag(VC2)),0)
     
     #Combine above to make dataframe with truth and estimates side-by-side
     #store years from youngest sibling in comparisons to end of study
@@ -537,9 +539,9 @@ CK_fit2 <- nlminb(start=Pars2, objective = lemon_neg_log_lik_TotalA, Negatives_P
     
     #Extract true values from year of estimation (ie min_cohort)
     pop.size <- pop.size %>% mutate(Total.adult.pop = Male.adult.pop + Female.adult.pop)
-    Mom_truth <- round(mean(pop.size$Female.adult.pop[min_cohort:n_yrs]),0)
-    Dad_truth <- round(mean(pop.size$Male.adult.pop[min_cohort:n_yrs]), 0)
-    Adult_truth <- round(mean(pop.size$Total.adult.pop[min_cohort:n_yrs]), 0)
+    Mom_truth <- round(pop.size$Female.adult.pop[min_cohort],0)
+    Dad_truth <- round(pop.size$Male.adult.pop[min_cohort], 0)
+    Adult_truth <- round(pop.size$Total.adult.pop[min_cohort], 0)
     Mom_min <- min(pop.size$Female.adult.pop[min_cohort:n_yrs])
     Mom_max <- max(pop.size$Female.adult.pop[min_cohort:n_yrs])
     Dad_min <- min(pop.size$Male.adult.pop[min_cohort:n_yrs])
@@ -549,9 +551,15 @@ CK_fit2 <- nlminb(start=Pars2, objective = lemon_neg_log_lik_TotalA, Negatives_P
     
     
     #Create dataframe of estimates and truth
-    estimates <- data.frame(cbind(round(exp(c(CK_fit1$p1[1], CK_fit1$p2[1], CK_fit2$p1[1])),0)), c(SE1, SE2), c("F", "M", "All"))
-    estimates <- cbind(estimates, c(Mom_truth, Dad_truth, Adult_truth), c(Mom_min, Dad_min, Adult_min), c(Mom_max, Dad_max, Adult_max)) #Includes the minimum and maximum numbers of mothers, fathers and adults over the time period being estimated
-    colnames(estimates) <- c("CKMR_estimate", "SE", "Sex", "Mean_truth", "Minimum", "Maximum")
+    estimates <- data.frame(cbind(
+      round(exp(c(CK_fit1$p1[1], CK_fit1$p2[1], CK_fit2$p1[1])),0)), 
+      c(SE1, SE2), 
+      c("F", "M", "All"))
+    estimates <- cbind(estimates, 
+                       c(Mom_truth, Dad_truth, Adult_truth), 
+                       c(Mom_min, Dad_min, Adult_min), 
+                       c(Mom_max, Dad_max, Adult_max)) #Includes the minimum and maximum numbers of mothers, fathers and adults over the time period being estimated
+    colnames(estimates) <- c("CKMR_estimate", "SE", "Sex", "Truth", "Minimum", "Maximum")
     estimates
     
     #Extract more metrics that can help with troubleshooting
@@ -560,9 +568,13 @@ CK_fit2 <- nlminb(start=Pars2, objective = lemon_neg_log_lik_TotalA, Negatives_P
     
     metrics <- cbind(c(sum(mom_positives[,3]), sum(dad_positives[,3]), sum(parent_positives[,3])), 
                      c(rep(lam, times = 3)), 
+                     c(rep(pop_growth_all_mean, times = 3)),
                      c(rep(total_samples, times=3)),
-                     c(rep(pop_size_mean, times=3)))
-    colnames(metrics) <- c("Parents_detected", "Pop_growth", "Total_samples", "Pop_size_mean")
+                     c(rep(pop_size_mean, times=3)),
+                     c(rep(CK_fit1$convcode, times=2), CK_fit2$convcode),
+                     c(rep(CK_fit1$kkt1, times=2), CK_fit2$kkt1),
+                     c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2))
+    colnames(metrics) <- c("Parents_detected", "Pop_growth_est_yrs", "Pop_growth_all_yrs", "Total_samples", "Pop_size_mean", "convergence", "kkt1", "kkt2")
     
     #-----------------Loop end-----------------------------    
     #Bind results from previous iterations with current iteration
@@ -580,12 +592,16 @@ CK_fit2 <- nlminb(start=Pars2, objective = lemon_neg_log_lik_TotalA, Negatives_P
 #Calculate relative bias for all estimates
 
 results2 <- results %>% 
-  mutate(Relative_bias = round(((CKMR_estimate - Mean_truth)/Mean_truth)*100,1)) # CHANGED TABLE NAME SO CAN BUILD & CHECK RESULTS ITERATIVELY
+  mutate(Relative_bias = round(((CKMR_estimate - Truth)/Truth)*100,1)) # CHANGED TABLE NAME SO CAN BUILD & CHECK RESULTS ITERATIVELY
 
  results2 %>% group_by(Total_samples, Sex) %>% 
    dplyr::summarize(median = median(Relative_bias), n = n())
 
-write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_AvgN_rmvTry_06.09.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+#Home computer
+#write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_AvgN_neutral_lambda_06_21.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+
+#
+write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_negativePopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
