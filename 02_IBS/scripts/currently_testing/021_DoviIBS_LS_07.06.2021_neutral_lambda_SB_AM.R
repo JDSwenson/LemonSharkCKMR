@@ -38,7 +38,6 @@ num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates p
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation #JDS Q
 ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
 ff
-ff <- ff + 0.2
 
 # stable age distribution - JDS Q
 props <- rep(NA, max.age+1)
@@ -57,7 +56,7 @@ burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
 
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 5 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds.rda")
 
@@ -396,7 +395,7 @@ for(iter in 1:iterations) {
     
     #-------------Kinship probabilities - Half-sib-------------------
     
-    min_cohort <- n_yrs-40 # CHANGED THIS FROM MAX.AGE; set first year for calculating mean (arbitrary)
+    min_cohort <- n_yrs-40 # CHANGED THIS FROM MAX.AGE; set year of estimation.
     
     m_adult_age <- f_adult_age <- c(repro.age:max.age) # Set ages at which males and females are mature. Called by kinship probability function.
     
@@ -414,20 +413,25 @@ for(iter in 1:iterations) {
     # Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
     
     get_P_lemon <- function(Pars,P_Mother,P_Father,t_start,t_end){
-      N_F=exp(Pars[1]) #number of mature females (assume time constant) ### SEEMS LIKE A STRONG ASSUMPTION
+      N_Fe=exp(Pars[1])/2
+      N_Fo=exp(Pars[1])/2
+      
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
-          if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
-            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_F*lam^(ys_birth-min_cohort))
-          } else P_Mother[os_birth, ys_birth] <- 0
+          #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
+          if(ys_birth %% 2 ==0 & os_birth %% 2 == 0){
+           P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fe*lam^(ys_birth-min_cohort))
+          }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){
+            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fo*lam^(ys_birth-min_cohort))
+          }else P_Mother[os_birth, ys_birth] <- 0
         }
       }
       N_M=exp(Pars[2]) #number of mature males (time constant) ### - (total reproductive output from males) ???
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
-          if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
+          #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
             P_Father[os_birth,ys_birth] <- (surv^(ys_birth - os_birth))/(N_M*lam^(ys_birth-min_cohort))
-          } else P_Father[os_birth,ys_birth] <- 0
+          #} else P_Father[os_birth,ys_birth] <- 0
         }
       }
       return(list(P_Mother=P_Mother, P_Father=P_Father)) #return makes sure this is moved out of the loop into the environment
@@ -444,12 +448,12 @@ for(iter in 1:iterations) {
       
       for(os_birth in 1:(n_yrs-1)){  #Loop over possible ages of older sibs
         for(ys_birth in max(os_birth+1):n_yrs){ #Loop over possible ages of younger sibs
-          if((ys_birth - os_birth) <= ((maxAge) - repro.age)){ #If the adult could have been mature in the birth year of both individual, then fill the array with the appropriate probability of kinship
+          #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){ #If the adult could have been mature in the birth year of both individual, then fill the array with the appropriate probability of kinship
             
             #Probability of kinship based on birth year
             #See Hillary et al (2018) equation (3)
             P_Parent[os_birth, ys_birth] <- (4/(N_A*lam^(ys_birth-min_cohort)))*(surv^(ys_birth - os_birth))
-          } else P_Parent[os_birth, ys_birth] <- 0 #If it's not possible, set kinship probability to 0
+          #} else P_Parent[os_birth, ys_birth] <- 0 #If it's not possible, set kinship probability to 0
         }
       }
       return(list(P_Parent=P_Parent)) #return makes sure this is moved out of the loop into the environment
@@ -500,9 +504,10 @@ for(iter in 1:iterations) {
     }
     
     #Fit model - optimx version -- gives warnings but also gives the same estimate as nlminb
-    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
+    #CHANGED 7/7/2021: changed method from BFGS to L-BFGS-B and set lower bound for parameters at 1
+    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="L-BFGS-B", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end, lower = c(1, 1))
     
-    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="BFGS", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
+    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="L-BFGS-B", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end, lower = c(1, 1))
     
     #Fit model - nlminb version
 #CK_fit1 <- nlminb(start=Pars, objective = lemon_neg_log_lik, hessian = lemon_neg_log_lik,  Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
@@ -523,13 +528,13 @@ for(iter in 1:iterations) {
 
     # #compute variance covariance matrix - optimx
     D1=diag(length(Pars))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
-    VC_trans1 = solve(attr(CK_fit1, "details")["BFGS" ,"nhatend"][[1]])
+    VC_trans1 = solve(attr(CK_fit1, "details")["L-BFGS-B" ,"nhatend"][[1]])
     VC1 = (t(D1)%*%VC_trans1%*%D1) #delta method
     SE1=round(sqrt(diag(VC1)),0)
      
     # #compute variance covariance matrix - optimx
     D2=diag(length(Pars2))*exp(CK_fit2$p1[1]) #derivatives of transformations
-    VC_trans2 = solve(attr(CK_fit2, "details")["BFGS" ,"nhatend"][[1]])
+    VC_trans2 = solve(attr(CK_fit2, "details")["L-BFGS-B" ,"nhatend"][[1]])
     VC2 = (t(D2)%*%VC_trans2%*%D2) #delta method
     SE2 = round(sqrt(diag(VC2)),0)
     
@@ -598,9 +603,9 @@ results2 <- results %>%
    dplyr::summarize(median = median(Relative_bias), n = n())
 
 #Home computer
-write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/skipped_breeding/Dovi_neutral_lambda_SB_NM_07.06.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_neutral_lambda_SB_AM_07.07.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
-#write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_positivePopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+#write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 

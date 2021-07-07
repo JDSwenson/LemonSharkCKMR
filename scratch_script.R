@@ -1,3 +1,42 @@
+#Work on skipped-breeding model
+ys_birth <- 85
+os_birth <- 73
+
+mom_positives %>% mutate(x = Ind_1_birth %% 2)
+  
+if(ys_birth %% 2 == 0){
+  print("Hi")
+}
+
+#Try running model outside of optimization algorithm
+lemon_neg_log_lik <- function(Pars,Negatives_Mother,Negatives_Father,Pairs_Mother,Pairs_Father,P_Mother,P_Father,t_start,t_end){
+  
+  P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,t_start=t_start,t_end=t_end)
+  
+  loglik=0
+  
+  #likelihood contributions for all negative comparisons
+  for(irow in 1:nrow(Negatives_Mother)){
+    loglik=loglik+Negatives_Mother[irow,3]*log(1-P$P_Mother[Negatives_Mother[irow,1],Negatives_Mother[irow,2]])
+  } 
+  for(irow in 1:nrow(Negatives_Father)){
+    loglik=loglik+Negatives_Father[irow,3]*log(1-P$P_Father[Negatives_Father[irow,1],Negatives_Father[irow,2]])
+  }  
+  #likelihood contributions for positive comparisons
+  for(irow in 1:nrow(Pairs_Mother)){
+    loglik=loglik+Pairs_Mother[irow,3]*log(P$P_Mother[Pairs_Mother[irow,1],Pairs_Mother[irow,2]])
+  }
+  for(irow in 1:nrow(Pairs_Father)){
+    loglik=loglik+Pairs_Father[irow,3]*log(P$P_Father[Pairs_Father[irow,1],Pairs_Father[irow,2]])
+  }  
+  -loglik
+}
+
+lemon_neg_log_lik(Pars=Pars,Negatives_Mother = mom_negatives,Negatives_Father = dad_negatives,Pairs_Mother = mom_positives_sub,Pairs_Father = dad_positives_sub,P_Mother = P_Mother,P_Father = P_Father,t_start = t_start,t_end = t_end)
+
+mom_positives_sub <- mom_positives %>% sample_n(size = 5)
+dad_positives_sub <- dad_positives %>% sample_n(size = 5)
+
 #Check oldest and youngest parents in fishSim
 mom_indiv <- indiv %>% select(Mum, BirthY)
 dad_indiv <- indiv %>% select(Dad, BirthY)

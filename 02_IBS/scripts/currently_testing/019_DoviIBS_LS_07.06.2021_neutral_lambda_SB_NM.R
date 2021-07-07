@@ -30,7 +30,7 @@ Adult.survival <- 0.825 # CHANGED FROM 0.9; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 # CHANGED FROM 30; set the maximum age allowed in the simulation
 
-mating.periodicity <- 1 # CHANGED FROM 2; number of years between mating; assigned to an individual 
+mating.periodicity <- 2 # CHANGED FROM 2; number of years between mating; assigned to an individual 
                         # and sticks with them through their life. So they're either a one or two year breeder.
 num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution) #JDS Q
@@ -56,7 +56,7 @@ burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
 
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 5 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds.rda")
 
@@ -395,7 +395,7 @@ for(iter in 1:iterations) {
     
     #-------------Kinship probabilities - Half-sib-------------------
     
-    min_cohort <- n_yrs-40 # CHANGED THIS FROM MAX.AGE; set first year for calculating mean (arbitrary)
+    min_cohort <- n_yrs-40 # CHANGED THIS FROM MAX.AGE; set year of estimation.
     
     m_adult_age <- f_adult_age <- c(repro.age:max.age) # Set ages at which males and females are mature. Called by kinship probability function.
     
@@ -597,10 +597,9 @@ results2 <- results %>%
    dplyr::summarize(median = median(Relative_bias), n = n())
 
 #Home computer
-#write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_AvgN_neutral_lambda_06_21.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_neutral_lambda_SB_NM_07.06.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
-#
-write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+#write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 

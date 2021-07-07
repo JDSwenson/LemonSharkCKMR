@@ -38,7 +38,6 @@ num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates p
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation #JDS Q
 ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
 ff
-ff <- ff + 0.2
 
 # stable age distribution - JDS Q
 props <- rep(NA, max.age+1)
@@ -57,7 +56,7 @@ burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
 
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 5 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds.rda")
 
@@ -264,7 +263,7 @@ for(iter in 1:iterations) {
   
   ####---------Checking population parameters-------####
   
-  nrow(YOY.df)/length(mothers) # Average fecundity for last year; remember whether they've skipped breeding
+  nrow(YOY.df)/length(mothers) # Average fecundity for last year; remember whether they're skipped breeding
   
   # Adult.survival <- 0.9 # Adult survival
   # juvenile.survival <- 0.9 # juvenile survival
@@ -294,7 +293,7 @@ for(iter in 1:iterations) {
   
   # Set initial parameters for model based on initial abundance of males and females
   f.init <- m.init <- init.adult_pop.size/2
-  Pars <- c(log(f.init), log(m.init)) #Pars1 is for the sex-specific model
+  Pars <- c(log(f.init/2), log(f.init/2), log(m.init)) #Pars1 is for the sex-specific model
   Pars2 <- log(init.adult_pop.size) #Pars2 is for the sex-aggregated model
   
   #####################################################################################
@@ -365,9 +364,13 @@ for(iter in 1:iterations) {
     ####----------------Split dataframes into final form for model----------####
     
     #Sex-specific
-    mom_positives <- positives %>% filter(Ind_1_mom == Ind_2_mom) %>% 
+    mom_positives_e <- positives %>% filter(Ind_1_mom == Ind_2_mom & Ind_1_birth %% 2 == 0) %>% 
       select(Ind_1_birth, Ind_2_birth) %>% 
       plyr::count() 
+    
+    mom_positives_o <- positives %>% filter(Ind_1_mom == Ind_2_mom & Ind_1_birth %% 2 != 0) %>% 
+      select(Ind_1_birth, Ind_2_birth) %>% 
+      plyr::count()
     
     dad_positives <- positives %>% filter(Ind_1_dad == Ind_2_dad)  %>%
       select(Ind_1_birth, Ind_2_birth) %>%
@@ -381,7 +384,11 @@ for(iter in 1:iterations) {
     #Make dataframes for negative comparisons
     
     #Sex-specific
-    mom_negatives <- pairwise.df_all.info %>% filter(Ind_1_mom != Ind_2_mom & Ind_1_birth != Ind_2_birth) %>% #filter for same cohort is repetitive
+    mom_negatives_e <- pairwise.df_all.info %>% filter(Ind_1_mom != Ind_2_mom & Ind_1_birth != Ind_2_birth & Ind_1_birth %% 2 == 0) %>% #filter for same cohort is repetitive
+      select(Ind_1_birth, Ind_2_birth) %>% 
+      plyr::count()
+    
+    mom_negatives_o <- pairwise.df_all.info %>% filter(Ind_1_mom != Ind_2_mom & Ind_1_birth != Ind_2_birth & Ind_1_birth %% 2 != 0) %>% #filter for same cohort is repetitive
       select(Ind_1_birth, Ind_2_birth) %>% 
       plyr::count()
     
@@ -396,7 +403,7 @@ for(iter in 1:iterations) {
     
     #-------------Kinship probabilities - Half-sib-------------------
     
-    min_cohort <- n_yrs-40 # CHANGED THIS FROM MAX.AGE; set first year for calculating mean (arbitrary)
+    min_cohort <- n_yrs-40 # CHANGED THIS FROM MAX.AGE; set year of estimation.
     
     m_adult_age <- f_adult_age <- c(repro.age:max.age) # Set ages at which males and females are mature. Called by kinship probability function.
     
@@ -598,9 +605,9 @@ results2 <- results %>%
    dplyr::summarize(median = median(Relative_bias), n = n())
 
 #Home computer
-write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/skipped_breeding/Dovi_neutral_lambda_SB_NM_07.06.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_neutral_lambda_SB_NM_07.06.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
-#write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_positivePopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+#write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
