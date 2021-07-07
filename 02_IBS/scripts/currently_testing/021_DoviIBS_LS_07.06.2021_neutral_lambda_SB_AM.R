@@ -56,7 +56,7 @@ burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
 
-iterations <- 5 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds.rda")
 
@@ -413,17 +413,17 @@ for(iter in 1:iterations) {
     # Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
     
     get_P_lemon <- function(Pars,P_Mother,P_Father,t_start,t_end){
-      N_Fe=exp(Pars[1])/2
+      N_Fe=exp(Pars[1])/2 #split the number of females into two variables so they refer to separate years
       N_Fo=exp(Pars[1])/2
       
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
           #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
-          if(ys_birth %% 2 ==0 & os_birth %% 2 == 0){
+          if(ys_birth %% 2 ==0 & os_birth %% 2 == 0){ #Check if the offspring were born in an even year
            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fe*lam^(ys_birth-min_cohort))
-          }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){
+          }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){ #Check if the offspring were born in an odd year
             P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fo*lam^(ys_birth-min_cohort))
-          }else P_Mother[os_birth, ys_birth] <- 0
+          }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding)
         }
       }
       N_M=exp(Pars[2]) #number of mature males (time constant) ### - (total reproductive output from males) ???
@@ -578,8 +578,9 @@ for(iter in 1:iterations) {
                      c(rep(pop_size_mean, times=3)),
                      c(rep(CK_fit1$convcode, times=2), CK_fit2$convcode),
                      c(rep(CK_fit1$kkt1, times=2), CK_fit2$kkt1),
-                     c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2))
-    colnames(metrics) <- c("Parents_detected", "Pop_growth_est_yrs", "Pop_growth_all_yrs", "Total_samples", "Pop_size_mean", "convergence", "kkt1", "kkt2")
+                     c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2),
+                     c(rep(CK_fit1$value, times=2), CK_fit2$value))
+    colnames(metrics) <- c("Parents_detected", "Pop_growth_est_yrs", "Pop_growth_all_yrs", "Total_samples", "Pop_size_mean", "convergence", "kkt1", "kkt2", "Likelihood")
     
     #-----------------Loop end-----------------------------    
     #Bind results from previous iterations with current iteration
@@ -603,7 +604,7 @@ results2 <- results %>%
    dplyr::summarize(median = median(Relative_bias), n = n())
 
 #Home computer
-write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_neutral_lambda_SB_AM_07.07.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/skipped_breeding/Dovi_neutral_lambda_SB_AM_07.07.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 

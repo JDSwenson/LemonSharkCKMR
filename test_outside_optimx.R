@@ -3,7 +3,7 @@ values <- NULL
 lik <- NULL
 
 #Gives error when parameter value is 0
-for(i in 0:100){
+for(i in seq(570, 620, by = 0.1)){
 Pars[1] = Pars[2] <- log(i)
 
 P=get_P_lemon(Pars=Pars,P_Mother=P_Mother,P_Father=P_Father,t_start=t_start,t_end=t_end)
@@ -31,6 +31,8 @@ print(-loglik)
 values[i] <- i
 lik[i] <- -loglik
 }
+
+min(lik)
 
 head(values)
 lik

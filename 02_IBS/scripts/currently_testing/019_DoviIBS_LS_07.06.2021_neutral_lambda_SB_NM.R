@@ -56,7 +56,7 @@ burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
 
-iterations <- 5 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds.rda")
 
@@ -499,9 +499,9 @@ for(iter in 1:iterations) {
     }
     
     #Fit model - optimx version -- gives warnings but also gives the same estimate as nlminb
-    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="BFGS", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
+    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="L-BFGS-B", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end, lower = c(1, 1))
     
-    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="BFGS", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end)
+    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="L-BFGS-B", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end, lower = c(1, 1))
     
     #Fit model - nlminb version
 #CK_fit1 <- nlminb(start=Pars, objective = lemon_neg_log_lik, hessian = lemon_neg_log_lik,  Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
@@ -522,13 +522,13 @@ for(iter in 1:iterations) {
 
     # #compute variance covariance matrix - optimx
     D1=diag(length(Pars))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
-    VC_trans1 = solve(attr(CK_fit1, "details")["BFGS" ,"nhatend"][[1]])
+    VC_trans1 = solve(attr(CK_fit1, "details")["L-BFGS-B" ,"nhatend"][[1]])
     VC1 = (t(D1)%*%VC_trans1%*%D1) #delta method
     SE1=round(sqrt(diag(VC1)),0)
      
     # #compute variance covariance matrix - optimx
     D2=diag(length(Pars2))*exp(CK_fit2$p1[1]) #derivatives of transformations
-    VC_trans2 = solve(attr(CK_fit2, "details")["BFGS" ,"nhatend"][[1]])
+    VC_trans2 = solve(attr(CK_fit2, "details")["L-BFGS-B" ,"nhatend"][[1]])
     VC2 = (t(D2)%*%VC_trans2%*%D2) #delta method
     SE2 = round(sqrt(diag(VC2)),0)
     
@@ -572,8 +572,9 @@ for(iter in 1:iterations) {
                      c(rep(pop_size_mean, times=3)),
                      c(rep(CK_fit1$convcode, times=2), CK_fit2$convcode),
                      c(rep(CK_fit1$kkt1, times=2), CK_fit2$kkt1),
-                     c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2))
-    colnames(metrics) <- c("Parents_detected", "Pop_growth_est_yrs", "Pop_growth_all_yrs", "Total_samples", "Pop_size_mean", "convergence", "kkt1", "kkt2")
+                     c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2),
+                     c(rep(CK_fit1$value, times=2), CK_fit2$value))
+    colnames(metrics) <- c("Parents_detected", "Pop_growth_est_yrs", "Pop_growth_all_yrs", "Total_samples", "Pop_size_mean", "convergence", "kkt1", "kkt2", "Likelihood")
     
     #-----------------Loop end-----------------------------    
     #Bind results from previous iterations with current iteration
@@ -597,7 +598,7 @@ results2 <- results %>%
    dplyr::summarize(median = median(Relative_bias), n = n())
 
 #Home computer
-write.table(results2, file = paste0("~/R/R_working_dir/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/testing/Dovi_neutral_lambda_SB_NM_07.06.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/skipped_breeding/Dovi_neutral_lambda_SB_NM_07.07.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
