@@ -4,8 +4,14 @@
 #Search for Troubleshoot for areas that may have issues
 #rm(list=ls())
 library(tidyverse)
+library(FSA) #Mainly for von bertalanffy growth function (vbFuns)
 
-lemon_data <- read.csv("Main_lemon_shark.csv", header=TRUE, stringsAsFactors = FALSE)
+vonBert <- vbFuns(param = "Typical")
+
+
+
+
+lemon_data <- read.csv("03_Lemon_Shark/data/Main_lemon_shark.csv", header=TRUE, stringsAsFactors = FALSE)
 lemon_data <- lemon_data[which(lemon_data$Island=="BIM"),] #Subset for bimini
 lemon_data %>% separate(Tube.Label, sep=";", into = c("Juvenile_ID", "Recapture_1", "Recapture_2", "Recapture_3", "Recapture_4")) -> lemon_data2 #Separate Tube labels into capture history (there is one tube label per sample instance)
 colnames(lemon_data2) <- c("PIT_tag","Capture_ID", "Recapture_1", "Recapture_2", "Recapture_3", "Recapture_4", "Capture_Year", "Capture_Date", "Island", "Site", "Sex", "PCL_cm", "TL_cm", "DOB", "Father", "Mother") #relabel columns
