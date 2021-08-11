@@ -43,7 +43,7 @@ n_yrs = t_end <- burn.in + Num.years
 iterations <- 300 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 #save(rseeds, file = "rseeds_300iters.rda")
-#load("rseeds_300iters.rda")
+load("rseeds_300iters.rda")
 
 #set.seed(885767)
 
@@ -295,7 +295,7 @@ for(iter in 1:iterations) {
     nrow()
   init.adult_pop.size
   
-  # Set initial parameters for model based on initial abundance of males and females
+  # Set initial parameters for model
   f.init <- m.init <- init.adult_pop.size/2
   Pars <- c(log(f.init), log(m.init), log(1)) #Pars1 is for the sex-specific model: female pop size, male pop size, lambda
   Pars2 <- c(log(init.adult_pop.size), log(1)) #Pars2 is for the sex-aggregated model: adult pop size, lambda
@@ -417,18 +417,20 @@ for(iter in 1:iterations) {
     # Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
     
     get_P_lemon <- function(Pars,P_Mother,P_Father,t_start,t_end){
-      N_Fe=exp(Pars[1])/2 #split the number of females into two variables so they refer to separate years
-      N_Fo=exp(Pars[1])/2
+    #Skipped-breeding: split the number of females into two variables so they refer to separate years (even and odd)
+      N_Fe=exp(Pars[1])/2 #even years
+      N_Fo=exp(Pars[1])/2 #odd years
+      
+      #Bring in the parameter for lambda
       lam_est <- exp(Pars[3])
       
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
-          #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
           if(ys_birth %% 2 == 0 & os_birth %% 2 == 0){ #Check if the offspring were born in an even year
            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fe*lam_est^(ys_birth-min_cohort))
           }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){ #Check if the offspring were born in an odd year
             P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fo*lam_est^(ys_birth-min_cohort))
-          }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding)
+          }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding in the simulation)
         }
       }
       N_M=exp(Pars[2]) #number of mature males (time constant) ### - (total reproductive output from males) ???
@@ -510,8 +512,10 @@ for(iter in 1:iterations) {
     
     #Fit model - optimx version -- gives warnings but also gives the same estimate as nlminb
     #CHANGED 7/7/2021: changed method from BFGS to L-BFGS-B and set lower bound for parameters at 1
+    #CHANGED 08/11/2021: Lower bounds of 25 for abundance (otherwise produces NA with the lower bound of lambda) and -2% for lambda; upper bound of 10000 for abundance and 2% for lambda. Keep all on the log scale for consistency.
     CK_fit1 <- optimx(par=Pars, fn=lemon_neg_log_lik, hessian=TRUE, method="L-BFGS-B", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end, lower = c(log(25), log(25), log(0.98)), upper = c(log(10000), log(10000), log(1.02)))
     
+    #Sex-aggregated
     CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="L-BFGS-B", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end, lower = c(log(1), log(0.95)))
     
     #Fit model - nlminb version
