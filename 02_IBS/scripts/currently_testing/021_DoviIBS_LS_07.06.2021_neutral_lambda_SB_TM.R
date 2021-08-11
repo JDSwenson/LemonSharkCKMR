@@ -35,11 +35,11 @@ mating.periodicity <- 2 # CHANGED FROM 2; number of years between mating; assign
 num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution) #JDS Q
 
-f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation #JDS Q
-ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
+f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
+ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle - however we set mating periodicity, we're scaling fecundity so that lambda is neutral (or whatever it was set to)
 ff
 
-# stable age distribution - JDS Q
+# stable age distribution
 props <- rep(NA, max.age+1)
 props[1] <- f
 props[2] <- f * YOY.survival
@@ -420,10 +420,14 @@ for(iter in 1:iterations) {
         for(ys_birth in (os_birth+1):n_yrs){
           #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
           if(ys_birth %% 2 ==0 & os_birth %% 2 == 0){ #Check if the offspring were born in an even year
-           P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fe*lam^(ys_birth-min_cohort))
-          }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){ #Check if the offspring were born in an odd year
+           
+            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fe*lam^(ys_birth-min_cohort))
+          
+           }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){ #Check if the offspring were born in an odd year
+            
             P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fo*lam^(ys_birth-min_cohort))
-          }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding)
+          
+            }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding)
         }
       }
       N_M=exp(Pars[2]) #number of mature males (time constant) ### - (total reproductive output from males) ???
