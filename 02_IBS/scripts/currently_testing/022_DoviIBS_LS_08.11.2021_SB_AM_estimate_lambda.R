@@ -43,7 +43,7 @@ n_yrs = t_end <- burn.in + Num.years
 iterations <- 300 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 #save(rseeds, file = "rseeds_300iters.rda")
-#load("rseeds_300iters.rda")
+load("rseeds_300iters.rda")
 
 #set.seed(885767)
 
@@ -567,6 +567,7 @@ for(iter in 1:iterations) {
     
     #Create dataframe of estimates and truth
     options(pillar.sigfig = 4) #display up to 4 significant digits
+    
 
     estimates <- as_tibble(
       c(Est_N, Est_lam)) %>% 
@@ -583,12 +584,15 @@ for(iter in 1:iterations) {
     total_samples <- sample.size * length(sample.years)
     pop_size_mean <- round(mean(pop.size$population_size[min_cohort:n_yrs]),0)
     Parents_detected <- c(sum(mom_positives[,3]), sum(dad_positives[,3]), rep(sum(parent_positives[,3]), times = 3))
-    Pop_growth_est_yrs <- c(rep(pop_growth_all_mean, times = 5))
+    Pop_growth_est_yrs <- c(rep(lam, times = 5))
     Pop_growth_all_yrs <- c(rep(pop_growth_all_mean, times = 5))
     Total_samples <- c(rep(total_samples, times=5))
     Pop_size_mean <- c(rep(pop_size_mean, times=5))
+    #Convergence: 0 indicates successful convergence; 51 is warning from L-BFGS-B method; 52 is error from L-BFGS-B method
     Convergence <- c(rep(CK_fit1$convcode, times=2), CK_fit2$convcode, CK_fit1$convcode, CK_fit2$convcode)
+    #kkt1: True (i.e. 1) if the solution has a small gradient
     kkt1 <- c(rep(CK_fit1$kkt1, times=2), CK_fit2$kkt1, CK_fit1$kkt1, CK_fit2$kkt1)
+    #kkt2: TRUE (i.e. 1) if the solution has a positive definite Hessian
     kkt2 <- c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2, CK_fit1$kkt2, CK_fit2$kkt2)
     Likelihood <- c(rep(CK_fit1$value, times=2), CK_fit2$value, CK_fit1$value, CK_fit2$value)
         
@@ -598,7 +602,8 @@ for(iter in 1:iterations) {
       
     #-----------------Loop end-----------------------------    
     #Bind results from previous iterations with current iteration
-    results <- rbind(results, cbind(estimates, metrics))
+    results <- rbind(results, cbind(estimates, metrics)) %>% 
+      as_tibble()
   
 #  }) # end try clause    
   } # end loop over sample sizes
