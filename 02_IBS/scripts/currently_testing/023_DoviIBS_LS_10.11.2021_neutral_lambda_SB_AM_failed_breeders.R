@@ -35,15 +35,32 @@ mating.periodicity <- 2 # CHANGED FROM 2; number of years between mating; assign
 num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution) #JDS Q
 
+f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
+ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle - however we set mating periodicity, we're scaling fecundity so that lambda is neutral (or whatever it was set to)
+ff
+
+ps <- .9 #percent successful breeders (females only)
+
+# stable age distribution
+props <- rep(NA, max.age+1)
+props[1] <- f
+props[2] <- f * YOY.survival
+for (y in 3:(repro.age+1)) props[y] <- props[y-1] * juvenile.survival
+#props[repro.age+1] <- props[repro.age] * juvenile.survival + Adult.survival
+for (y in (repro.age+2):(max.age+1)) props[y] <- props[y-1] * Adult.survival
+
+prop.Adult <- sum(props[(repro.age+1):(max.age+1)])/sum(props)
+
+Nages <- round(props[-1] * init.adult.pop.size) 
+init.pop.size <- sum(Nages) # all ages except YOYs
 
 burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs = t_end <- burn.in + Num.years
 
-iterations <- 300 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
-#save(rseeds, file = "rseeds_300iters.rda")
-load("rseeds_300iters.rda")
+load("rseeds.rda")
 
 #set.seed(885767)
 
@@ -52,7 +69,7 @@ load("rseeds_300iters.rda")
 #Decide which years to subtract from n_yrs for sampling and include in the vector below 
 # (currently 5:0, which means sample the last 6 years of the simulation)
 sample.years <- c(n_yrs - c(5:0))
-#sample.size <- 30 #sample size per year
+sample.size <- 30 #sample size per year
 
 #--------------Start simulation loop--------------
 
@@ -64,26 +81,7 @@ for(iter in 1:iterations) {
   set.seed(rseeds[iter])
   
   ####---------Set up initial population-----####
-  #Move this down from above so that lambda varies with each iteration of the loop
-  f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation #JDS Q
-  ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
-  #Randomly have neutral, negative, or positive population growth (bc we're estimating lambda)
-  ff <- sample(c(ff - 0.2, ff + 0.2, ff), size = 1, replace = TRUE)
-
-    
-  # stable age distribution - JDS Q
-  props <- rep(NA, max.age+1)
-  props[1] <- f
-  props[2] <- f * YOY.survival
-  for (y in 3:(repro.age+1)) props[y] <- props[y-1] * juvenile.survival
-  #props[repro.age+1] <- props[repro.age] * juvenile.survival + Adult.survival
-  for (y in (repro.age+2):(max.age+1)) props[y] <- props[y-1] * Adult.survival
   
-  prop.Adult <- sum(props[(repro.age+1):(max.age+1)])/sum(props)
-  
-  Nages <- round(props[-1] * init.adult.pop.size) 
-  init.pop.size <- sum(Nages) # all ages except YOYs
-    
   init.pop <- data.frame() # create a blank data frame which will become the initial population
   
   age.x <- NULL
@@ -169,8 +167,10 @@ for(iter in 1:iterations) {
   # At end of year 0 ...
   print(paste("year 0", "N_mothers=", length(mothers), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # print the simulation year and the population size in the R console so they can be oberved
   
-  ####-------Loop for all other breeding years--------####
   
+  
+  
+  ####-------Loop for all other breeding years--------####
   pop.size <- data.frame()
   
   loopy.list <- list() # Make list to store dataframe of population for each year, where each element corresponds to the year e.g. loopy.list[[1]] is the population from the first year
@@ -181,11 +181,16 @@ for(iter in 1:iterations) {
     data1$age.x <- data1$age.x+1 # increase each individuals age by one for the new year - happy birthday survivors!
     
     mothers <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle == repro.cycle.vec[v+1])  #determine which females are available to breed in this year; this is an index
+    
+    #Make some mothers unavailable to breed
+    num_mothers <- round(length(mothers) * ps,0) #Get the number of mothers that will successfully breed based on the value of ps specified above
+    mothers2 <- sample(mothers, size = num_mothers)
+    
     fathers <- which(data1$sex=='M' & data1$age.x>=repro.age)  #determine which males are available to breed in this year
     
     YOY.df <- data.frame() # create an empty data frame to populate with the YOY born in this year
     
-    for(j in 1:length(mothers)) { # Loop through all of the available mothers
+    for(j in 1:length(mothers2)) { # Loop through all of the available mothers
       
       num.mates.x <- sample(num.mates, size=1) # determine the number of mates for a given mother this year
       inter.df <- data.frame() # Create a data frame for the offspring born from each mother
@@ -195,7 +200,7 @@ for(iter in 1:iterations) {
         num.offspring <- rpois(1, ff) # CHANGED FROM rbinom(n = 1, size = 1, prob = ff); generate the number of offspring born from this mother/sire pairing ### AGAIN, WHY BINOMIAL???
         indv.name <- NA #create a place holder for the random name given to each offspring
         age.x <- 0 # assign a 0 age to each offspring born this year
-        mother.x <- data1[mothers[j],1] # record the mothers name
+        mother.x <- data1[mothers2[j],1] # record the mothers name
         father.x <- data1[sample(fathers, size = 1),1] # record the fathers name
         birth.year <- v # assign the birth year in the simulation
         sex <- NA # create a place holder for the biological sex of each offspring
@@ -230,7 +235,7 @@ for(iter in 1:iterations) {
     loopy.list[[v]] <- loopy.pop # Save the current year's population data as a list element, where the index corresponds to the year
     
     #  print(paste("year", v, "N= ", nrow(loopy.pop) , sep=" ")) # print the simulation year and the population size in the R console so they can be observed
-    print(paste("year", v, "N_mothers=", length(mothers), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # CHANGED THIS
+    print(paste("year", v, "N_adult_females=", length(mothers), "N_mothers=", length(mothers2), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # CHANGED THIS
     
     ### CHANGED THIS TO ONLY COUNT SURVIVORS - JDS Q
     pop.size.vec <- cbind.data.frame(year=v, population_size=nrow(loopy.pop[loopy.pop$Survival=="S",]), # 
@@ -295,10 +300,10 @@ for(iter in 1:iterations) {
     nrow()
   init.adult_pop.size
   
-  # Set initial parameters for model
+  # Set initial parameters for model based on initial abundance of males and females
   f.init <- m.init <- init.adult_pop.size/2
-  Pars <- c(log(f.init), log(m.init), log(1)) #Pars1 is for the sex-specific model: female pop size, male pop size, lambda
-  Pars2 <- c(log(init.adult_pop.size), log(1)) #Pars2 is for the sex-aggregated model: adult pop size, lambda
+  Pars <- c(log(f.init), log(m.init)) #Pars1 is for the sex-specific model
+  Pars2 <- log(init.adult_pop.size) #Pars2 is for the sex-aggregated model
   
   #####################################################################################
   ### DATA SAMPLING
@@ -306,7 +311,7 @@ for(iter in 1:iterations) {
   for(samps in 1:3){
   #try({  
      
-    sample.size <- c(50, 75, 100)[samps] #To loop over different sample sizes, draw a different number of samples each time
+    sample.size <- c(40, 50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
     
     ####------------------------Collect samples---------------------####
     
@@ -417,27 +422,28 @@ for(iter in 1:iterations) {
     # Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
     
     get_P_lemon <- function(Pars,P_Mother,P_Father,t_start,t_end){
-    #Skipped-breeding: split the number of females into two variables so they refer to separate years (even and odd)
-      N_Fe=exp(Pars[1])/2 #even years
-      N_Fo=exp(Pars[1])/2 #odd years
-      
-      #Bring in the parameter for lambda
-      lam_est <- exp(Pars[3])
+      N_Fe=exp(Pars[1])/2 #split the number of females into two variables so they refer to separate years
+      N_Fo=exp(Pars[1])/2
       
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
-          if(ys_birth %% 2 == 0 & os_birth %% 2 == 0){ #Check if the offspring were born in an even year
-           P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fe*lam_est^(ys_birth-min_cohort))
-          }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){ #Check if the offspring were born in an odd year
-            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fo*lam_est^(ys_birth-min_cohort))
-          }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding in the simulation)
+          #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
+          if(ys_birth %% 2 ==0 & os_birth %% 2 == 0){ #Check if the offspring were born in an even year
+           
+            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fe*lam^(ys_birth-min_cohort))
+          
+           }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){ #Check if the offspring were born in an odd year
+            
+            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fo*lam^(ys_birth-min_cohort))
+          
+            }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding)
         }
       }
       N_M=exp(Pars[2]) #number of mature males (time constant) ### - (total reproductive output from males) ???
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
           #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
-            P_Father[os_birth,ys_birth] <- (surv^(ys_birth - os_birth))/(N_M*lam_est^(ys_birth-min_cohort))
+            P_Father[os_birth,ys_birth] <- (surv^(ys_birth - os_birth))/(N_M*lam^(ys_birth-min_cohort))
           #} else P_Father[os_birth,ys_birth] <- 0
         }
       }
@@ -452,14 +458,14 @@ for(iter in 1:iterations) {
     #CKMR model: populate array with kinship probabilities based on birth years
     get_P_lemon_TotalA <- function(Pars2,P_Parent,t_start,t_end){
       N_A=exp(Pars2[1]) #number of mature adults
-      lam_est_A <- exp(Pars2[2])
+      
       for(os_birth in 1:(n_yrs-1)){  #Loop over possible ages of older sibs
         for(ys_birth in max(os_birth+1):n_yrs){ #Loop over possible ages of younger sibs
           #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){ #If the adult could have been mature in the birth year of both individual, then fill the array with the appropriate probability of kinship
             
             #Probability of kinship based on birth year
             #See Hillary et al (2018) equation (3)
-            P_Parent[os_birth, ys_birth] <- (4/(N_A*lam_est_A^(ys_birth-min_cohort)))*(surv^(ys_birth - os_birth))
+            P_Parent[os_birth, ys_birth] <- (4/(N_A*lam^(ys_birth-min_cohort)))*(surv^(ys_birth - os_birth))
           #} else P_Parent[os_birth, ys_birth] <- 0 #If it's not possible, set kinship probability to 0
         }
       }
@@ -512,11 +518,9 @@ for(iter in 1:iterations) {
     
     #Fit model - optimx version -- gives warnings but also gives the same estimate as nlminb
     #CHANGED 7/7/2021: changed method from BFGS to L-BFGS-B and set lower bound for parameters at 1
-    #CHANGED 08/11/2021: Lower bounds of 25 for abundance (otherwise produces NA with the lower bound of lambda) and -2% for lambda; upper bound of 10000 for abundance and 2% for lambda. Keep all on the log scale for consistency.
-    CK_fit1 <- optimx(par=Pars, fn=lemon_neg_log_lik, hessian=TRUE, method="L-BFGS-B", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end, lower = c(log(25), log(25), log(0.98)), upper = c(log(10000), log(10000), log(1.02)))
+    CK_fit1 <- optimx(par=Pars,fn=lemon_neg_log_lik,hessian=TRUE, method="L-BFGS-B", Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end, lower = c(1, 1))
     
-    #Sex-aggregated
-    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="L-BFGS-B", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end, lower = c(log(1), log(0.95)))
+    CK_fit2 <- optimx(par=Pars2,fn=lemon_neg_log_lik_TotalA,hessian=TRUE, method="L-BFGS-B", Negatives_Parent=parent_negatives, Pairs_Parent=parent_positives, P_Parent=P_Parent, t_start=t_start, t_end=t_end, lower = c(1, 1))
     
     #Fit model - nlminb version
 #CK_fit1 <- nlminb(start=Pars, objective = lemon_neg_log_lik, hessian = lemon_neg_log_lik,  Negatives_Mother=mom_negatives, Negatives_Father=dad_negatives, Pairs_Mother=mom_positives, Pairs_Father=dad_positives, P_Mother=P_Mother, P_Father=P_Father, t_start=t_start, t_end=t_end)
@@ -526,7 +530,7 @@ for(iter in 1:iterations) {
 ### NO MORE WARNINGS
     
     # summary(CK_fit1)
-     exp(CK_fit1[1:3])
+    # exp(CK_fit1[1:2])
     
     # summary(CK_fit2)
     # exp(CK_fit2[1])
@@ -536,16 +540,16 @@ for(iter in 1:iterations) {
 
 
     # #compute variance covariance matrix - optimx
-    D1=diag(length(Pars))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1]), exp(CK_fit1$p3[1])) #derivatives of transformations
+    D1=diag(length(Pars))*c(exp(CK_fit1$p1[1]),exp(CK_fit1$p2[1])) #derivatives of transformations
     VC_trans1 = solve(attr(CK_fit1, "details")["L-BFGS-B" ,"nhatend"][[1]])
     VC1 = (t(D1)%*%VC_trans1%*%D1) #delta method
-    SE1=round(sqrt(diag(VC1)),3)
+    SE1=round(sqrt(diag(VC1)),0)
      
     # #compute variance covariance matrix - optimx
-    D2=diag(length(Pars2))*c(exp(CK_fit2$p1[1]), exp(CK_fit2$p2[1])) #derivatives of transformations
+    D2=diag(length(Pars2))*exp(CK_fit2$p1[1]) #derivatives of transformations
     VC_trans2 = solve(attr(CK_fit2, "details")["L-BFGS-B" ,"nhatend"][[1]])
     VC2 = (t(D2)%*%VC_trans2%*%D2) #delta method
-    SE2 = round(sqrt(diag(VC2)),3)
+    SE2 = round(sqrt(diag(VC2)),0)
     
     #Combine above to make dataframe with truth and estimates side-by-side
     #store years from youngest sibling in comparisons to end of study
@@ -556,58 +560,44 @@ for(iter in 1:iterations) {
     Mom_truth <- round(pop.size$Female.adult.pop[min_cohort],0)
     Dad_truth <- round(pop.size$Male.adult.pop[min_cohort], 0)
     Adult_truth <- round(pop.size$Total.adult.pop[min_cohort], 0)
-    Lam_truth <- rep(lam, times = 2)
     Mom_min <- min(pop.size$Female.adult.pop[min_cohort:n_yrs])
     Mom_max <- max(pop.size$Female.adult.pop[min_cohort:n_yrs])
     Dad_min <- min(pop.size$Male.adult.pop[min_cohort:n_yrs])
     Dad_max <- max(pop.size$Male.adult.pop[min_cohort:n_yrs])
     Adult_min <- min(pop.size$Total.adult.pop[min_cohort:n_yrs])
     Adult_max <- max(pop.size$Total.adult.pop[min_cohort:n_yrs])
-    Lam_min <- min(pop.size$Lambda[min_cohort:n_yrs])
-    Lam_max <- max(pop.size$Lambda[min_cohort:n_yrs])
-    Est_N <- round(exp(c(CK_fit1$p1[1], CK_fit1$p2[1], CK_fit2$p1[1])), 0)
-    Est_lam <- round(exp(c(CK_fit1$p3[1], CK_fit2$p2[1])), 3)
     
     
     #Create dataframe of estimates and truth
-    options(pillar.sigfig = 4) #display up to 4 significant digits
+    estimates <- data.frame(cbind(
+      round(exp(c(CK_fit1$p1[1], CK_fit1$p2[1], CK_fit2$p1[1])),0)), 
+      c(SE1, SE2), 
+      c("F", "M", "All"))
+    estimates <- cbind(estimates, 
+                       c(Mom_truth, Dad_truth, Adult_truth), 
+                       c(Mom_min, Dad_min, Adult_min), 
+                       c(Mom_max, Dad_max, Adult_max)) #Includes the minimum and maximum numbers of mothers, fathers and adults over the time period being estimated
+    colnames(estimates) <- c("CKMR_estimate", "SE", "Sex", "Truth", "Minimum", "Maximum")
+    estimates
     
-
-    estimates <- as_tibble(
-      c(Est_N, Est_lam)) %>% 
-      mutate(SE = c(round(SE1[1:2], 0), round(SE2[1], 0), SE1[3], SE2[2])) %>% 
-      mutate(Parameter = c(rep("N", times = 3), rep("lambda", times = 2))) %>% 
-      mutate(Sex = c("F", "M", "All", "sex-specific", "sex-aggregated")) %>% 
-      mutate(Truth = c(round(c(Mom_truth, Dad_truth, Adult_truth),0), round(Lam_truth, 4))) %>% 
-      mutate(Minimum = c(Mom_min, Dad_min, Adult_min, rep(round(Lam_min, 3), times = 2))) %>% 
-      mutate(Maximum = c(Mom_max, Dad_max, Adult_max, rep(round(Lam_max, 3), times = 2))) %>% 
-      rename(CKMR_estimate = value)
-    
-
     #Extract more metrics that can help with troubleshooting
     total_samples <- sample.size * length(sample.years)
     pop_size_mean <- round(mean(pop.size$population_size[min_cohort:n_yrs]),0)
-    Parents_detected <- c(sum(mom_positives[,3]), sum(dad_positives[,3]), rep(sum(parent_positives[,3]), times = 3))
-    Pop_growth_est_yrs <- c(rep(lam, times = 5))
-    Pop_growth_all_yrs <- c(rep(pop_growth_all_mean, times = 5))
-    Total_samples <- c(rep(total_samples, times=5))
-    Pop_size_mean <- c(rep(pop_size_mean, times=5))
-    #Convergence: 0 indicates successful convergence; 51 is warning from L-BFGS-B method; 52 is error from L-BFGS-B method
-    Convergence <- c(rep(CK_fit1$convcode, times=2), CK_fit2$convcode, CK_fit1$convcode, CK_fit2$convcode)
-    #kkt1: True (i.e. 1) if the solution has a small gradient
-    kkt1 <- c(rep(CK_fit1$kkt1, times=2), CK_fit2$kkt1, CK_fit1$kkt1, CK_fit2$kkt1)
-    #kkt2: TRUE (i.e. 1) if the solution has a positive definite Hessian
-    kkt2 <- c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2, CK_fit1$kkt2, CK_fit2$kkt2)
-    Likelihood <- c(rep(CK_fit1$value, times=2), CK_fit2$value, CK_fit1$value, CK_fit2$value)
-        
     
-    metrics <- cbind(Parents_detected, Pop_growth_est_yrs, Pop_growth_all_yrs, Total_samples, Pop_size_mean, Convergence, kkt1, kkt2, Likelihood)
-      
-      
+    metrics <- cbind(c(sum(mom_positives[,3]), sum(dad_positives[,3]), sum(parent_positives[,3])), 
+                     c(rep(lam, times = 3)), 
+                     c(rep(pop_growth_all_mean, times = 3)),
+                     c(rep(total_samples, times=3)),
+                     c(rep(pop_size_mean, times=3)),
+                     c(rep(CK_fit1$convcode, times=2), CK_fit2$convcode),
+                     c(rep(CK_fit1$kkt1, times=2), CK_fit2$kkt1),
+                     c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2),
+                     c(rep(CK_fit1$value, times=2), CK_fit2$value))
+    colnames(metrics) <- c("Parents_detected", "Pop_growth_est_yrs", "Pop_growth_all_yrs", "Total_samples", "Pop_size_mean", "convergence", "kkt1", "kkt2", "Likelihood")
+    
     #-----------------Loop end-----------------------------    
     #Bind results from previous iterations with current iteration
-    results <- rbind(results, cbind(estimates, metrics)) %>% 
-      as_tibble()
+    results <- rbind(results, cbind(estimates, metrics))
   
 #  }) # end try clause    
   } # end loop over sample sizes
@@ -627,7 +617,7 @@ results2 <- results %>%
    dplyr::summarize(median = median(Relative_bias), n = n())
 
 #Home computer
-write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_tests/Lemon_sharks/results/Dovi_estimate_lambda_SB_AM_08.11.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/skipped_breeding/Dovi_neutral_lambda_SB_AM_07.07.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
