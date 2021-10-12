@@ -1,0 +1,4 @@
+"CKMR_estimate","SE","Sex","Truth","Minimum","Maximum","Parents_detected","Total_pop_growth_est_yrs","Total_pop_growth_all_yrs","Total_samples","Pop_size_mean_est_yrs","percent_successful_mothers","convergence","kkt1","kkt2","Likelihood","Relative_bias"
+502,46,"F",490,446,544,118,1.00082174829437,1.00041042281638,600,10300,1,0,1,1,1976.25311335407,2.4
+503,42,"M",510,471,552,141,1.00082174829437,1.00041042281638,600,10300,1,0,1,1,1976.25311335407,-1.4
+1094,68,"All",1000,920,1071,259,1.00082174829437,1.00041042281638,600,10300,1,0,1,1,1900.68933246416,9.4

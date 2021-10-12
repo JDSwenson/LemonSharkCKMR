@@ -39,7 +39,10 @@ f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity 
 ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle - however we set mating periodicity, we're scaling fecundity so that lambda is neutral (or whatever it was set to)
 ff
 
+
+#Added 10/11/2021
 ps <- .9 #percent successful breeders (females only)
+
 
 # stable age distribution
 props <- rep(NA, max.age+1)
@@ -61,21 +64,21 @@ n_yrs = t_end <- burn.in + Num.years
 iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds.rda")
-
 #set.seed(885767)
 
 ####---------Sampling parameters---------####
-
 #Decide which years to subtract from n_yrs for sampling and include in the vector below 
+
 # (currently 5:0, which means sample the last 6 years of the simulation)
 sample.years <- c(n_yrs - c(5:0))
 sample.size <- 30 #sample size per year
 
 #--------------Start simulation loop--------------
-
 ### MOVED SAMPLING BELOW, SO EXTRACT VARIOUS SAMPLE SIZES FROM THE SAME POPULATION
 
 results <- NULL #initialize results array
+
+for(ps in c(1, 0.95, 0.9, 0.85, 0.8)){ #percent successful breeders (females only)
 
 for(iter in 1:iterations) {
   set.seed(rseeds[iter])
@@ -182,70 +185,81 @@ for(iter in 1:iterations) {
     
     mothers <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle == repro.cycle.vec[v+1])  #determine which females are available to breed in this year; this is an index
     
-    #Make some mothers unavailable to breed
-    num_mothers <- round(length(mothers) * ps,0) #Get the number of mothers that will successfully breed based on the value of ps specified above
+    
+    
+    ##########Make some mothers unavailable to breed#############
+    num_mothers <- round(length(mothers) * ps, 0) #Get the number of mothers that will successfully breed based on the value of ps specified above
     mothers2 <- sample(mothers, size = num_mothers)
+    
     
     fathers <- which(data1$sex=='M' & data1$age.x>=repro.age)  #determine which males are available to breed in this year
     
     YOY.df <- data.frame() # create an empty data frame to populate with the YOY born in this year
     
-    for(j in 1:length(mothers2)) { # Loop through all of the available mothers
-      
-      num.mates.x <- sample(num.mates, size=1) # determine the number of mates for a given mother this year
-      inter.df <- data.frame() # Create a data frame for the offspring born from each mother
-      
-      for(h in 1:num.mates.x) { # Loop through each sire with whom this mother mates 
-        
-        num.offspring <- rpois(1, ff) # CHANGED FROM rbinom(n = 1, size = 1, prob = ff); generate the number of offspring born from this mother/sire pairing ### AGAIN, WHY BINOMIAL???
-        indv.name <- NA #create a place holder for the random name given to each offspring
-        age.x <- 0 # assign a 0 age to each offspring born this year
-        mother.x <- data1[mothers2[j],1] # record the mothers name
-        father.x <- data1[sample(fathers, size = 1),1] # record the fathers name
-        birth.year <- v # assign the birth year in the simulation
-        sex <- NA # create a place holder for the biological sex of each offspring
-        repro.cycle <- sample(1:mating.periodicity, size = 1) # assign the newborn to an eventual breeding cycle group
-        inter.df2 <- cbind.data.frame(indv.name, birth.year, age.x, mother.x, father.x, sex, repro.cycle) # Create a row with the attributes of each YOY (at this point only one from each mating pair)
-        inter.df2 <- inter.df2[rep(seq_len(nrow(inter.df2)), num.offspring), ] # Create the random number of offspring from each pairing that we set above
-        inter.df2$sex <- sample(c('F','M'), size = nrow(inter.df2), prob = birth.sex.ratio, replace = T) #Assign biological sex to each new born based on the sex ratio set in the parameter section
-        baby.names <- vector() # Create a blank vector for random baby names
-        
-        for(w in 1:nrow(inter.df2)){ # create a random name for each newborn from this mating pair
-          name1 <- paste(sample(letters, size = 20, replace = T), collapse="")
-          baby.names <- c(baby.names,name1)  
-        }
-        
-        if(nrow(inter.df2)==0){next} #if there were no offspring from this mating pair, skips to the next mating pair (if you dont include this you will get an error in the loop)
-        inter.df2$indv.name <- baby.names # add the baby names to the data frame
-        inter.df <- rbind(inter.df, inter.df2) #add the new borns from this mating pair to the other from the same mother
-      } # end loop over mates
-      
-      YOY.df <- rbind(YOY.df,inter.df) #add all of the offspring from each mother to a data frame of all the YOY for the year
-    } # end loop over mothers
+
     
-    loopy.pop <- rbind(data1, YOY.df) #Combine the YOY data with the other individuals present this year. YOY go at the bottom.
+      for(j in 1:length(mothers2)) { # Loop through all of the available mothers
+      
+        num.mates.x <- sample(num.mates, size=1) # determine the number of mates for a given mother this year
+        inter.df <- data.frame() # Create a data frame for the offspring born from each mother
+      
+          for(h in 1:num.mates.x) { # Loop through each sire with whom this mother mates 
+        
+            num.offspring <- rpois(1, ff) # CHANGED FROM rbinom(n = 1, size = 1, prob = ff); generate the number of offspring born from this mother/sire pairing ### AGAIN, WHY BINOMIAL???
+            indv.name <- NA #create a place holder for the random name given to each offspring
+            age.x <- 0 # assign a 0 age to each offspring born this year
+            mother.x <- data1[mothers2[j],1] # record the mothers name
+            father.x <- data1[sample(fathers, size = 1),1] # record the fathers name
+            birth.year <- v # assign the birth year in the simulation
+            sex <- NA # create a place holder for the biological sex of each offspring
+            repro.cycle <- sample(1:mating.periodicity, size = 1) # assign the newborn to an eventual breeding cycle group
+            inter.df2 <- cbind.data.frame(indv.name, birth.year, age.x, mother.x, father.x, sex, repro.cycle) # Create a row with the attributes of each YOY (at this point only one from each mating pair)
+            inter.df2 <- inter.df2[rep(seq_len(nrow(inter.df2)), num.offspring), ] # Create the random number of offspring from each pairing that we set above
+            inter.df2$sex <- sample(c('F','M'), size = nrow(inter.df2), prob = birth.sex.ratio, replace = T) #Assign biological sex to each new born based on the sex ratio set in the parameter section
+            baby.names <- vector() # Create a blank vector for random baby names
+        
+            for(w in 1:nrow(inter.df2)){ # create a random name for each newborn from this mating pair
+              name1 <- paste(sample(letters, size = 20, replace = T), collapse="")
+              baby.names <- c(baby.names,name1)  
+            }
+          
+            if(nrow(inter.df2)==0){next} #if there were no offspring from this mating pair, skips to the next mating pair (if you dont include this you will get an error in the loop)
+            inter.df2$indv.name <- baby.names # add the baby names to the data frame
+            inter.df <- rbind(inter.df, inter.df2) #add the new borns from this mating pair to the other from the same mother
+          } # end loop over mates
+        
+          YOY.df <- rbind(YOY.df,inter.df) #add all of the offspring from each mother to a data frame of all the YOY for the year
+      } # end loop over mothers
     
-    #Assign a column with whether or not an individual this year will survive to next year. The survival is randomly drawn based on the life stage and the probabilities defined in the parameter section
-    loopy.pop$Survival <- ifelse(loopy.pop$age.x==0, sample(c("S","M"), size=length(which(loopy.pop$age.x==0)), prob=c(YOY.survival, 1-YOY.survival), replace=T),
-                                 ifelse(loopy.pop$age.x<repro.age, sample(c("S","M"), size=length(which(loopy.pop$age.x<repro.age)), prob=c(juvenile.survival, 1-juvenile.survival),replace=T),
-                                        ifelse(loopy.pop$age.x<max.age, sample(c("S","M"), size=length(which(loopy.pop$age.x<max.age)), prob=c(Adult.survival, 1-Adult.survival),replace=T), "M")))
+      loopy.pop <- rbind(data1, YOY.df) #Combine the YOY data with the other individuals present this year. YOY go at the bottom.
     
+  
+          #Assign a column with whether or not an individual this year will survive to next year. The survival is randomly drawn based on the life stage and the probabilities defined in the parameter section
+      loopy.pop$Survival <- ifelse(loopy.pop$age.x==0, sample(c("S","M"), size=length(which(loopy.pop$age.x==0)), prob=c(YOY.survival, 1-YOY.survival), replace=T), 
+                                   ifelse(loopy.pop$age.x<repro.age, sample(c("S","M"), size=length(which(loopy.pop$age.x<repro.age)), prob=c(juvenile.survival, 1-juvenile.survival),replace=T), 
+                                          ifelse(loopy.pop$age.x<max.age, sample(c("S","M"), size=length(which(loopy.pop$age.x<max.age)), prob=c(Adult.survival, 1-Adult.survival),replace=T), "M")))
     #assign(paste("year.end.pop.", v, sep=""),loopy.pop) # save the current year's population data as an object
     
-    loopy.list[[v]] <- loopy.pop # Save the current year's population data as a list element, where the index corresponds to the year
     
-    #  print(paste("year", v, "N= ", nrow(loopy.pop) , sep=" ")) # print the simulation year and the population size in the R console so they can be observed
-    print(paste("year", v, "N_adult_females=", length(mothers), "N_mothers=", length(mothers2), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # CHANGED THIS
+      loopy.list[[v]] <- loopy.pop # Save the current year's population data as a list element, where the index corresponds to the year
+      # print(paste("year", v, "N= ", nrow(loopy.pop) , sep=" ")) # print the simulation year and the population size in the R console so they can be observed
+    
+      print(paste("year", v, "N_adult_females=", length(mothers), "N_mothers=", length(mothers2), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # CHANGED THIS
     
     ### CHANGED THIS TO ONLY COUNT SURVIVORS - JDS Q
-    pop.size.vec <- cbind.data.frame(year=v, population_size=nrow(loopy.pop[loopy.pop$Survival=="S",]), # 
-                                     Male.adult.pop = nrow(loopy.pop[loopy.pop$sex == "M" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",]), # 
-                                     Female.adult.pop = nrow(loopy.pop[loopy.pop$sex == "F" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",])) # 
-    pop.size <- rbind(pop.size, pop.size.vec)
+     pop.size.vec <- cbind.data.frame(year=v, population_size=nrow(loopy.pop[loopy.pop$Survival=="S",]), 
+                                      Male.adult.pop = nrow(loopy.pop[loopy.pop$sex == "M" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",]),
+                                      Female.adult.pop = nrow(loopy.pop[loopy.pop$sex == "F" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",]))
     
-  } # end loop over sim years
+     
+     pop.size <- rbind(pop.size, pop.size.vec)
+    
+  } 
+  ####### END Simulation loop ###############3
   
-  #Label the list elements with the year
+
+  
+    #Label the list elements with the year
   names(loopy.list) <- paste0("year.end.pop.", seq(1:(burn.in + Num.years)))
   
   ##===============================================================================================
@@ -261,18 +275,21 @@ for(iter in 1:iterations) {
     lambda <- c(lambda,lambda.1)
   }
   
-  lambda <- c(NA, lambda)
+  lambda <- c(NA, lambda) #Make sure the vector of lambda values is indexed correctly.
   pop.size$Lambda <- lambda
   
   # plot(lambda[(burn.in+1):n_yrs], pch=19)
   # abline(h=1, lty=3)
   
-  mean_lam <- mean(pop.size$Lambda[(burn.in+1):n_yrs], na.rm=T) # mean Lambda
+  mean_lam <- mean(pop.size$Lambda[(burn.in+1):n_yrs], na.rm=T) # mean Lambda from the time after burn-in until the end
   sd(pop.size$Lambda[(burn.in+1):n_yrs], na.rm=T) # sd Lambda
   
-  ####---------Checking population parameters-------####
+
   
-  nrow(YOY.df)/length(mothers) # Average fecundity for last year; remember whether they've skipped breeding
+    ####---------Checking population parameters-------####
+    #For last year of the simulation
+    nrow(YOY.df)/length(mothers) # Average expected fecundity
+    nrow(YOY.df)/length(mothers2) #Average observed fecundity
   
   # Adult.survival <- 0.9 # Adult survival
   # juvenile.survival <- 0.9 # juvenile survival
@@ -300,22 +317,30 @@ for(iter in 1:iterations) {
     nrow()
   init.adult_pop.size
   
-  # Set initial parameters for model based on initial abundance of males and females
+  #Set initial parameters for model based on initial abundance of males and females. Just to control the value.
+  #Should try varying this. I have in small batches, but not formally ... I don't think ...
   f.init <- m.init <- init.adult_pop.size/2
   Pars <- c(log(f.init), log(m.init)) #Pars1 is for the sex-specific model
   Pars2 <- log(init.adult_pop.size) #Pars2 is for the sex-aggregated model
   
   #####################################################################################
   ### DATA SAMPLING
-  
-  for(samps in 1:3){
-  #try({  
+ 
+  ### LOOP ### 
+  #  for(samps in 1:3){
+    #try({  
      
-    sample.size <- c(40, 50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
-    
-    ####------------------------Collect samples---------------------####
-    
-    #Initialize dataframes
+  #    sample.size <- c(40, 50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
+  
+  
+  ### ONE SAMPLE SIZE ###  
+  sample.size <- 100  
+  
+  
+  
+  ####------------------------Collect samples---------------------####
+  
+  #Initialize dataframes
     sample.df_all.info <- NULL
     sample.df_temp <- NULL
     
@@ -330,21 +355,25 @@ for(iter in 1:iterations) {
       dplyr::arrange(birth.year, desc()) 
     
     
-    ####-------------Construct pairwise comparison matrix--------------####
     
+    ####-------------Construct pairwise comparison matrix--------------####
+    #Create and merge two dataframes from samples
+    #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
+    Ind1_birthyears <- sample.df_all.info %>%
+      select(indv.name, birth.year, age.x, mother.x, father.x) %>% #select relevant columns only
+      dplyr::rename("Ind_1" = indv.name, "Ind_1_birth" = birth.year, "Ind_1_age" = age.x, "Ind_1_mom" = mother.x, "Ind_1_dad" = father.x) 
+    
+    #Rename columns for join and also so younger sib birth year and parents are distinguishable from older sib data when joined below.
     #Create dataframe of pairwise comparisons with just individual IDs
     pairwise.df <- data.frame(t(combn(sample.df_all.info$indv.name, m=2))) # generate all combinations of the elements of x taken m at a time.
     colnames(pairwise.df) <- c("Ind_1", "indv.name") #Rename columns so they can easily be joined
     head(pairwise.df)
     
-    #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
-    Ind1_birthyears <- sample.df_all.info %>%
-      select(indv.name, birth.year, age.x, mother.x, father.x) %>% #select relevant columns only
-      dplyr::rename("Ind_1" = indv.name, "Ind_1_birth" = birth.year, "Ind_1_age" = age.x, "Ind_1_mom" = mother.x, "Ind_1_dad" = father.x) 
-    #Rename columns for join and also so younger sib birth year and parents are distinguishable from older sib data when joined below.
     
-    #Combine the two dataframes above to extract birth year and parents for each individual in the pairwise comparison matrix. 
-    #This is the main pairwise comparison matrix with all (relevant) comparisons and individual data.###
+    
+
+        #Combine the two dataframes above to extract birth year and parents for each individual in the pairwise comparison matrix. 
+    ####This is the main pairwise comparison matrix with all (relevant) comparisons and individual data. The reference dataframe, if you will.###
     pairwise.df_all.info <- pairwise.df %>% left_join(Ind1_birthyears, by = "Ind_1") %>% 
       left_join(sample.df_all.info, by = "indv.name") %>% 
       dplyr::rename("Ind_2" = indv.name, "Ind_2_birth" = birth.year, "Ind_2_age" = age.x, "Ind_2_mom" = mother.x, "Ind_2_dad" = father.x) %>% 
@@ -353,16 +382,19 @@ for(iter in 1:iterations) {
     
     head(pairwise.df_all.info )
     
+    ##Check output dataframe to make sure the join was correct##
     #Check that there are no repeat comparisons -- compare number of distinct comparisons to total number of comparisons.
     #Should return TRUE
     pairwise.df_all.info %>% distinct(Ind_1, Ind_2) %>% nrow() == nrow(pairwise.df_all.info)
     nrow(pairwise.df_all.info)
     
+    ##Subset for specific positive comparisons##
     #Extract positive half-sib comparisons
     positives <- pairwise.df_all.info %>% filter(Ind_1_mom == Ind_2_mom | Ind_1_dad == Ind_2_dad) 
     nrow(positives)
     
     #Remove full sibs -- adjust JDS
+    ##Should add to the model##
     positives <- positives %>% filter(Ind_1_mom != Ind_2_mom | Ind_1_dad != Ind_2_dad) # EDITED CODE TO REMOVE FULL SIBS 
     nrow(positives)
     
@@ -403,21 +435,16 @@ for(iter in 1:iterations) {
       plyr::count()
     
     #-------------Kinship probabilities - Half-sib-------------------
+    min_cohort <- n_yrs-burn.in # CHANGED THIS FROM MAX.AGE; set year of estimation.
     
-    min_cohort <- n_yrs-40 # CHANGED THIS FROM MAX.AGE; set year of estimation.
-    
-    m_adult_age <- f_adult_age <- c(repro.age:max.age) # Set ages at which males and females are mature. Called by kinship probability function.
-    
-    pop_growth_all_mean <- mean(pop.size$Lambda[1:nrow(pop.size)], na.rm=T)
-    
-    ###Used in model###
-    surv <- Adult.survival #Set value ### HOW DO WE KNOW THIS?
+    ##Define variables for the model
+    m_mat <- f_mat <- c(repro.age:max.age) # Set ages at which males and females are mature. Called by kinship probability function. Assumed same for now.
+    pop_growth_all_mean <- mean(pop.size$Lambda[1:nrow(pop.size)], na.rm=T) #mean population growth for all age classes.
+    surv <- Adult.survival #Adult survival
     #surv <- mean_adult_surv #Observed value
-    
     lam <- mean(pop.size$Lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation ### HOW DO WE KNOW THIS?
     
     ####Sex-specific####
-    
     P_Mother <- P_Father <- array(NA,dim=c(n_yrs,n_yrs)) #creates two empty arrays, one for mother and one for father.  
     # Dimensions are older sib birth year and younger sib birth year (all of which are specified by n_yrs)
     
@@ -428,15 +455,11 @@ for(iter in 1:iterations) {
       for(os_birth in 1:(n_yrs-1)){  #> = after, < = before
         for(ys_birth in (os_birth+1):n_yrs){
           #if((ys_birth - os_birth) <= ((maxAge) - repro.age)){
-          if(ys_birth %% 2 ==0 & os_birth %% 2 == 0){ #Check if the offspring were born in an even year
-           
+          if(ys_birth %% 2 ==0 & os_birth %% 2 == 0){ #Check if the offspring were born in an even year; assumes females are breeding on a strict schedule.
             P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fe*lam^(ys_birth-min_cohort))
-          
-           }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){ #Check if the offspring were born in an odd year
-            
-            P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fo*lam^(ys_birth-min_cohort))
-          
-            }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding)
+              }else if(ys_birth %% 2 ==1 & os_birth %% 2 == 1){ #Check if the offspring were born in an odd year
+                P_Mother[os_birth, ys_birth] <- (surv^(ys_birth - os_birth))/(N_Fo*lam^(ys_birth-min_cohort))
+                }else P_Mother[os_birth, ys_birth] <- 0 #If the birth years of the older and younger siblings are not both even or both odd, then assign a probability of 0 (since all individuals are skipped-breeding)
         }
       }
       N_M=exp(Pars[2]) #number of mature males (time constant) ### - (total reproductive output from males) ???
@@ -574,40 +597,55 @@ for(iter in 1:iterations) {
       c(SE1, SE2), 
       c("F", "M", "All"))
     estimates <- cbind(estimates, 
-                       c(Mom_truth, Dad_truth, Adult_truth), 
-                       c(Mom_min, Dad_min, Adult_min), 
+                       c(Mom_truth, Dad_truth, Adult_truth), #True values
+                       c(Mom_min, Dad_min, Adult_min), #Minimum over observed years
                        c(Mom_max, Dad_max, Adult_max)) #Includes the minimum and maximum numbers of mothers, fathers and adults over the time period being estimated
     colnames(estimates) <- c("CKMR_estimate", "SE", "Sex", "Truth", "Minimum", "Maximum")
     estimates
     
-    #Extract more metrics that can help with troubleshooting
+    #Extract more metrics that can help with understanding and troubleshooting
     total_samples <- sample.size * length(sample.years)
     pop_size_mean <- round(mean(pop.size$population_size[min_cohort:n_yrs]),0)
     
     metrics <- cbind(c(sum(mom_positives[,3]), sum(dad_positives[,3]), sum(parent_positives[,3])), 
-                     c(rep(lam, times = 3)), 
-                     c(rep(pop_growth_all_mean, times = 3)),
-                     c(rep(total_samples, times=3)),
-                     c(rep(pop_size_mean, times=3)),
-                     c(rep(CK_fit1$convcode, times=2), CK_fit2$convcode),
+                     c(rep(lam, times = 3)), #Lambda for total population over estimated years
+                     c(rep(pop_growth_all_mean, times = 3)), #Lambda for total population over all years
+                     c(rep(total_samples, times=3)), #Total samples drawn
+                     c(rep(pop_size_mean, times=3)), #mean size of the population over estimated years
+                     c(rep(ps, times=3)), #percent successful breeders
+                     c(rep(CK_fit1$convcode, times=2), CK_fit2$convcode), #convergence
                      c(rep(CK_fit1$kkt1, times=2), CK_fit2$kkt1),
                      c(rep(CK_fit1$kkt2, times=2), CK_fit2$kkt2),
                      c(rep(CK_fit1$value, times=2), CK_fit2$value))
-    colnames(metrics) <- c("Parents_detected", "Pop_growth_est_yrs", "Pop_growth_all_yrs", "Total_samples", "Pop_size_mean", "convergence", "kkt1", "kkt2", "Likelihood")
+    colnames(metrics) <- c("Parents_detected", "Total_pop_growth_est_yrs", "Total_pop_growth_all_yrs", "Total_samples", "Pop_size_mean_est_yrs", "percent_successful_mothers", "convergence", "kkt1", "kkt2", "Likelihood")
     
     #-----------------Loop end-----------------------------    
     #Bind results from previous iterations with current iteration
     results <- rbind(results, cbind(estimates, metrics))
   
 #  }) # end try clause    
-  } # end loop over sample sizes
+#  } # end loop over sample sizes
   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
 
+  ###Move to outer layer of for loop. This will write a new file after every 100 iterations through the different ps (percent_success) value. ###
+  
+  #Calculate relative bias for all estimates
+    results2 <- results %>% 
+    mutate(Relative_bias = round(((CKMR_estimate - Truth)/Truth)*100,1)) # CHANGED TABLE NAME SO CAN BUILD & CHECK RESULTS ITERATIVELY
+
+    results2 %>% group_by(Total_samples, Sex) %>% 
+    dplyr::summarize(median = median(Relative_bias), n = n())
+  
+  
+    write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/breeding_success/Breeding_success_", ps, "_10.11.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+}
+
 ##################################################################################
 ### SAVE AND CHECK RESULTS
 
+#Below is duplicative, if saving the output within the for loop
 #Calculate relative bias for all estimates
 
 results2 <- results %>% 
@@ -616,9 +654,12 @@ results2 <- results %>%
  results2 %>% group_by(Total_samples, Sex) %>% 
    dplyr::summarize(median = median(Relative_bias), n = n())
 
-#Home computer
-write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/skipped_breeding/Dovi_neutral_lambda_SB_AM_07.07.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
+### Home computer ###
+#write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/skipped_breeding/Dovi_neutral_lambda_SB_AM_07.07.2021.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+ write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/breeding_success/test", ps, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE) #Precision Workstation
+ 
+ ### Cluster ###
 #write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
@@ -638,4 +679,4 @@ ggplot(data=results2, aes(x=factor(Total_samples))) +
   scale_fill_brewer(palette="Set2") +
   font("title", size = 10, face = "bold")
 
-##################################################################################
+################################################################################
