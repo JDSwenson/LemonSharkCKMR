@@ -8,6 +8,12 @@ library(R2jags)
 #Number of adults (uninformative)
 #survival (beta -- conjugate prior for binomial)
 
+#Define data
+
+
+#Define initial values for priors
+
+
 ##CKMR code
 cat("model{
 
