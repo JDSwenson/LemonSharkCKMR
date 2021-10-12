@@ -526,7 +526,7 @@ for(iter in 1:iterations) {
 ### NO MORE WARNINGS
     
     # summary(CK_fit1)
-    # exp(CK_fit1[1:2])
+     exp(CK_fit1[1:3])
     
     # summary(CK_fit2)
     # exp(CK_fit2[1])
