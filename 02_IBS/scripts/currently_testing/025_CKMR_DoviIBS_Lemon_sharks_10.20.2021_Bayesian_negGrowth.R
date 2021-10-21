@@ -588,8 +588,8 @@ write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS
 ####-------Quick viz of results--------####
 
 #Box plot of relative bias
-ggplot(data=results2, aes(x=factor(Total_samples))) +
-  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+ggplot(data=results2, aes(x=factor(total_samples))) +
+  geom_boxplot(aes(y=relative_bias, fill=sex)) +
   ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +
   annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +

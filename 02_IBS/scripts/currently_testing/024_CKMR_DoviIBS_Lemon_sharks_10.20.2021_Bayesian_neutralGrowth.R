@@ -36,14 +36,13 @@ repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 # CHANGED FROM 30; set the maximum age allowed in the simulation
 
 mating.periodicity <- 1 # CHANGED FROM 2; number of years between mating; assigned to an individual 
-# and sticks with them through their life. So they're either a one or two year breeder.
+                        # and sticks with them through their life. So they're either a one or two year breeder.
 num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution) #JDS Q
 
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation #JDS Q
 ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
 ff
-ff <- ff + 0.2
 
 # stable age distribution - JDS Q
 props <- rep(NA, max.age+1)
@@ -306,8 +305,8 @@ for(iter in 1:iterations) {
   ### DATA SAMPLING
   
   for(samps in 1:3){
-    #try({  
-    
+  #try({  
+     
     sample.size <- c(40, 50, 60)[samps] #To loop over different sample sizes, draw a different number of samples each time
     
     ####------------------------Collect samples---------------------####
@@ -464,7 +463,7 @@ for(iter in 1:iterations) {
       }
     }
     
-    jags_file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/models/HS_posGrowth_model_iteration_", iter, ".txt")
+    jags_file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/models/HS_neutralGrowth_model_iteration_", iter, ".txt")
     write_model(HS_model, jags_file)
     
     
@@ -512,8 +511,8 @@ for(iter in 1:iterations) {
     ##### STEP 7: CONVERGENCE DIAGNOSTICS #####
     # view convergence diagnostic summaries for all monitored nodes
     model_summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T)))
-    
-    ##### Compile and report results ####
+
+##### Compile and report results ####
     #Combine above to make dataframe with truth and estimates side-by-side
     #store years from youngest sibling in comparisons to end of study
     yrs <- c(min_cohort:t_end)
@@ -552,11 +551,11 @@ for(iter in 1:iterations) {
     #-----------------Loop end-----------------------------    
     #Bind results from previous iterations with current iteration
     results <- rbind(results, cbind(estimates, metrics))
-    
-    #  }) # end try clause    
+  
+#  }) # end try clause    
   } # end loop over sample sizes
   
-  write.table(results, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/simple_model_posGrowth_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(results, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/simple_model_neutralGrowth_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
@@ -570,11 +569,11 @@ results2 <- results %>%
   mutate(relative_bias = round(((mean - truth)/truth)*100,1)) %>% # CHANGED TABLE NAME SO CAN BUILD & CHECK RESULTS ITERATIVELY
   mutate(in_interval = ifelse(`2.5` < mean & mean < `97.5`, "Y", "N")) 
 
-results2 %>% group_by(total_samples, parameter) %>% 
-  dplyr::summarize(median = median(relative_bias), n = n())
+ results2 %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(median = median(relative_bias), n = n())
 
 #Home computer: Dell Precision
-write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/simple_model_validation_posGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/simple_model_neutralGrowth_validation.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #MGHPCC
 #write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
