@@ -568,7 +568,7 @@ for(iter in 1:iterations) {
 
 results2 <- results %>% 
   mutate(relative_bias = round(((mean - truth)/truth)*100,1)) %>% # CHANGED TABLE NAME SO CAN BUILD & CHECK RESULTS ITERATIVELY
-  mutate(in_interval = ifelse(`2.5` < mean & mean < `97.5`, "Y", "N")) 
+  mutate(in_interval = ifelse(`2.5` < truth & truth < `97.5`, "Y", "N")) 
 
 results2 %>% group_by(total_samples, parameter) %>% 
   dplyr::summarize(median = median(relative_bias), n = n())
