@@ -12,6 +12,7 @@ library(tidyverse)
 library(ggpubr)
 ```
 
+<<<<<<< HEAD
 **10/13/2021**
 ```{r}
 breed_success.list <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/breeding_success/*.csv")
@@ -34,6 +35,137 @@ ggplot(data=breed_success.df, aes(x=factor(percent_successful_mothers*100))) +
   font("title", size = 10, face = "bold")
 ```
 
+=======
+
+**10/21/2021**
+These simulations were run with a Bayesian model fitted with JAGS
+```{r}
+#neutral_growth
+IBS.null_Lemon_neutral_growth_lambdaModel.df <- read_csv("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/simple_model_neutralGrowth_validation.csv") #%>% 
+  mutate(sex = factor(sex, levels = c("M", "F")))
+
+#negative_growth_lambdaModel
+IBS.null_Lemon_negative_growth_lambdaModel.df <- read_csv("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/simple_model_validation_negGrowth.csv") #%>% 
+  mutate(sex = factor(sex, levels = c("M", "F")))
+
+#positive_growth_lambdaModel
+IBS.null_Lemon_positive_growth_lambdaModel.df <- read_csv("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/simple_model_validation_posGrowth.csv") #%>% 
+  mutate(sex = factor(sex, levels = c("M", "F")))
+
+head(IBS.null_Lemon_neutral_growth_lambdaModel.df)
+head(IBS.null_Lemon_negative_growth_lambdaModel.df)
+head(IBS.null_Lemon_positive_growth_lambdaModel.df)
+
+#Calculate percent of population sampled
+IBS.null_Lemon_neutral_growth_lambdaModel.df <- IBS.null_Lemon_neutral_growth_lambdaModel.df %>% mutate(samples_per_year = total_samples/6) %>% 
+  mutate(percent_sampled = (samples_per_year/pop_size_mean)*100)
+
+IBS.null_Lemon_negative_growth_lambdaModel.df <- IBS.null_Lemon_negative_growth_lambdaModel.df %>% mutate(samples_per_year = total_samples/6) %>% 
+  mutate(percent_sampled = (samples_per_year/pop_size_mean)*100)
+
+IBS.null_Lemon_positive_growth_lambdaModel.df <- IBS.null_Lemon_positive_growth_lambdaModel.df %>% mutate(samples_per_year = total_samples/6) %>% 
+  mutate(percent_sampled = (samples_per_year/pop_size_mean)*100)
+
+#Calculate median relative bias
+IBS.null_Lemon_neutral_growth_lambdaModel.df %>% group_by(parameter, total_samples) %>% summarize(median(relative_bias))
+
+IBS.null_Lemon_negative_growth_lambdaModel.df %>% group_by(parameter, total_samples) %>% summarize(median(relative_bias))
+
+IBS.null_Lemon_positive_growth_lambdaModel.df %>% group_by(parameter, total_samples) %>% summarize(median(relative_bias))
+
+neutral.df <- IBS.null_Lemon_neutral_growth_lambdaModel.df %>% 
+   mutate(in_interval = ifelse(`2.5` < truth & truth < `97.5`, "Y", "N"))
+
+pos.df <- IBS.null_Lemon_positive_growth_lambdaModel.df %>% 
+  mutate(in_interval = ifelse(`2.5` < truth & truth < `97.5`, "Y", "N"))
+
+neg.df <- IBS.null_Lemon_negative_growth_lambdaModel.df %>% 
+  mutate(in_interval = ifelse(`2.5` < truth & truth < `97.5`, "Y", "N"))
+
+table(neutral.df$in_interval)
+table(pos.df$in_interval)  
+table(neg.df$in_interval)
+
+
+
+View(pos.df)
+
+
+#Plot results - Box plot
+neutral_growth_lambdaModel_Box <- ggplot(data=IBS.null_Lemon_neutral_growth_lambdaModel.df, aes(x=factor(total_samples))) +
+  geom_boxplot(aes(y=relative_bias, fill=parameter)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Neutral growth; lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+negative_growth_lambdaModel_Box <- ggplot(data=IBS.null_Lemon_negative_growth_lambdaModel.df, aes(x=factor(total_samples))) +
+  geom_boxplot(aes(y=relative_bias, fill=parameter)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Negative growth; lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+positive_growth_lambdaModel_Box <- ggplot(data=IBS.null_Lemon_positive_growth_lambdaModel.df, aes(x=factor(total_samples))) +
+  geom_boxplot(aes(y=relative_bias, fill=parameter)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Sample size", y="Relative bias", title="Positive growth; lambda in model") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+#Scatter plot
+neutral_growth_lambdaModel_Scatter <- ggplot(data=IBS.null_Lemon_neutral_growth_lambdaModel.df, aes(x=percent_sampled)) +
+  geom_jitter(aes(y=relative_bias, color=parameter)) +
+  geom_smooth(aes(x = percent_sampled, y = relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_neutral_growth_lambdaModel.df$percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+negative_growth_lambdaModel_Scatter <- ggplot(data=IBS.null_Lemon_negative_growth_lambdaModel.df, aes(x=percent_sampled)) +
+  geom_jitter(aes(y=relative_bias, color=parameter)) +
+  geom_smooth(aes(x = percent_sampled, y = relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_negative_growth_lambdaModel.df$percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+positive_growth_lambdaModel_Scatter <- ggplot(data=IBS.null_Lemon_positive_growth_lambdaModel.df, aes(x=percent_sampled)) +
+  geom_jitter(aes(y=relative_bias, color=parameter)) +
+  geom_smooth(aes(x = percent_sampled, y = relative_bias)) +
+  ylim(-50, 100) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin = min(IBS.null_Lemon_positive_growth_lambdaModel.df$percent_sampled), xmax=Inf, ymin=-20, ymax=20, alpha=.2, col="red") +
+  labs(x="Percent sampled", y="Relative bias") +
+  scale_color_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+
+
+ggarrange(neutral_growth_lambdaModel_Box, negative_growth_lambdaModel_Box, positive_growth_lambdaModel_Box, neutral_growth_lambdaModel_Scatter, negative_growth_lambdaModel_Scatter, positive_growth_lambdaModel_Scatter, ncol = 3, nrow = 2, common.legend = TRUE)
+
+```
+
+
+
+
+
+
+
+
+
+>>>>>>> 6a22807facf5712de31fddf4874ca2ad492165fd
 **06/23/2021**
 The simulations on 06/22/2021 show that, predictably, when we have a population that is growing or shrinking, the model that assumes constant population size starts to struggle a bit. So, I ran the same simulations as on 06/22/2021, but this time added a parameter for population growth back into the model, all with the seeds set to be the same. 
 *Note: I ran the script once, but did not put the exponent to lambda in parentheses for the sex-aggregated model, which caused it to give wild results. Re-running now (11:45am 6/23) to rectify the issue.
