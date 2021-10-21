@@ -12,6 +12,28 @@ library(tidyverse)
 library(ggpubr)
 ```
 
+**10/13/2021**
+```{r}
+breed_success.list <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/breeding_success/*.csv")
+
+breed_success.df <- sapply(Breed_success.list, read_csv, simplify=FALSE) %>% 
+bind_rows() %>% 
+  mutate(Sex = factor(Sex, levels = c("M", "F", "All")))
+
+breed_success.df %>% group_by(percent_successful_mothers) %>% 
+  summarize(median(Relative_bias))
+
+
+ggplot(data=breed_success.df, aes(x=factor(percent_successful_mothers*100))) +
+  geom_boxplot(aes(y=Relative_bias, fill=Sex)) +
+  ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Percent successful mothers", y="Relative bias", title="Relative bias by breeding success") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
+```
+
 **06/23/2021**
 The simulations on 06/22/2021 show that, predictably, when we have a population that is growing or shrinking, the model that assumes constant population size starts to struggle a bit. So, I ran the same simulations as on 06/22/2021, but this time added a parameter for population growth back into the model, all with the seeds set to be the same. 
 *Note: I ran the script once, but did not put the exponent to lambda in parentheses for the sex-aggregated model, which caused it to give wild results. Re-running now (11:45am 6/23) to rectify the issue.
