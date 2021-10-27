@@ -170,16 +170,17 @@ lemon_neg_log_lik_TotalA <- function(Pars2, Negatives_Parent, Pairs_Parent, P_Pa
 }
 
 ####--------Start loop----------####
-iterations <- 100
+iterations <- 10
 
-for(samps in 1:3){
-  results <- NULL
-  n_samples <- c(40, 50, 60)[samps]
-  n_samples_total <- n_samples * n_samp_yr + n_samples #because sampling starts in year t_start, we need to add one more year
-  sampled_ages <- data.frame(matrix(0, nrow = n_samples, ncol = iterations))
+results <- NULL
+
+for(popsize in 1:4){
+  pop <- c(10000, 25000, 50000, 100000)[popsize]
+  n_samples <- 600
+  #n_samples_total <- n_samples * n_samp_yr + n_samples #because sampling starts in year t_start, we need to add one more year
+  #sampled_ages <- data.frame(matrix(0, nrow = n_samples, ncol = iterations))
   for(iter in 1:iterations) {
-    index <- (iter*2)-1
-
+  
 #-------------Loop start-------------------------    
 #makeFounders creates a matrix of specified size (pop) where each row is an individual in the founder popualtion.
 indiv <- makeFounders(pop = pop, osr = osr, stocks = c(1), maxAge = maxAge, survCurv=survCurv)
@@ -260,6 +261,16 @@ HSPs <- pairs[pairs$TwoTwo == 1,1:2] ##Half-Sibling pairs - verified from fishSi
 non_POPs <- pairs[pairs$OneTwo == 0,1:2] ##pairs that are not POPs
 non_HSPs <- pairs[pairs$TwoTwo == 0,1:2] ##pairs that are not half-sibs
 
+iter_results <- NULL
+
+iter_results$popsize <- nrow(indiv[is.na(indiv[,6]),])
+iter_results$HSPs <- nrow(HSPs)
+iter_results$POPs <- nrow(POPs)
+iter_results$CV <- round((1/sqrt(sum(nrow(HSPs), nrow(POPs)))) * 100, 1)
+
+results <- rbind(results, iter_results)
+  }
+}
 # think of this dataframe as storing only information about the younger fish. Stores ID and birth year only (at present) for every individual in indiv, but renames the ID column to younger so it can be joined with HSPs_tbl below)
 youngerbirthyears <- indiv %>%
   dplyr::select(Me, BirthY, Mum, Dad) %>% 
