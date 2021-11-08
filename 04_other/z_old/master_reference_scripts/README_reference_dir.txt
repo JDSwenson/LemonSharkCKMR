@@ -1,2 +1,0 @@
-The reference scripts folder is for markdown files that contain working relevant code. In essence, these files are a repository of the things that work.
-The goal is for these files to contain all the code that is directly relevant to the research project (i.e. not troubleshooting). Later, we can pair them down to the parts we actually use in the manuscript.
