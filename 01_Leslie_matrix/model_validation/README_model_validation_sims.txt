@@ -1,1 +1,0 @@
-These scripts use the Leslie matrix model to test the effects of varying population growth (neutral, positive, negative) on CKMR bias.

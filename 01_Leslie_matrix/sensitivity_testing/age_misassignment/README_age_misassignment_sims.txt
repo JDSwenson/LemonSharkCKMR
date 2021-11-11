@@ -1,1 +1,0 @@
-These simulations test the effects of misassigning ages on CKMR abundance estimates. Because the Leslie Matrix approach comes at it from the population, not individual, level, these tests don't examine the effects of misassigning ages as much as the effects of sampling in a way that does not reflect the stable age distribution.
