@@ -321,7 +321,7 @@ for(yr in 2:length(loopy.list)){
     model_summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T)))
 
     #view diagnostic plots
-    #diag_plots(post, jags_params, ext_device = F)
+    diag_plots(post, jags_params, ext_device = F)
     
     
 ##### Compile and report results ####
@@ -392,6 +392,10 @@ results2 %>% group_by(total_samples, parameter) %>%
  results2 %>% group_by(total_samples, parameter) %>% 
    dplyr::summarize(median = median(relative_bias), n = n())
 
+ #Assess convergence
+ results2 %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(sum(Rhat < 1.1))
+ 
 #Home computer: Dell Precision
 write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/neutralGrowth_estSurvLam.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
