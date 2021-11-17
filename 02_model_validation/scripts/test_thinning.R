@@ -16,6 +16,11 @@ library(postpack)
 
 rm(list=ls())
 
+#HP
+source("~/R/working_directory/CKMR/LemonSharkCKMR_GitHub/01_MAIN_scripts/functions/Dovi_IBS.R")
+source("~/R/working_directory/CKMR/LemonSharkCKMR_GitHub/01_MAIN_scripts/functions/pairwise_comparisons.R")
+
+#Dell
 source("~/R/working_directory/LemonSharkCKMR/01_MAIN_scripts/functions/Dovi_IBS.R")
 source("~/R/working_directory/LemonSharkCKMR/01_MAIN_scripts/functions/pairwise_comparisons.R")
 #######################################################################
@@ -374,16 +379,6 @@ for(yr in 2:length(loopy.list)){
 
 ##################################################################################
 ### SAVE AND CHECK RESULTS
-
-#Check autocorrelation of consecutive posterior estimates
-#Next: run acf function
-#Then: re-run with more thinning
-head(post.samps.all) # results when thinning = 1
-acf(post.samps.all$Nf[1:5000]) 
-
-
-head(post.samps.thin5) # results when thinning = 5
-acf(post.samps.all$Nf[1:5000]) 
 
 
 #Calculate relative bias for all estimates

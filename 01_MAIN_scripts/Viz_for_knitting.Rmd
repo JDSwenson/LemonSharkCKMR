@@ -12,7 +12,6 @@ library(tidyverse)
 library(ggpubr)
 ```
 
-<<<<<<< HEAD
 **10/13/2021**
 ```{r}
 breed_success.list <- Sys.glob("~/R/R_working_dir/CKMR/LemonSharkCKMR_GitHub/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/breeding_success/*.csv")
@@ -158,14 +157,6 @@ ggarrange(neutral_growth_lambdaModel_Box, negative_growth_lambdaModel_Box, posit
 ```
 
 
-
-
-
-
-
-
-
->>>>>>> 6a22807facf5712de31fddf4874ca2ad492165fd
 **06/23/2021**
 The simulations on 06/22/2021 show that, predictably, when we have a population that is growing or shrinking, the model that assumes constant population size starts to struggle a bit. So, I ran the same simulations as on 06/22/2021, but this time added a parameter for population growth back into the model, all with the seeds set to be the same. 
 *Note: I ran the script once, but did not put the exponent to lambda in parentheses for the sex-aggregated model, which caused it to give wild results. Re-running now (11:45am 6/23) to rectify the issue.
