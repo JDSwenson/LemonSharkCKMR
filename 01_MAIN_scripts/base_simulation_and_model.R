@@ -1,9 +1,6 @@
-#### LEMON SHARKS: DOVI'S BS MODEL
+#### LEMON SHARKS: DOVI'S IBS MODEL
 
 #Load packages
-#devtools::install_github("BruceKendall/mpmtools")
-
-#library(optimx)
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
 #library(popbio) #not needed
 #library(mpmtools) #not needed
@@ -16,12 +13,10 @@ library(postpack)
 
 rm(list=ls())
 
-source("~/R/working_directory/LemonSharkCKMR/functions/Dovi_IBS.R")
-source("~/R/working_directory/LemonSharkCKMR/functions/pairwise_comparisons.R")
-#######################################################################
-### DATA-GENERATING MODEL
+source("./01_MAIN_scripts/functions/Dovi_IBS.R")
+source("./01_MAIN_scripts//functions/pairwise_comparisons.R")
 
-
+########## DATA-GENERATING MODEL ##########
 # Note on sequencing: Births happen at beginning of each year, followed by deaths 
 # (i.e. a female who dies in year 10 can still give birth and have surviving pups in year 10)
 
@@ -30,29 +25,26 @@ source("~/R/working_directory/LemonSharkCKMR/functions/pairwise_comparisons.R")
 init.adult.pop.size <- 1000 # CHANGED FROM 3000; Initial adult population size
 init.prop.female <- 0.5 # proportion of the initial population size that is female
 birth.sex.ratio <- c(0.5,0.5) # The probability that each baby is F:M - has to add up to 1
-
 YOY.survival <- 0.7 # CHANGED FROM 0.8; young of year survival
 juvenile.survival <- 0.8 # CHANGED FROM 0.9; juvenile survival
 Adult.survival <- 0.825 # CHANGED FROM 0.9; Adult survival
-
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 # CHANGED FROM 30; set the maximum age allowed in the simulation
-
-mating.periodicity <- 1 # CHANGED FROM 2; number of years between mating; assigned to an individual 
-                        # and sticks with them through their life. So they're either a one or two year breeder.
+mating.periodicity <- 1 # CHANGED FROM 2; number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates per mating
-#avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution) #JDS Q
+#avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
-f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation #JDS Q
+f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
 ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
 ff
 
-# stable age distribution - JDS Q
+# stable age distribution
 props <- rep(NA, max.age+1)
 props[1] <- f
 props[2] <- f * YOY.survival
 for (y in 3:(repro.age+1)) props[y] <- props[y-1] * juvenile.survival
 #props[repro.age+1] <- props[repro.age] * juvenile.survival + Adult.survival
+
 for (y in (repro.age+2):(max.age+1)) props[y] <- props[y-1] * Adult.survival
 
 prop.Adult <- sum(props[(repro.age+1):(max.age+1)])/sum(props)
@@ -62,7 +54,8 @@ init.pop.size <- sum(Nages) # all ages except YOYs
 
 burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
-n_yrs = t_end <- burn.in + Num.years
+n_yrs <- burn.in + Num.years #Total number of simulation years
+min_cohort <- n_yrs - 5 # Set year of estimation
 
 iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
@@ -70,24 +63,22 @@ load("rseeds.rda")
 
 #set.seed(885767)
 
-####---------Sampling parameters---------####
 
+####-------------- Sampling parameters -------------####
 #sample.years <- c(n_yrs - c(2:0)) #For three years of sampling
 sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
 sample.vec <- c(400, 600, 800) #vector to sample over per year
 
-#--------------Start simulation loop--------------
 
-### MOVED SAMPLING BELOW, SO EXTRACT VARIOUS SAMPLE SIZES FROM THE SAME POPULATION
-
+####-------------- Start simulation loop -------------------####
+# Moved sampling below so extract different sample sizes from same population
 results <- NULL #initialize results array
 
 for(iter in 1:iterations) {
   set.seed(rseeds[iter])
 
-  #Run individual based simulation.
-  #Outputs a list, where the first element is the list of population parameters for each year, and the second is the population size
+  #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
                init.prop.female = init.prop.female,
                Nages = Nages,
@@ -101,22 +92,18 @@ for(iter in 1:iterations) {
                ff = ff,
                burn.in = burn.in,
                Num.years = Num.years)
-  
+
+#Outputs a list, where the first element is a list of various population parameters for each year, and the second is the population size for each year
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size <- out[[2]] #population parameters for each year of simulation
   
-  ##===============================================================================================
-  ####---------quick analysis of population growth (lambda)-----####
-  
-  plot(pop.size$population_size, pch=19, ylim=c(0.9*min(pop.size$population_size), 1.1*max(pop.size$population_size)))
-  
-  #} # end loop over iters
-  
-  ####---------Checking population parameters-------####
+
+####------------- Examine simulation results ---------------####
+  plot(pop.size$population_size, pch=19, ylim=c(0.9*min(pop.size$population_size), 1.1*max(pop.size$population_size))) #Plot population size through time
   
   #nrow(YOY.df)/length(mothers) # Average fecundity for last year; remember whether they've skipped breeding
   
-  #True adult abundance
+  #Make dataframe of abundance for each year
   pop.size <- pop.size %>% mutate(Total.adult.pop = Male.adult.pop + Female.adult.pop)
   
   #Calculate population growth for whole population
@@ -126,44 +113,48 @@ for(iter in 1:iterations) {
     total.lambda <- c(total.lambda, total.lambda.1)
   }
   
-  #Calculate population growth for adults
+  #Calculate population growth for adults only
   adult.lambda <- NULL
   for(l in 2:nrow(pop.size)){ 
     adult.lambda.1 <- pop.size$Total.adult.pop[l]/pop.size$Total.adult.pop[l-1]
     adult.lambda <- c(adult.lambda, adult.lambda.1)
   }
   
+  #Add NA to first element of population growth vectors
   total.lambda <- c(NA, total.lambda)
   adult.lambda <- c(NA, adult.lambda)
+  mean.adult.lambda <- mean(pop.size$adult.lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
+  
+  #Add population growth per year to pop.size dataframe
   pop.size$total.lambda <- total.lambda
   pop.size$adult.lambda <- adult.lambda
   
   #plot(total.lambda[(burn.in+1):n_yrs], pch=19)
   #abline(h=1, lty=3)
   
-  mean.total.lam <- mean(pop.size$total.lambda[(burn.in+1):n_yrs], na.rm=T) # mean Lambda
+  (mean.total.lam <- mean(pop.size$total.lambda[(burn.in+1):n_yrs], na.rm=T)) # mean population growth for whole population
   sd(pop.size$total.lambda[(burn.in+1):n_yrs], na.rm=T) # sd Lambda
   
-  #Survival
-sVec <- NULL
+  #Calculate survival for each year
+sVec <- NULL #Make empty vector to save yearly survival rates
+
+#Store annual survival of adults
 for(yr in 2:length(loopy.list)){
-    sVec[yr] <- length(which(loopy.list[[yr]]$Survival=='S' & loopy.list[[yr]]$age.x>=repro.age))/length(which(loopy.list[[yr]]$age.x>=repro.age)) #survival of adults
+    sVec[yr] <- length(which(loopy.list[[yr]]$Survival=='S' & loopy.list[[yr]]$age.x>=repro.age))/length(which(loopy.list[[yr]]$age.x>=repro.age))
 }
-  sVec <- c(NA, sVec) #Survival over all the simulation years
-  
+  sVec <- c(NA, sVec) #Add NA to survival vector for first year of simulation
+
   length(which(loopy.list[[n_yrs]]$Survival=='S' & loopy.list[[n_yrs]]$age.x>0 & loopy.list[[n_yrs]]$age.x<repro.age))/length(which(loopy.list[[n_yrs]]$age.x>0 & loopy.list[[n_yrs]]$age.x<repro.age)) #survival of juveniles
+  
   length(which(loopy.list[[n_yrs]]$Survival=='S' & loopy.list[[n_yrs]]$age.x==0))/length(which(loopy.list[[n_yrs]]$age.x==0)) #survival of YOY
   
 
-    #####################################################################################
-  ### DATA SAMPLING
-  
+  ####--------------------Collect samples---------------------####
+  #Loop over sample sizes stored in sample.vec  
   for(samps in 1:length(sample.vec)){
-  #try({  
-     
-    sample.size <- sample.vec[samps] #To loop over different sample sizes, draw a different number of samples each time
+
+        sample.size <- sample.vec[samps] #Specify sample size
     
-    ####------------------------Collect samples---------------------####
     #Initialize dataframes
     sample.df_all.info <- NULL
     sample.df_temp <- NULL
@@ -186,16 +177,13 @@ for(yr in 2:length(loopy.list)){
     pairwise.df_all.info <- pairwise.out[[1]]
     positives <- pairwise.out[[2]]
     
-    #Check that there are no repeat comparisons -- compare number of distinct comparisons to total number of comparisons.
-    #Should return TRUE
+    #Check that there are no repeat comparisons -- compare number of distinct comparisons to total number of comparisons. Should return TRUE
     pairwise.df_all.info %>% distinct(Ind_1, Ind_2) %>% nrow() == nrow(pairwise.df_all.info)
 
     
     nrow(positives) #How many positive comparisons total?
-    #head(mom_comps)
-    #head(dad_comps)
     
-    #Remove full sibs (and other unwanted individuals) from sample dataframe
+    #Remove full sibs (and other unwanted individuals) from sample dataframe, if present
     #Should incorporate full sibs into the model at some point ... 
     filtered.samples <- filter_indvs(sample.df_all.info, positives)
     
@@ -207,71 +195,60 @@ for(yr in 2:length(loopy.list)){
     positives.filt <- pairwise.out.filt[[2]]
     mom_comps <- pairwise.out.filt[[3]] 
     dad_comps <- pairwise.out.filt[[4]]
-        
 
-        #-------------Kinship probabilities - Half-sib-------------------
-    min_cohort <- n_yrs-40 # CHANGED THIS FROM MAX.AGE; set first year for calculating mean (arbitrary)
-    mean.adult.lambda <- mean(pop.size$adult.lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
-        
-    #---------------Do I need anything in this section?--------------------#
-    #m_adult_age <- f_adult_age <- c(repro.age:max.age) # Set ages at which males and females are mature. Called by kinship probability function.
-    #pop_growth_all_mean <- mean(pop.size$Lambda[1:nrow(pop.size)], na.rm=T)
-    
-    
-    #### Fit Bayesian model ####
-    ####PICK UP HERE AFTER 10/27/2021####
-    
-    ################ STEP 1: PREPARE DATA #################
+
+    ########## Fit CKMR model ##########
+    #-------------- STEP 1: PREPARE DATA ----------------#
     #Need priors for:
     #Number of adults (uninformative)
-    #maybe eventually survival (beta -- conjugate prior for binomial)
+    #Survival (beta -- conjugate prior for binomial; uninformative)
     
     #Define data
     jags_data = list(
       #Moms
-      MHSP = mom_comps$yes,
-      mom_n_comps = mom_comps$all,
-      mom_ys_birth = mom_comps$Ind_2_birth,
-      mom_os_birth = mom_comps$Ind_1_birth,
-      mom_yrs = nrow(mom_comps),
+      MHSP = mom_comps$yes, # Positive maternal half-sibs; Y
+      mom_n_comps = mom_comps$all, # Number of total maternal comparisons; R
+      mom_ys_birth = mom_comps$Ind_2_birth, # birth year of younger sib; b
+      mom_os_birth = mom_comps$Ind_1_birth, # birth year of older sib; a
+      mom_yrs = nrow(mom_comps), # number of cohort comparisons to loop over 
       
       #Dads
-      FHSP = dad_comps$yes,
-      dad_n_comps = dad_comps$all,
-      dad_ys_birth = dad_comps$Ind_2_birth,
-      dad_os_birth = dad_comps$Ind_1_birth,
-      dad_yrs = nrow(dad_comps),
+      FHSP = dad_comps$yes, # Positive paternal half-sibs; Y
+      dad_n_comps = dad_comps$all, # Number of total paternal comparisons; R
+      dad_ys_birth = dad_comps$Ind_2_birth, # birth year of younger sib; b
+      dad_os_birth = dad_comps$Ind_1_birth, # birth year of older sib; a
+      dad_yrs = nrow(dad_comps), # number of cohort comparisons to loop over
       
       #Fix other potential parameters
       #surv = surv,
-      lam = mean.adult.lambda,
-      min_cohort = min_cohort
+      lam = mean.adult.lambda, # fix lambda to mean lambda of adults over estimation period
+      min_cohort = min_cohort # estimation year i.e. year the estimate will be focused on
     )
     
-    #Define initial values for priors
-    
-    ################### STEP 2: SPECIFY JAGS MODEL CODE ##################
-    ##CKMR code
+
+    #----------------- STEP 2: SPECIFY JAGS MODEL CODE ---------------#
     HS_model = function(){
+
       #PRIORS
-      Nf ~ dnorm(0, 1.0E-6) #Uninformative prior for female abundance
-      Nm ~ dnorm(0, 1.0E-6) ##Uninformative prior for male abundance
-      surv ~ dbeta(1 ,1) #Assumes constant survival of males and females
+      Nf ~ dnorm(0, 1.0E-6) # Uninformative prior for female abundance
+      Nm ~ dnorm(0, 1.0E-6) # Uninformative prior for male abundance
+      surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       
       #Likelihood
-      for(i in 1:mom_yrs){
-        MHSP[i] ~ dbin((surv^(mom_ys_birth[i] - mom_os_birth[i]))/(Nf*lam^(mom_ys_birth[i]-min_cohort)), mom_n_comps[i])
+      for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
+        MHSP[i] ~ dbin((surv^(mom_ys_birth[i] - mom_os_birth[i]))/(Nf*lam^(mom_ys_birth[i]-min_cohort)), mom_n_comps[i]) # Sex-specific CKMR model equation
       }
-      for(j in 1:dad_yrs){
-        FHSP[j] ~ dbin((surv^(dad_ys_birth[j] - dad_os_birth[j]))/(Nm*lam^(dad_ys_birth[j]-min_cohort)), dad_n_comps[j])
+      for(j in 1:dad_yrs){ # Loop over paternal cohort comparisons
+        FHSP[j] ~ dbin((surv^(dad_ys_birth[j] - dad_os_birth[j]))/(Nm*lam^(dad_ys_birth[j]-min_cohort)), dad_n_comps[j]) # Sex-specific CKMR model equation
       }
     }
-    
-    jags_file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/models/HS_neutralGrowth_estSurv_iteration_", iter, ".txt")
+
+    # Write model    
+    jags_file = paste0("./models/HS_neutralGrowth_estSurv_iteration_", iter, ".txt")
     write_model(HS_model, jags_file)
     
     
-    ########### STEP 3: SPECIFY INITIAL VALUES ##################
+    #------------ STEP 3: SPECIFY INITIAL VALUES ---------------#
     jags_inits = function(nc) {
       inits = list()
       for(c in 1:nc){
@@ -284,12 +261,12 @@ for(yr in 2:length(loopy.list)){
       return(inits)
     }
     
-    ########## STEP 4: SET NODES TO MONITOR ################
+    #------------ STEP 4: SET NODES TO MONITOR ---------------#
     jags_params = c("Nf", "Nm", "surv")
     n_params = length(jags_params) #used to autofill dataframe later
     
     
-    ########### STEP 5: SET MCMC DIMENSIONS ################
+    #------------- STEP 5: SET MCMC DIMENSIONS ---------------#
     jags_dims = c(
       ni = 5000,  # number of post-burn-in samples per chain
       nb = 5000,  # number of burn-in samples
@@ -298,8 +275,7 @@ for(yr in 2:length(loopy.list)){
     )
     
     
-    ##### STEP 6: RUN THE MODEL WITH JAGS #####
-    
+    #---------------- STEP 6: RUN JAGS ---------------#
     post = jagsUI::jags.basic(data = jags_data, #If using postpack from AFS workshop
                               
                               #post = rjags::jags(data = jags_data, #If wanting to use other diagnostics
@@ -314,28 +290,29 @@ for(yr in 2:length(loopy.list)){
                               parallel = F
     )
     
-    ##### STEP 7: CONVERGENCE DIAGNOSTICS #####
+    #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
     # view convergence diagnostic summaries for all monitored nodes
     model_summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T)))
 
-##### Compile and report results ####
-    #Combine above to make dataframe with truth and estimates side-by-side
-    #store years from youngest sibling in comparisons to end of study
-    yrs <- c(min_cohort:t_end)
+
+    ########## Compile and report results #########
+    # Combine above to make dataframe with truth and estimates side-by-side
+    # store years from youngest sibling in comparisons to end of study
+    yrs <- c(min_cohort:n_yrs)
     
     #Extract true values from year of estimation (ie min_cohort)
-    Mom_truth <- round(pop.size$Female.adult.pop[min_cohort],0)
-    Dad_truth <- round(pop.size$Male.adult.pop[min_cohort], 0)
-    surv_truth <- round(mean(sVec[min_cohort:n_yrs]), 4)
-    #Adult_truth <- round(pop.size$Total.adult.pop[min_cohort], 0)
-    Mom_min <- min(pop.size$Female.adult.pop[min_cohort:n_yrs])
-    Mom_max <- max(pop.size$Female.adult.pop[min_cohort:n_yrs])
-    Dad_min <- min(pop.size$Male.adult.pop[min_cohort:n_yrs])
-    Dad_max <- max(pop.size$Male.adult.pop[min_cohort:n_yrs])
-    #Adult_min <- min(pop.size$Total.adult.pop[min_cohort:n_yrs])
-    #Adult_max <- max(pop.size$Total.adult.pop[min_cohort:n_yrs])
-    surv_min <- min(sVec[min_cohort:n_yrs])
-    surv_max <- max(sVec[min_cohort:n_yrs])
+    Mom_truth <- round(pop.size$Female.adult.pop[min_cohort],0) # True Nf
+    Dad_truth <- round(pop.size$Male.adult.pop[min_cohort], 0) # True Nm
+    surv_truth <- round(mean(sVec[min_cohort:n_yrs]), 4) # True adult survival over estimation period
+    #Adult_truth <- round(pop.size$Total.adult.pop[min_cohort], 0) # Used for sex-aggregated model
+    Mom_min <- min(pop.size$Female.adult.pop[min_cohort:n_yrs]) #Minimum Nf over estimation period
+    Mom_max <- max(pop.size$Female.adult.pop[min_cohort:n_yrs]) #Maximum Nf over estimation period
+    Dad_min <- min(pop.size$Male.adult.pop[min_cohort:n_yrs]) #Minimum Nm over estimation period
+    Dad_max <- max(pop.size$Male.adult.pop[min_cohort:n_yrs]) #Maximum Nm over estimation period
+    #Adult_min <- min(pop.size$Total.adult.pop[min_cohort:n_yrs]) # Used for sex-aggregated model
+    #Adult_max <- max(pop.size$Total.adult.pop[min_cohort:n_yrs]) # Used for sex-aggregated model
+    surv_min <- min(sVec[min_cohort:n_yrs]) #Minimum survival over estimation period
+    surv_max <- max(sVec[min_cohort:n_yrs]) #Maximum survival over estimation period
     
     #Create dataframe of estimates and truth
     estimates <- model_summary %>% rownames_to_column(var = "parameter") %>% 
@@ -343,36 +320,35 @@ for(yr in 2:length(loopy.list)){
       as_tibble() %>% 
       rename(`50` = X50., `2.5` = X2.5., `97.5` = X97.5.)
     
-    #Extract more metrics that can help with troubleshooting
-    total_samples <- sample.size * length(sample.years)
-    pop_size_mean <- round(mean(pop.size$population_size[min_cohort:n_yrs]),0)
+    #Extract more metrics that can help with troubleshooting and visualization
+    total_samples <- sample.size * length(sample.years) # total samples
+    pop_size_mean <- round(mean(pop.size$population_size[min_cohort:n_yrs]),0) #Mean TOTAL population size over estimation period
     
-    metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), sum(mom_comps[,3]) + sum(dad_comps[3])), 
-                     c(rep(mean.adult.lambda, times = n_params)), 
-                     c(rep(total_samples, times = n_params)),
-                     c(rep(pop_size_mean, times = n_params)),
-                     c(rep(iter, times = n_params)))
+    #Bind metrics together
+    metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), sum(mom_comps[,3]) + sum(dad_comps[3])), # number of positive IDs i.e. half-sibs
+                     c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
+                     c(rep(total_samples, times = n_params)), # total samples
+                     c(rep(pop_size_mean, times = n_params)), #mean population size over estimation period
+                     c(rep(iter, times = n_params))) #iteration
     colnames(metrics) <- c("parents_detected", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
     
-    #-----------------Loop end-----------------------------    
+    #-----------------Loop end-----------------------------#
     #Bind results from previous iterations with current iteration
     results <- rbind(results, cbind(estimates, metrics))
   
-#  }) # end try clause    
   } # end loop over sample sizes
   
+# Write file iteratively in case R crashes or computer shuts down
   write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
 
-##################################################################################
-### SAVE AND CHECK RESULTS
-
+########## Save and check results ##########
 #Calculate relative bias for all estimates
 
 results2 <- results %>% 
-  mutate(relative_bias = round(((mean - truth)/truth)*100,1)) %>% # CHANGED TABLE NAME SO CAN BUILD & CHECK RESULTS ITERATIVELY
+  mutate(relative_bias = round(((mean - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(`2.5` < truth & truth < `97.5`, "Y", "N")) %>% 
   mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
 
@@ -385,18 +361,14 @@ results2 %>% group_by(total_samples, parameter) %>%
    dplyr::summarize(median = median(relative_bias), n = n())
 
 #Home computer: Dell Precision
-write.table(results2, file = paste0("~/R/working_directory/LemonSharkCKMR/02_IBS/Dovi_IBS_model_validation/Lemon_sharks/results/basic_bayesian/neutralGrowth_estSurv.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+today <- format(Sys.Date(), "%d%b%Y")
+write.table(results2, file = paste0("./02_model_validation/results/Lemon_Shark_life_history/model_validation/neutralGrowth_estSurv_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #MGHPCC
 #write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
-#write.table(age_dist, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_age.distributions_", total_samples, ".samples_02.10.2021_ages.correct_age.dist.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
-#write.table(survival_at_age, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/results/fishSim_survival.at.age_", total_samples, ".samples_02.10.2021_ages.correct_surv.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-#}
-
-####-------Quick viz of results--------####
-
+#-------------Quick viz of results--------------#
 #Box plot of relative bias
 ggplot(data=results2, aes(x=factor(total_samples))) +
   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
@@ -409,4 +381,4 @@ ggplot(data=results2, aes(x=factor(total_samples))) +
 
 
 
-##################################################################################
+####################### End ##############################
