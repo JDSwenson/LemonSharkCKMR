@@ -227,11 +227,15 @@ for(yr in 2:length(loopy.list)){
     
 
     #----------------- STEP 2: SPECIFY JAGS MODEL CODE ---------------#
+    tau <- 1E-6
+    #Convert tau to SD (for interpretation)
+    (sd <- sqrt(1/tau))
+    
     HS_model = function(){
 
       #PRIORS
-      Nf ~ dnorm(0, 1.0E-6) # Uninformative prior for female abundance
-      Nm ~ dnorm(0, 1.0E-6) # Uninformative prior for male abundance
+      Nf ~ dnorm(0, tau) # Uninformative prior for female abundance
+      Nm ~ dnorm(0, tau) # Uninformative prior for male abundance
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       
       #Likelihood
