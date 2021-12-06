@@ -10,6 +10,7 @@ library(R2jags)
 library(jagsUI)
 library(Rlab)
 library(postpack)
+library(coda)
 
 rm(list=ls())
 
@@ -57,7 +58,7 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 min_cohort <- n_yrs - 5 # Set year of estimation
 
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 50 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds.rda")
 
@@ -74,6 +75,9 @@ sample.vec <- c(400, 600, 800) #vector to sample over per year
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
 results <- NULL #initialize results array
+sims.list.1 <- NULL
+sims.list.2 <- NULL
+sims.list.3 <- NULL
 
 for(iter in 1:iterations) {
   set.seed(rseeds[iter])
@@ -123,7 +127,8 @@ for(iter in 1:iterations) {
   #Add NA to first element of population growth vectors
   total.lambda <- c(NA, total.lambda)
   adult.lambda <- c(NA, adult.lambda)
-  mean.adult.lambda <- mean(pop.size$adult.lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
+  
+  mean.adult.lambda <- mean(adult.lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
   
   #Add population growth per year to pop.size dataframe
   pop.size$total.lambda <- total.lambda
@@ -222,14 +227,15 @@ for(yr in 2:length(loopy.list)){
       #Fix other potential parameters
       #surv = surv,
       lam = mean.adult.lambda, # fix lambda to mean lambda of adults over estimation period
-      min_cohort = min_cohort # estimation year i.e. year the estimate will be focused on
+      min_cohort = min_cohort, # estimation year i.e. year the estimate will be focused on
+      tau = 1E-6
     )
     
 
     #----------------- STEP 2: SPECIFY JAGS MODEL CODE ---------------#
-    tau <- 1E-6
     #Convert tau to SD (for interpretation)
-    (sd <- sqrt(1/tau))
+    #tau <- 1E-6
+    #(sd <- sqrt(1/tau))
     
     HS_model = function(){
 
@@ -272,9 +278,9 @@ for(yr in 2:length(loopy.list)){
     
     #------------- STEP 5: SET MCMC DIMENSIONS ---------------#
     jags_dims = c(
-      ni = 5000,  # number of post-burn-in samples per chain
-      nb = 5000,  # number of burn-in samples
-      nt = 1,     # thinning rate
+      ni = 10000,  # number of post-burn-in samples per chain
+      nb = 10000,  # number of burn-in samples
+      nt = 10,     # thinning rate
       nc = 2      # number of chains
     )
     
@@ -294,10 +300,19 @@ for(yr in 2:length(loopy.list)){
                               parallel = F
     )
     
+
+    if(samps == 1){
+      sims.list.1[[iter]] <- post
+    } else if(samps == 2){
+      sims.list.2[[iter]] <- post
+    } else if(samps == 3){
+      sims.list.3[[iter]] <- post
+    }
+    
     #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
     # view convergence diagnostic summaries for all monitored nodes
     model_summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T)))
-
+    
 
     ########## Compile and report results #########
     # Combine above to make dataframe with truth and estimates side-by-side
@@ -342,8 +357,19 @@ for(yr in 2:length(loopy.list)){
   
   } # end loop over sample sizes
   
-# Write file iteratively in case R crashes or computer shuts down
+# Write files iteratively in case R crashes or computer shuts down
+  #Results
   write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  
+  #Model output for diagnostics
+  total.samples.1 <- sample.vec[1] * length(sample.years)
+  saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
+  
+  total.samples.2 <- sample.vec[2] * length(sample.years)
+  saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
+  
+  total.samples.3 <- sample.vec[3] * length(sample.years)
+  saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
@@ -356,7 +382,7 @@ results2 <- results %>%
   mutate(in_interval = ifelse(`2.5` < truth & truth < `97.5`, "Y", "N")) %>% 
   mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
 
-#Within credible interval?
+#Within HPD interval?
 results2 %>% group_by(total_samples, parameter) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
@@ -366,7 +392,20 @@ results2 %>% group_by(total_samples, parameter) %>%
 
 #Home computer: Dell Precision
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-write.table(results2, file = paste0("./02_model_validation/results/Lemon_Shark_life_history/model_validation/neutralGrowth_estSurv_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model_validation/neutralGrowth_estSurv_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+
+total.samples.1 <- sample.vec[1] * length(sample.years)
+saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
+
+total.samples.2 <- sample.vec[2] * length(sample.years)
+saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
+
+total.samples.3 <- sample.vec[3] * length(sample.years)
+saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
+
+#To read in RDS file
+#pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")
+
 
 #MGHPCC
 #write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
