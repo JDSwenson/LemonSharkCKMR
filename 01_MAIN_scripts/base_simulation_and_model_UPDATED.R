@@ -74,7 +74,8 @@ sample.vec <- c(400, 600, 800) #vector to sample over per year
 
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
-results <- NULL #initialize results array
+# Initialize arrays for saving results
+results <- NULL
 sims.list.1 <- NULL
 sims.list.2 <- NULL
 sims.list.3 <- NULL
@@ -360,6 +361,8 @@ for(yr in 2:length(loopy.list)){
 # Write files iteratively in case R crashes or computer shuts down
   #Results
   write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  
+  today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
   
   #Model output for diagnostics
   total.samples.1 <- sample.vec[1] * length(sample.years)
