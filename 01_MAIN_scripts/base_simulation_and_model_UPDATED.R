@@ -58,9 +58,11 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 min_cohort <- n_yrs - 5 # Set year of estimation
 
-iterations <- 50 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
-load("rseeds.rda")
+#save(rseeds, file = "rseeds_12.21.rda")
+
+load("rseeds_12.21.rda")
 
 #set.seed(885767)
 
@@ -69,7 +71,7 @@ load("rseeds.rda")
 #sample.years <- c(n_yrs - c(2:0)) #For three years of sampling
 sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
-sample.vec <- c(400, 600, 800) #vector to sample over per year
+sample.vec <- c(250, 325, 400) #vector to sample over per year
 
 
 ####-------------- Start simulation loop -------------------####
@@ -101,59 +103,10 @@ for(iter in 1:iterations) {
 #Outputs a list, where the first element is a list of various population parameters for each year, and the second is the population size for each year
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size <- out[[2]] #population parameters for each year of simulation
-  
 
-####------------- Examine simulation results ---------------####
-  plot(pop.size$population_size, pch=19, ylim=c(0.9*min(pop.size$population_size), 1.1*max(pop.size$population_size))) #Plot population size through time
   
-  #nrow(YOY.df)/length(mothers) # Average fecundity for last year; remember whether they've skipped breeding
-  
-  #Make dataframe of abundance for each year
-  pop.size <- pop.size %>% mutate(Total.adult.pop = Male.adult.pop + Female.adult.pop)
-  
-  #Calculate population growth for whole population
-  total.lambda <- NULL
-  for(l in 2:nrow(pop.size)){ 
-    total.lambda.1 <- pop.size$population_size[l]/pop.size$population_size[l-1]
-    total.lambda <- c(total.lambda, total.lambda.1)
-  }
-  
-  #Calculate population growth for adults only
-  adult.lambda <- NULL
-  for(l in 2:nrow(pop.size)){ 
-    adult.lambda.1 <- pop.size$Total.adult.pop[l]/pop.size$Total.adult.pop[l-1]
-    adult.lambda <- c(adult.lambda, adult.lambda.1)
-  }
-  
-  #Add NA to first element of population growth vectors
-  total.lambda <- c(NA, total.lambda)
-  adult.lambda <- c(NA, adult.lambda)
-  
-  mean.adult.lambda <- mean(adult.lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
-  
-  #Add population growth per year to pop.size dataframe
-  pop.size$total.lambda <- total.lambda
-  pop.size$adult.lambda <- adult.lambda
-  
-  #plot(total.lambda[(burn.in+1):n_yrs], pch=19)
-  #abline(h=1, lty=3)
-  
-  (mean.total.lam <- mean(pop.size$total.lambda[(burn.in+1):n_yrs], na.rm=T)) # mean population growth for whole population
-  sd(pop.size$total.lambda[(burn.in+1):n_yrs], na.rm=T) # sd Lambda
-  
-  #Calculate survival for each year
-sVec <- NULL #Make empty vector to save yearly survival rates
-
-#Store annual survival of adults
-for(yr in 2:length(loopy.list)){
-    sVec[yr] <- length(which(loopy.list[[yr]]$Survival=='S' & loopy.list[[yr]]$age.x>=repro.age))/length(which(loopy.list[[yr]]$age.x>=repro.age))
-}
-  sVec <- c(NA, sVec) #Add NA to survival vector for first year of simulation
-
-  length(which(loopy.list[[n_yrs]]$Survival=='S' & loopy.list[[n_yrs]]$age.x>0 & loopy.list[[n_yrs]]$age.x<repro.age))/length(which(loopy.list[[n_yrs]]$age.x>0 & loopy.list[[n_yrs]]$age.x<repro.age)) #survival of juveniles
-  
-  length(which(loopy.list[[n_yrs]]$Survival=='S' & loopy.list[[n_yrs]]$age.x==0))/length(which(loopy.list[[n_yrs]]$age.x==0)) #survival of YOY
-  
+  #Save results from the simulation
+  source("./01_MAIN_scripts/functions/query_results.R")
 
   ####--------------------Collect samples---------------------####
   #Loop over sample sizes stored in sample.vec  
@@ -174,6 +127,9 @@ for(yr in 2:length(loopy.list)){
     #Keep just one instance of each individual (to avoid self-recapture) and sort by birth year so when we make the pairwise comparison matrix, Ind_1 is always older than Ind_2 (bc it comes first)
     sample.df_all.info <- sample.df_all.info %>% distinct(indv.name, .keep_all = TRUE) %>% 
       dplyr::arrange(birth.year, desc()) 
+    
+    sampled.mothers <- unique(sample.df_all.info$mother.x)
+    sampled.fathers <- unique(sample.df_all.info$father.x)
     
     
     ####-------------Construct pairwise comparison matrix--------------####
@@ -279,9 +235,9 @@ for(yr in 2:length(loopy.list)){
     
     #------------- STEP 5: SET MCMC DIMENSIONS ---------------#
     jags_dims = c(
-      ni = 10000,  # number of post-burn-in samples per chain
-      nb = 10000,  # number of burn-in samples
-      nt = 10,     # thinning rate
+      ni = 15000,  # number of post-burn-in samples per chain
+      nb = 20000,  # number of burn-in samples
+      nt = 15,     # thinning rate
       nc = 2      # number of chains
     )
     
@@ -298,7 +254,7 @@ for(yr in 2:length(loopy.list)){
                               n.thin = jags_dims["nt"],
                               n.burnin = jags_dims["nb"],
                               n.chains = jags_dims["nc"],
-                              parallel = F
+                              parallel = T
     )
     
 
@@ -333,6 +289,8 @@ for(yr in 2:length(loopy.list)){
     #Adult_max <- max(pop.size$Total.adult.pop[min_cohort:n_yrs]) # Used for sex-aggregated model
     surv_min <- min(sVec[min_cohort:n_yrs]) #Minimum survival over estimation period
     surv_max <- max(sVec[min_cohort:n_yrs]) #Maximum survival over estimation period
+    mean.num.mothers.total <- round(mean(pop.size$Num.mothers[min_cohort:n_yrs]), 0) #Mean number of mothers in population over estimation period
+    mean.num.fathers.total <- round(mean(pop.size$Num.fathers[min_cohort:n_yrs]), 0) #Mean number of fathers in population over estimation period
     
     #Create dataframe of estimates and truth
     estimates <- model_summary %>% rownames_to_column(var = "parameter") %>% 
@@ -346,11 +304,13 @@ for(yr in 2:length(loopy.list)){
     
     #Bind metrics together
     metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), sum(mom_comps[,3]) + sum(dad_comps[3])), # number of positive IDs i.e. half-sibs
+                     c(mean.num.mothers.total, mean.num.fathers.total, mean.num.mothers.total + mean.num.fathers.total), #Mean number of parents in population over estimation period
+                     c(length(sampled.mothers), length(sampled.fathers), length(sampled.mothers) + length(sampled.fathers)), #number of unique sampled parents
                      c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
                      c(rep(total_samples, times = n_params)), # total samples
                      c(rep(pop_size_mean, times = n_params)), #mean population size over estimation period
                      c(rep(iter, times = n_params))) #iteration
-    colnames(metrics) <- c("parents_detected", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
+    colnames(metrics) <- c("parents_detected", "unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
     
     #-----------------Loop end-----------------------------#
     #Bind results from previous iterations with current iteration
@@ -358,21 +318,21 @@ for(yr in 2:length(loopy.list)){
   
   } # end loop over sample sizes
   
-# Write files iteratively in case R crashes or computer shuts down
-  #Results
-  write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-  
-  today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-  
-  #Model output for diagnostics
-  total.samples.1 <- sample.vec[1] * length(sample.years)
-  saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
-  
-  total.samples.2 <- sample.vec[2] * length(sample.years)
-  saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
-  
-  total.samples.3 <- sample.vec[3] * length(sample.years)
-  saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
+# # Write files iteratively in case R crashes or computer shuts down
+#   #Results
+   write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+#   
+   today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
+#   
+#   #Model output for diagnostics
+   total.samples.1 <- sample.vec[1] * length(sample.years)
+   saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
+#   
+   total.samples.2 <- sample.vec[2] * length(sample.years)
+   saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
+#   
+   total.samples.3 <- sample.vec[3] * length(sample.years)
+   saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
@@ -393,12 +353,17 @@ results2 %>% group_by(total_samples, parameter) %>%
  results2 %>% group_by(total_samples, parameter) %>% 
    dplyr::summarize(median = median(relative_bias), n = n())
 
+ #Mean number of parents detected
+ #Median relative bias by sample size
+ results2 %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(mean = mean(parents_detected), n = n())
+ 
 #Home computer: Dell Precision
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model_validation/neutralGrowth_estSurv_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model.validation/CKMR_results_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 total.samples.1 <- sample.vec[1] * length(sample.years)
-saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
+saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples_longChain"))
 
 total.samples.2 <- sample.vec[2] * length(sample.years)
 saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples"))

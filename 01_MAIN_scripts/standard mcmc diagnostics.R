@@ -3,11 +3,11 @@ library(coda)
 rm(list=ls())
 
 # Model output
-jags.model.400 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_06Dec2021_400_samples")
+jags.model.400 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_08Dec2021_400_samples_longChain")
 
-jags.model.600 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_06Dec2021_600_samples")
+#jags.model.600 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_06Dec2021_600_samples")
 
-jags.model.800 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_06Dec2021_800_samples")
+#jags.model.800 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_06Dec2021_800_samples")
 
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 
@@ -16,54 +16,54 @@ today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 jags_params_4plot <- c("Nf", "Nm", "surv") #Specify parameters
 
 #Specify save location for pdf of plots
-tracePlot.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/TracePlots_06Dec2021_800samples.pdf")
+tracePlot.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/TracePlots_", today, "_400samples_longChain.pdf")
 pdf(file = tracePlot.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(jags.model.800)){
-  diag_plots(jags.model.800[[i]], jags_params_4plot, layout = "4x1")
+for(i in 1:length(jags.model.400)){
+  diag_plots(jags.model.400[[i]], jags_params_4plot, layout = "4x1")
 }
 
 dev.off()
 
 #-----------------------------Autocorrelation---------------------------------------------------
 #Specify save location for pdf of plots
-autocorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Autocorrelation.plots_06Dec2021_800samples.pdf")
+autocorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Autocorrelation.plots_", today, "_400samples_longChain.pdf")
 pdf(file = autocorr.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(jags.model.800)){
-  autocorr.plot(jags.model.800[[i]])
+for(i in 1:length(jags.model.400)){
+  autocorr.plot(jags.model.400[[i]])
 }
 
 dev.off()
 
 #Visual check for one iteration
-autocorr.diag(jags.model.800[[5]], lags = c(0, 1, 5, 10, 15, 20))
+autocorr.diag(jags.model.400[[5]], lags = c(0, 1, 5, 10, 15, 20))
 
 #-----------------------------Cross-correlation---------------------------------------------------
 #Specify save location for pdf of plots
-crosscorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Cross_correlation.plots_06Dec2021_800samples.pdf")
+crosscorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Cross_correlation.plots_", today, "_400samples_longChain.pdf")
 pdf(file = crosscorr.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(c in 1:length(jags.model.800)){
-  crosscorr.plot(jags.model.800[[c]])
+for(c in 1:length(jags.model.400)){
+  crosscorr.plot(jags.model.400[[c]])
 }
 
 dev.off()
 
 #Visual check for one iteration
-crosscorr(jags.model.800[[5]])
+crosscorr(jags.model.400[[5]])
 
 #-----------------------------Effective chain length---------------------------------------------------
 #Initialize dataframes
 effectiveSize.df = EF.temp <- NULL
-for(j in 1:length(jags.model.800)){
-  EF.temp <- data.frame(t(effectiveSize(jags.model.800[[j]]))) %>% 
+for(j in 1:length(jags.model.400)){
+  EF.temp <- data.frame(t(effectiveSize(jags.model.400[[j]]))) %>% 
     mutate(iteration = j)
   effectiveSize.df <- rbind(effectiveSize.df, EF.temp)
 }
@@ -78,10 +78,10 @@ geweke.df = geweke.temp.c1 = geweke.temp.c2 <- NULL
 g.thresh <- 1.65 # Set threshold for geweke failure
 
 # Loop through all chains and iterations and store geweke diagnostic results
-for(w in 1:length(jags.model.800)){
-  geweke.temp.c1 <- data.frame(t(geweke.diag(jags.model.800[[w]])[[1]][[1]])) %>% 
+for(w in 1:length(jags.model.400)){
+  geweke.temp.c1 <- data.frame(t(geweke.diag(jags.model.400[[w]])[[1]][[1]])) %>% 
     mutate(iteration = w, chain = 1)
-  geweke.temp.c2 <- data.frame(t(geweke.diag(jags.model.800[[w]])[[2]][[1]])) %>% 
+  geweke.temp.c2 <- data.frame(t(geweke.diag(jags.model.400[[w]])[[2]][[1]])) %>% 
     mutate(iteration = w, chain = 2)
   geweke.df <- rbind(geweke.df, geweke.temp.c1, geweke.temp.c2)
 }
@@ -116,13 +116,13 @@ geweke.df %>% summarize(`0.05` = sum(abs(surv) > 1.96))
 
 #Save plots of geweke diagnostic
 #Specify save location for pdf of plots
-geweke.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Geweke_06Dec2021_800samples.pdf")
+geweke.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Geweke_", today, "_400samples_longChain.pdf")
 pdf(file = geweke.file) #Open pdf file for plotting
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(jags.model.800)){
-  geweke.plot(jags.model.800[[i]])
+for(i in 1:length(jags.model.400)){
+  geweke.plot(jags.model.400[[i]])
 }
 
 dev.off() #Close pdf file
@@ -133,9 +133,9 @@ dev.off() #Close pdf file
 #Calculate gelman diagnostic for each iteration
 gelman.df = gelman.temp <- NULL
 
-for(g in 1:length(jags.model.800)){
+for(g in 1:length(jags.model.400)){
 
-  gelman.temp <- data.frame(t(gelman.diag(jags.model.800[[g]])[[1]])) %>% 
+  gelman.temp <- data.frame(t(gelman.diag(jags.model.400[[g]])[[1]])) %>% 
     rownames_to_column(var = "type") %>% 
     mutate(iteration = g)
   
@@ -144,13 +144,13 @@ for(g in 1:length(jags.model.800)){
 
 #Save plots of gelman diagnostic
 #Specify save location for pdf of plots
-gelman.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Gelman_06Dec2021_800samples.pdf")
+gelman.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Gelman_", today, "_400samples_longChain.pdf")
 pdf(file = gelman.file) #Open pdf file for plotting
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(jags.model.800)){
-  gelman.plot(jags.model.800[[i]])
+for(i in 1:length(jags.model.400)){
+  gelman.plot(jags.model.400[[i]])
 }
 
 dev.off() #Close pdf file
@@ -161,7 +161,7 @@ dev.off() #Close pdf file
 # It iteratively removes proportions of the samples, and reports the iteration at which we should start the chain i.e. increase the burn-in period by the iteration reported here.
 # We do NOT want to reject the null.
 
-heidel.diag(jags.model.800[[1]])
+heidel.diag(jags.model.400[[1]])
 
 
 #-----------------------------Raftery-Lewis---------------------------------------------------
@@ -171,10 +171,10 @@ heidel.diag(jags.model.800[[1]])
 # N = total number of iterations that should be run for each variable
 # Nmin = the minimum number of iterations that should be run for each variable
 # I = the increase in number of iterations needed to reach convergence.
-raftery.diag(jags.model.800[[1]])
+raftery.diag(jags.model.400[[1]])
 
 
-superdiag(jags.model.800[[1]])
+superdiag(jags.model.400[[1]])
 ##===============================================================================
 
 #Charlotte's code

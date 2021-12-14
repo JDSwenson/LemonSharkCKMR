@@ -152,7 +152,9 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
   ### CHANGED THIS TO ONLY COUNT SURVIVORS - JDS Q
   pop.size.vec <- cbind.data.frame(year=v, population_size=nrow(loopy.pop[loopy.pop$Survival=="S",]), # 
                                    Male.adult.pop = nrow(loopy.pop[loopy.pop$sex == "M" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",]), # 
-                                   Female.adult.pop = nrow(loopy.pop[loopy.pop$sex == "F" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",])) # 
+                                   Female.adult.pop = nrow(loopy.pop[loopy.pop$sex == "F" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",]),
+                                   Num.mothers = length(mothers),
+                                   Num.fathers = length(fathers)) # 
   pop.size <- rbind(pop.size, pop.size.vec)
   
 } # end loop over sim years
