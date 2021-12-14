@@ -71,7 +71,7 @@ load("rseeds_12.21.rda")
 #sample.years <- c(n_yrs - c(2:0)) #For three years of sampling
 sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
-sample.vec <- c(250, 325, 400) #vector to sample over per year
+sample.vec <- c(200, 300, 400) #vector to sample over per year
 
 
 ####-------------- Start simulation loop -------------------####
@@ -363,13 +363,13 @@ today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model.validation/CKMR_results_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 total.samples.1 <- sample.vec[1] * length(sample.years)
-saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples_longChain"))
+saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples_thin15_draw15000"))
 
 total.samples.2 <- sample.vec[2] * length(sample.years)
-saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
+saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples_thin15_draw15000"))
 
 total.samples.3 <- sample.vec[3] * length(sample.years)
-saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
+saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples_thin15_draw15000"))
 
 #To read in RDS file
 #pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")
