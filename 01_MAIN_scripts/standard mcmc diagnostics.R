@@ -2,15 +2,6 @@
 library(coda)
 rm(list=ls())
 
-# Model output
-jags.model.400 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_08Dec2021_400_samples_longChain")
-
-#jags.model.600 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_06Dec2021_600_samples")
-
-#jags.model.800 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_06Dec2021_800_samples")
-
-today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-
 #-----------------------------Trace plots---------------------------------------------------
 #Specify parameters to plot
 jags_params_4plot <- c("Nf", "Nm", "surv") #Specify parameters

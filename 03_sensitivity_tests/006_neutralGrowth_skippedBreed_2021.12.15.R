@@ -18,6 +18,8 @@ rm(list=ls())
 source("./01_MAIN_scripts/functions/Dovi_IBS.R")
 source("./01_MAIN_scripts//functions/pairwise_comparisons.R")
 
+today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
+
 ########## DATA-GENERATING MODEL ##########
 # Note on sequencing: Births happen at beginning of each year, followed by deaths 
 # (i.e. a female who dies in year 10 can still give birth and have surviving pups in year 10)
@@ -32,7 +34,7 @@ juvenile.survival <- 0.8 # CHANGED FROM 0.9; juvenile survival
 Adult.survival <- 0.825 # CHANGED FROM 0.9; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 # CHANGED FROM 30; set the maximum age allowed in the simulation
-mating.periodicity <- 1 # CHANGED FROM 2; number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+mating.periodicity <- 2 # CHANGED FROM 2; number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 num.mates <- c(1:3) # CHANGED FROM c(1:3); vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
@@ -368,17 +370,16 @@ results2 %>% group_by(total_samples, parameter) %>%
    dplyr::summarize(mean = mean(parents_detected), n = n())
  
 #Home computer: Dell Precision
-today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model.validation/CKMR_results_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Sensitivity.tests/Model.results/CKMR.results_skipped.breeding_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 total.samples.1 <- sample.vec[1] * length(sample.years)
-saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples_thin15_draw15000"))
+saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Sensitivity.tests/Model.output/CKMR_modelout_skipped.breeding_", today, "_", total.samples.1, "_samples_thin15_draw15000"))
 
 total.samples.2 <- sample.vec[2] * length(sample.years)
-saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples_thin15_draw15000"))
+saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Sensitivity.tests/Model.output/CKMR_modelout_skipped.breeding_", today, "_", total.samples.2, "_samples_thin15_draw15000"))
 
 total.samples.3 <- sample.vec[3] * length(sample.years)
-saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples_thin15_draw15000"))
+saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Sensitivity.tests/Model.output/CKMR_modelout_skipped.breeding_", today, "_", total.samples.3, "_samples_thin15_draw15000"))
 
 #To read in RDS file
 #pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")
