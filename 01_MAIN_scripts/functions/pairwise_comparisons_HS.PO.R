@@ -124,17 +124,17 @@ dad_comps.PO <- pairwise.df_all.info %>% #filter for same cohort is repetitive
   filter(offspring.birth.year - parent.birth.year >= repro.age)
 
 
-return(list(pairwise.df_all.info, positives, mom_comps.HS, dad_comps.HS, mom_comps.PO, dad_comps.PO))
+return(list(pairwise.df_all.info, positives.HS, positives.PO, mom_comps.HS, dad_comps.HS, mom_comps.PO, dad_comps.PO))
 }
 
 
-filter_indvs <- function(samples, positives){
+filter_indvs <- function(samples, positives.HS){
 #Remove full sib comparisons -- 10/27/2021: potentially problematic bc we're only removing the comparison, not the individuals. Better to identify full sibs and remove the individuals.
 #positives <- positives %>% filter(Ind_1_mom != Ind_2_mom | Ind_1_dad != Ind_2_dad) # Keeps only comparisons where either the mother or the father is different
 #nrow(positives)
 
 #Identify full sibs
-full_sibs <- positives %>% filter(Ind_1_mom == Ind_2_mom & Ind_1_dad == Ind_2_dad)
+full_sibs <- positives.HS %>% filter(Ind_1_mom == Ind_2_mom & Ind_1_dad == Ind_2_dad)
 
 print(paste0("There are ", nrow(full_sibs), " full siblings that will be removed from the sample dataframe."))
 
