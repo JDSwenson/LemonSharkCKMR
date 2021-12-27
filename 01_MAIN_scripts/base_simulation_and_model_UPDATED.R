@@ -61,9 +61,9 @@ min_cohort <- n_yrs - 5 # Set year of estimation
 
 iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
-#save(rseeds, file = "rseeds_12.21.rda")
+#save(rseeds, file = "rseeds_12.27.rda")
 
-load("rseeds.rda")
+#load("rseeds.rda")
 
 #set.seed(885767)
 
@@ -79,6 +79,7 @@ sample.vec <- c(200, 300, 400) #vector to sample over per year
 # Moved sampling below so extract different sample sizes from same population
 # Initialize arrays for saving results
 results <- NULL
+sample.info <- NULL
 sims.list.1 <- NULL
 sims.list.2 <- NULL
 sims.list.3 <- NULL
@@ -104,6 +105,7 @@ for(iter in 1:iterations) {
 #Outputs a list, where the first element is a list of various population parameters for each year, and the second is the population size for each year
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size <- out[[2]] #population parameters for each year of simulation
+  parents.tibble <- out[[3]] #Tibble for each parent for each year to check the distribution later
 
   
   #Save results from the simulation
@@ -318,13 +320,17 @@ for(iter in 1:iterations) {
                      c(length(sampled.mothers), length(sampled.fathers), length(sampled.mothers) + length(sampled.fathers)), #number of unique sampled parents
                      c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
                      c(rep(total_samples, times = n_params)), # total samples
-                     c(rep(pop_size_mean, times = n_params)), #mean population size over estimation period
+                     c(rep(pop_size_mean, times = n_params)), # mean population size over estimation period
                      c(rep(iter, times = n_params))) #iteration
-    colnames(metrics) <- c("parents_detected", "unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
+    colnames(metrics) <- c("parents_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
     
     #-----------------Loop end-----------------------------#
     #Bind results from previous iterations with current iteration
     results <- rbind(results, cbind(estimates, metrics))
+    
+    #Save info for samples to examine in more detail
+    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size)
+    sample.info <- rbind(sample.info, sample.df_all.info)
   
   } # end loop over sample sizes
   
@@ -336,23 +342,29 @@ for(iter in 1:iterations) {
 #   
 #   #Model output for diagnostics
    total.samples.1 <- sample.vec[1] * length(sample.years)
-   saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
+   saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples_Seeds12.27"))
 #   
    total.samples.2 <- sample.vec[2] * length(sample.years)
-   saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
+   saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples_Seeds12.27"))
 #   
    total.samples.3 <- sample.vec[3] * length(sample.years)
-   saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
-  
+   saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples_Seeds12.27"))
+   
+   # Detailed info on samples and parents to examine in more detail
+   saveRDS(sample.info, file = paste0("~/R/working_directory/temp_results/sample.info_", today, "_Seeds12.27"))
+   
+   saveRDS(parents.tibble, file = paste0("~/R/working_directory/temp_results/parents.breakdown_", today, "_Seeds12.27"))
+   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
 
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
 results2 <- results %>% 
-  mutate(relative_bias = round(((median - truth)/truth)*100,1)) %>%
+  mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
+  mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0)) %>% 
+  mutate(percent_parents_sampled = unique_parents_in_sample/unique_parents_in_pop)
 
 #Within HPD interval?
 results2 %>% group_by(total_samples, parameter) %>% 
@@ -369,16 +381,20 @@ results2 %>% group_by(total_samples, parameter) %>%
  
 #Home computer: Dell Precision
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model.validation/CKMR_results_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/CKMR_results_", today, "_Seeds12.27.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 total.samples.1 <- sample.vec[1] * length(sample.years)
-saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples_thin15_draw15000"))
+saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples_thin15_draw15000_Seeds12.27"))
 
 total.samples.2 <- sample.vec[2] * length(sample.years)
-saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples_thin15_draw15000"))
+saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples_thin15_draw15000_Seeds12.27"))
 
 total.samples.3 <- sample.vec[3] * length(sample.years)
-saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples_thin15_draw15000"))
+saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples_thin15_draw15000_Seeds12.27"))
+
+saveRDS(sample.info, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/sample.info_", today, "_Seeds12.27"))
+
+saveRDS(parents.tibble, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/CKMR_parents.breakdown_", today, "_thin15_draw15000_Seeds12.27"))
 
 #To read in RDS file
 #pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")

@@ -1,16 +1,32 @@
 library(tidyverse)
+library(ggpubr)
 library(RColorBrewer)
-
+library(coda)
+library(runjags)
 
 #----------------Quick analysis ------------------------------
 #Check results from model diagnostics
 # Results
-results <- read_csv("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model.validation/CKMR_results_14Dec2021.csv")
+results <- read_csv("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/CKMR_results_14Dec2021newseeds2.csv")
+
+# Posterior samples
+jags.model.200 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_14Dec2021_200_samples_thin15_draw15000_newSeeds2")
+
+jags.model.300 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_14Dec2021_300_samples_thin15_draw15000_newSeeds2")
+
+jags.model.400 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_14Dec2021_400_samples_thin15_draw15000_newSeeds2")
+
+# Breakdown of offspring for each parent
+rents <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_parents.breakdown_27Dec2021_thin15_draw15000")
+
+today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
+jags_params <- c("Nf", "Nm", "surv") #Specify parameters
+
 
 head(results)
 
 #Calculate relative bias
-results.temp2 <- results.temp %>% 
+results2 <- results %>% 
   mutate(relative_bias = round(((median - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
   mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
@@ -43,17 +59,11 @@ RB_violin <- ggplot(data=results, aes(x=factor(parameter))) +
 RB_violin
 
 
+
+
+
 #-------------------Calculate HPD intervals---------------------------
 # How many estimates fall in different HPD intervals?
-# Posterior samples
-jags.model.200 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_14Dec2021_200_samples_thin15_draw15000")
-
-jags.model.300 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_14Dec2021_300_samples_thin15_draw15000")
-
-jags.model.400 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_14Dec2021_400_samples_thin15_draw15000")
-
-today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-
 #Calculate HPD interval for each iteration
 intervals <- c(seq(from = 0.95, to = 0.05, by = -0.05))
 iterations = 100
@@ -129,22 +139,69 @@ HPD.400.4viz <- results2 %>% filter(total_samples == 400) %>%
 #How many iterations fall within the expected HPD interval
 HPD.200.summary <- HPD.200.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.200samps = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.200.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.300.summary <- HPD.300.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.300samps = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.300.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD400.summary <- HPD.400.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.400samps = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.400.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.summary <- HPD.200.summary %>% inner_join(HPD.300.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPD400.summary, by = c("parameter", "interval"))
+  inner_join(HPD400.summary, by = c("parameter", "interval")) %>% 
+  mutate(interval.scale = interval*100)
 
-write_csv(HPD.summary, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model.validation/HPD.summary_", today, ".csv"))
+HPD.summary.tidy <- HPD.summary %>% 
+  pivot_longer(
+    cols = starts_with("percent"),
+    names_to = "samples",
+    names_prefix = "percent_in_interval.",
+    values_to = "percent_in_interval"
+    )
+
+write_csv(HPD.summary, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/HPD.summary", today, ".csv"))
 
 #-----------------------Viz----------------------------------------------------
+#---------------------line plot -----------------------------------------------
+Nf.HPDI.plot <- ggplot(data = HPD.summary.tidy %>% filter(parameter == "Nf"), 
+                 aes(x = interval.scale)) +
+  geom_point(aes(y = percent_in_interval, color = samples)) + 
+  geom_smooth(aes(y = percent_in_interval, color = samples), se = FALSE) + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("Female abundance") + 
+  labs(x = "HPDI",
+       y = "Percent in HPDI") +
+  theme(legend.title = element_blank())
+
+
+Nm.HPDI.plot <- ggplot(data = HPD.summary.tidy %>% filter(parameter == "Nm"), 
+                       aes(x = interval.scale)) +
+  geom_point(aes(y = percent_in_interval, color = samples)) + 
+  geom_smooth(aes(y = percent_in_interval, color = samples), se = FALSE) + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("Male abundance") + 
+  labs(x = "HPDI",
+       y = "Percent in HPDI") +
+  theme(legend.title = element_blank())
+
+surv.HPDI.plot <- ggplot(data = HPD.summary.tidy %>% filter(parameter == "surv"), 
+                       aes(x = interval.scale)) +
+  geom_point(aes(y = percent_in_interval, color = samples)) + 
+  geom_smooth(aes(y = percent_in_interval, color = samples), se = FALSE) + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("Survival") + 
+  labs(x = "HPDI",
+       y = "Percent in HPDI") +
+  theme(legend.title = element_blank())
+
+
+ggarrange(Nf.HPDI.plot, Nm.HPDI.plot, surv.HPDI.plot)
+
+
+#-------------------More elaborate/specific line plots-------------------------------
+
 #Specify save location for pdf of plots
 coverage.file.400 <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Statistical.coverage_", today, "_400Samps.pdf")
 

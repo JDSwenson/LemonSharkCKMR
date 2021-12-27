@@ -7,7 +7,7 @@ rm(list=ls())
 jags_params_4plot <- c("Nf", "Nm", "surv") #Specify parameters
 
 #Specify save location for pdf of plots
-tracePlot.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/TracePlots_", today, "_400samples_longChain.pdf")
+tracePlot.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/TracePlots_", today, "_400samples.pdf")
 pdf(file = tracePlot.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
@@ -20,7 +20,7 @@ dev.off()
 
 #-----------------------------Autocorrelation---------------------------------------------------
 #Specify save location for pdf of plots
-autocorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Autocorrelation.plots_", today, "_400samples_longChain.pdf")
+autocorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/Autocorrelation.plots_", today, "_400samples_longChain.pdf")
 pdf(file = autocorr.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
@@ -36,7 +36,7 @@ autocorr.diag(jags.model.400[[5]], lags = c(0, 1, 5, 10, 15, 20))
 
 #-----------------------------Cross-correlation---------------------------------------------------
 #Specify save location for pdf of plots
-crosscorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Cross_correlation.plots_", today, "_400samples_longChain.pdf")
+crosscorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/Cross_correlation.plots_", today, "_400samples_longChain.pdf")
 pdf(file = crosscorr.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
@@ -107,7 +107,7 @@ geweke.df %>% summarize(`0.05` = sum(abs(surv) > 1.96))
 
 #Save plots of geweke diagnostic
 #Specify save location for pdf of plots
-geweke.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Geweke_", today, "_400samples_longChain.pdf")
+geweke.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/Geweke_", today, "_400samples_longChain.pdf")
 pdf(file = geweke.file) #Open pdf file for plotting
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
@@ -135,7 +135,7 @@ for(g in 1:length(jags.model.400)){
 
 #Save plots of gelman diagnostic
 #Specify save location for pdf of plots
-gelman.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Gelman_", today, "_400samples_longChain.pdf")
+gelman.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/Gelman_", today, "_400samples_longChain.pdf")
 pdf(file = gelman.file) #Open pdf file for plotting
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
