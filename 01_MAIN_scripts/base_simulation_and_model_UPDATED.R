@@ -105,7 +105,8 @@ for(iter in 1:iterations) {
 #Outputs a list, where the first element is a list of various population parameters for each year, and the second is the population size for each year
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size <- out[[2]] #population parameters for each year of simulation
-  parents.tibble <- out[[3]] #Tibble for each parent for each year to check the distribution later
+  parents.tibble <- out[[3]] %>% #Tibble for each parent for each year to check the distribution later
+    mutate(iteration = iter) 
 
   
   #Save results from the simulation
@@ -364,7 +365,7 @@ results2 <- results %>%
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
   mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0)) %>% 
-  mutate(percent_parents_sampled = unique_parents_in_sample/unique_parents_in_pop)
+  mutate(percent_parents_sampled = unique_parents_in_sample/mean_unique_parents_in_pop)
 
 #Within HPD interval?
 results2 %>% group_by(total_samples, parameter) %>% 

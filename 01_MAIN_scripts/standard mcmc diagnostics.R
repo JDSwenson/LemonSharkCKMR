@@ -1,6 +1,8 @@
 ## Diagnostics
 library(coda)
-rm(list=ls())
+library(tidyverse)
+
+#rm(list=ls())
 
 #-----------------------------Trace plots---------------------------------------------------
 #Specify parameters to plot
