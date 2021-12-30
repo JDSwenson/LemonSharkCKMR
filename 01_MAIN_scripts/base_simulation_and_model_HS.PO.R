@@ -57,7 +57,8 @@ init.pop.size <- sum(Nages) # all ages except YOYs
 burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs <- burn.in + Num.years #Total number of simulation years
-min_cohort <- n_yrs - 5 # Set year of estimation
+min_cohort <- n_yrs - 1 # Set year of estimation
+estimated.years <- c(min_cohort:n_yrs)
 
 iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
@@ -70,7 +71,7 @@ load("rseeds.rda")
 
 ####-------------- Sampling parameters -------------####
 #sample.years <- c(n_yrs - c(2:0)) #For three years of sampling
-sample.years <- n_yrs #One year of sampling
+sample.years <- c(n_yrs-1, n_yrs) #Two years of sampling
 #sample.size <- 300 #sample size per year
 sample.vec <- c(400) #vector to sample over per year
 
@@ -79,6 +80,7 @@ sample.vec <- c(400) #vector to sample over per year
 # Moved sampling below so extract different sample sizes from same population
 # Initialize arrays for saving results
 results <- NULL
+sample.info <- NULL
 sims.list.1 <- NULL
 sims.list.2 <- NULL
 sims.list.3 <- NULL
@@ -104,6 +106,9 @@ for(iter in 1:iterations) {
 #Outputs a list, where the first element is a list of various population parameters for each year, and the second is the population size for each year
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size <- out[[2]] #population parameters for each year of simulation
+  parents.tibble <- out[[3]] %>% #Tibble for each parent for each year to check the distribution later
+    mutate(iteration = iter) 
+  
 
   
   #Save results from the simulation
@@ -112,10 +117,10 @@ for(iter in 1:iterations) {
   ####--------------------Collect samples---------------------####
   #Loop over sample sizes stored in sample.vec  
   for(samps in 1:length(sample.vec)){
-
-        sample.size <- sample.vec[samps] #Specify sample size
     
-    #Initialize dataframes
+    sample.size <- sample.vec[samps] #Specify sample size
+
+        #Initialize dataframes
     sample.df_all.info <- NULL
     sample.df_temp <- NULL
     
@@ -134,38 +139,20 @@ for(iter in 1:iterations) {
     sampled.mothers <- unique(sample.df_all.info$mother.x)
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
+    filtered.sample.list <- filter.samples(sample.df_all.info)
+    filtered.samples.PO.list <- filtered.sample.list[[1]]
+    filtered.samples.HS.list <- filtered.sample.list[[2]]
+    
     
     ####-------------Construct pairwise comparison matrix--------------####
-    pairwise.out <- build.pairwise(sample.df_all.info)
+    pairwise.out <- build.pairwise(filtered.samples.PO = filtered.samples.PO.list, filtered.samples.HS =  filtered.samples.HS.list)
     
     #Separate list elements into different dataframes
-    pairwise.df_all.info <- pairwise.out[[1]]
-    positives.HS <- pairwise.out[[2]]
-    positives.PO <- pairwise.out[[3]]
-    
-    #Check that there are no repeat comparisons -- compare number of distinct comparisons to total number of comparisons. Should return TRUE
-    pairwise.df_all.info %>% distinct(Ind_1, Ind_2) %>% nrow() == nrow(pairwise.df_all.info)
-
-    
-    nrow(positives.HS) #How many positive HS comparisons total?
-    nrow(positives.PO)
-    
-    #Remove full sibs (and other unwanted individuals) from sample dataframe, if present
-    #Should incorporate full sibs into the model at some point ... 
-    filtered.samples <- filter_indvs(sample.df_all.info, positives.HS)
-    
-    #Reconstruct pairwise comparison dataframes from filtered sample list
-    pairwise.out.filt <- build.pairwise(filtered.samples)
-    
-    #Separate list elements into different dataframes
-    pairwise.df_all.info.filt <- pairwise.out.filt[[1]] 
-    positives.HS.filt <- pairwise.out.filt[[2]]
-    positives.PO.filt <- pairwise.out.filt[[3]]
-    mom_comps.HS <- pairwise.out.filt[[4]] 
-    dad_comps.HS <- pairwise.out.filt[[5]]
-    mom_comps.PO <- pairwise.out.filt[[6]] 
-    dad_comps.PO <- pairwise.out.filt[[7]]
-    
+    PO.mom_comps <- pairwise.out[[1]]
+    PO.dad_comps <- pairwise.out[[2]]
+    HS.mom_comps <- pairwise.out[[3]]
+    HS.dad_comps <- pairwise.out[[4]]
+     
     
     ########## Fit CKMR model ##########
     #-------------- STEP 1: PREPARE DATA ----------------#
@@ -173,73 +160,9 @@ for(iter in 1:iterations) {
     #Number of adults (uninformative)
     #Survival (beta -- conjugate prior for binomial; uninformative)
     
-    #Define data
-    jags_data = list(
-      #Moms - half-sib
-      MHSP = mom_comps.HS$yes, # Positive maternal half-sibs; Y
-      mom_n_comps.HS = mom_comps.HS$all, # Number of total maternal comparisons; R
-      mom_ys_birth = mom_comps.HS$Ind_2_birth, # birth year of younger sib; b
-      mom_os_birth = mom_comps.HS$Ind_1_birth, # birth year of older sib; a
-      mom_yrs.HS = nrow(mom_comps.HS), # number of cohort comparisons to loop over 
-      
-      #Dads - half-sib
-      FHSP = dad_comps.HS$yes, # Positive paternal half-sibs; Y
-      dad_n_comps.HS = dad_comps.HS$all, # Number of total paternal comparisons; R
-      dad_ys_birth = dad_comps.HS$Ind_2_birth, # birth year of younger sib; b
-      dad_os_birth = dad_comps.HS$Ind_1_birth, # birth year of older sib; a
-      dad_yrs.HS = nrow(dad_comps.HS), # number of cohort comparisons to loop over
-      
-      #Moms - PO
-      MPOP = mom_comps.PO$yes,
-      mom_n_comps.PO = mom_comps.PO$all,
-      mom_off.birth = mom_comps.PO$offspring.birth.year,
-      mom.birth = mom_comps.PO$parent.birth.year,
-      mom.capture = mom_comps.PO$parent.capture.year,
-      mom_yrs.PO = nrow(mom_comps.PO),
-      
-      #Dads - PO
-      FPOP = dad_comps.PO$yes,
-      dad_n_comps.PO = dad_comps.PO$all,
-      dad_off.birth = dad_comps.PO$offspring.birth.year,
-      dad.birth = dad_comps.PO$parent.birth.year,
-      dad.capture = dad_comps.PO$parent.capture.year,
-      dad_yrs.PO = nrow(dad_comps.PO),
-      
-      #Fix other potential parameters
-      #surv = surv,
-      lam = mean.adult.lambda, # fix lambda to mean lambda of adults over estimation period
-      min_cohort = min_cohort, # estimation year i.e. year the estimate will be focused on
-      tau = 1E-6
-    )
-    
-
-    #----------------- STEP 2: SPECIFY JAGS MODEL CODE ---------------#
-    #Convert tau to SD (for interpretation)
-    #tau <- 1E-6
-    #(sd <- sqrt(1/tau))
-    
-    HS.PO_model = function(){
-
-      #PRIORS
-      Nf ~ dnorm(0, tau) # Uninformative prior for female abundance
-      Nm ~ dnorm(0, tau) # Uninformative prior for male abundance
-      surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
-      
-      #HS Likelihood
-      for(i in 1:mom_yrs.HS){ # Loop over maternal cohort comparisons
-        MHSP[i] ~ dbin((surv^(mom_ys_birth[i] - mom_os_birth[i]))/(Nf*lam^(mom_ys_birth[i]-min_cohort)), mom_n_comps.HS[i]) # Sex-specific CKMR model equation
-      }
-      for(j in 1:dad_yrs.HS){ # Loop over paternal cohort comparisons
-        FHSP[j] ~ dbin((surv^(dad_ys_birth[j] - dad_os_birth[j]))/(Nm*lam^(dad_ys_birth[j]-min_cohort)), dad_n_comps.HS[j]) # Sex-specific CKMR model equation
-      }
-      #PO Likelihood
-      for(k in 1:mom_yrs.PO){ # Loop over maternal cohort comparisons
-        MPOP[k] ~ dbin(1/(Nf*lam^(mom_off.birth[k]-min_cohort)), mom_n_comps.PO[k]) # Sex-specific CKMR model equation
-      }
-      for(l in 1:dad_yrs.PO){ # Loop over paternal cohort comparisons
-        FPOP[l] ~ dbin(1/(Nm*lam^(dad_off.birth[l]-min_cohort)), dad_n_comps.PO[l]) # Sex-specific CKMR model equation
-      }
-    }
+    #Define data and model
+    source("./01_MAIN_scripts/functions/define_JAGS_data_HS.PO.R")
+  
 
     # Write model    
     jags_file = paste0("./models/HS.PO_neutralGrowth_estSurv_iteration_", iter, ".txt")
@@ -252,15 +175,17 @@ for(iter in 1:iterations) {
       for(c in 1:nc){
         inits[[c]] = list(
           surv = 0.8,
-          Nf = rnorm(1, mean = 500, sd = 100),
-          Nm = rnorm(1, mean = 500, sd = 100)
+          Nf1 = rnorm(1, mean = 500, sd = 100),
+          Nm1 = rnorm(1, mean = 500, sd = 100),
+          Nf2 = rnorm(1, mean = 500, sd = 100),
+          Nm2 = rnorm(1, mean = 500, sd = 100)
         )
       }
       return(inits)
     }
     
     #------------ STEP 4: SET NODES TO MONITOR ---------------#
-    jags_params = c("Nf", "Nm", "surv")
+    jags_params = c("Nf1", "Nm1", "Nf2", "Nm2", "surv")
     n_params = length(jags_params) #used to autofill dataframe later
     
     
@@ -300,7 +225,7 @@ for(iter in 1:iterations) {
     #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
     # view convergence diagnostic summaries for all monitored nodes
     # 2.5, 50, and 97.5 are quantiles in model.summary
-    model.summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T)))
+    (model.summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T))))
     
     #Calculate HPD intervals - 95%
     post.95 <- combine.mcmc(post) %>% 
@@ -356,24 +281,33 @@ for(iter in 1:iterations) {
     #-----------------Loop end-----------------------------#
     #Bind results from previous iterations with current iteration
     results <- rbind(results, cbind(estimates, metrics))
+    
+    #Save info for samples to examine in more detail
+    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size)
+    sample.info <- rbind(sample.info, sample.df_all.info)
   
   } # end loop over sample sizes
   
 # # Write files iteratively in case R crashes or computer shuts down
 #   #Results
-   write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-#   
-   today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-#   
-#   #Model output for diagnostics
-   total.samples.1 <- sample.vec[1] * length(sample.years)
-   saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
-#   
-#   total.samples.2 <- sample.vec[2] * length(sample.years)
-#   saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
-#   
-#   total.samples.3 <- sample.vec[3] * length(sample.years)
-#   saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
+  write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  #   
+  today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
+  #   
+  #   #Model output for diagnostics
+  total.samples.1 <- sample.vec[1] * length(sample.years)
+  saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples_Seeds12.27"))
+  #   
+  total.samples.2 <- sample.vec[2] * length(sample.years)
+  saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples_Seeds12.27"))
+  #   
+  total.samples.3 <- sample.vec[3] * length(sample.years)
+  saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples_Seeds12.27"))
+  
+  # Detailed info on samples and parents to examine in more detail
+  saveRDS(sample.info, file = paste0("~/R/working_directory/temp_results/sample.info_", today, "_Seeds12.27"))
+  
+  saveRDS(parents.tibble, file = paste0("~/R/working_directory/temp_results/parents.breakdown_", today, "_Seeds12.27"))
   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
@@ -415,6 +349,10 @@ saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.dia
 
 total.samples.3 <- sample.vec[3] * length(sample.years)
 saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples_thin15_draw15000_HS.PO1"))
+
+saveRDS(sample.info, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/sample.info_", today, "_Seeds12.27"))
+
+saveRDS(parents.tibble, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/CKMR_parents.breakdown_", today, "_thin15_draw15000_Seeds12.27"))
 
 #To read in RDS file
 #pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")

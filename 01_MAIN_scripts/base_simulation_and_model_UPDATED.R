@@ -215,7 +215,7 @@ for(iter in 1:iterations) {
     }
 
     # Write model    
-    jags_file = paste0("./models/HS_neutralGrowth_estSurv_iteration_", iter, ".txt")
+    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/models/HS_neutralGrowth_estSurv_iteration_", iter, ".txt")
     write_model(HS_model, jags_file)
     
     
