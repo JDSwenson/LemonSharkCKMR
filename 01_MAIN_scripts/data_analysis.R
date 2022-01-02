@@ -4,42 +4,111 @@ library(RColorBrewer)
 library(coda)
 library(runjags)
 
-#----------------Quick analysis ------------------------------
+rm(list=ls())
+
+#View different priors and posteriors
+runif(10000, min = 0, max = 3000) %>%
+  as_tibble() %>% 
+  ggplot(aes(x = value)) + 
+  geom_density(alpha = 0.6)
+
+sd <- 1000
+tau <- 1/(sd^2)
+
+rnorm(1000, mean = 0, sd = sd) %>% 
+  as_tibble() %>% 
+  ggplot(aes(x = value)) + 
+  geom_density()
+
+ggplot(data = dunif(s = ))
+
+#----------------Read in files ------------------------------
 #Check results from model diagnostics
-# Results
-results <- read_csv("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/CKMR_results_14Dec2021newseeds2.csv")
+date.of.simulation <- "01Jan2022"
+seeds <- "Seeds12.27"
+purpose <- "estSurvLam"
+sim.samples.1 <- "200.samples"
+sim.samples.2 <- "300.samples"
+sim.samples.3 <- "400.samples"
+MCMC.settings <- "thin15_draw15000_burn20000"
 
-# Posterior samples
-jags.model.200 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_14Dec2021_200_samples_thin15_draw15000_newSeeds2")
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/"
+results_prefix <- "CKMR_results"
+MCMC_prefix <- "CKMR_modelout"
+parents_prefix <- "CKMR_parents.breakdown"
+sample.prefix <- "CKMR_sample.info"
 
-jags.model.300 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_14Dec2021_300_samples_thin15_draw15000_newSeeds2")
 
-jags.model.400 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_14Dec2021_400_samples_thin15_draw15000_newSeeds2")
+#Results
+results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"))
+
+#MCMC samples/output
+sim.samples.1_MCMC <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+
+head(sim.samples.1_MCMC[[1]])
+
+sim.samples.2_MCMC <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+head(sim.samples.2_MCMC[[1]])
+
+sim.samples.3_MCMC <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+head(sim.samples.3_MCMC[[1]])
 
 # Breakdown of offspring for each parent
-rents <- readRDS("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_parents.breakdown_27Dec2021_thin15_draw15000")
+rents <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
-today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-jags_params <- c("Nf", "Nm", "surv") #Specify parameters
+#Breakdown of samples drawn from simulation
+sample.info <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+
+
+
+
+#----------------------Quick analysis of results----------------------------
+#today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
+jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
 
 
 head(results)
 
+#Temporary fix since results saved funny ... 
+#Lambda and survival were switched, so switching them back ... 
+HPD2.5_surv <- results %>% filter(parameter == "lam") %>% 
+  pull(HPD2.5)
+
+HPD2.5_lam <- results %>% filter(parameter == "surv") %>% 
+  pull(HPD2.5)  
+
+
+HPD97.5_surv <- results %>% filter(parameter == "lam") %>% 
+  pull(HPD97.5)
+
+HPD97.5_lam <- results %>% filter(parameter == "surv") %>% 
+  pull(HPD97.5)  
+
+results[results$parameter == "lam",]$HPD2.5 <- HPD2.5_lam
+results[results$parameter == "surv",]$HPD2.5 <- HPD2.5_surv
+
+results[results$parameter == "lam",]$HPD97.5 <- HPD97.5_lam
+results[results$parameter == "surv",]$HPD97.5 <- HPD97.5_surv
+
+results2 <- results %>% dplyr::select(-c(in_interval, relative_bias))
+
 #Calculate relative bias
-results2 <- results %>% 
-  mutate(relative_bias = round(((median - truth)/truth)*100,1)) %>%
-  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
+ results2 <- results2 %>% 
+   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
+   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) 
+ #%>% 
+  # mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
 
 #Median relative bias by sample size
-results.temp2 %>% group_by(total_samples, parameter) %>% 
-  dplyr::summarize(median = median(relative_bias), n = n())
+ results2 %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(median = median(relative_bias), n = n())
 
 #Check convergence
 results %>% summarize(converged = sum(Rhat >= 1.1))
 
 #Within HPD interval?
-results.temp2 %>% group_by(total_samples, parameter) %>% 
+results2 %>% group_by(total_samples, parameter) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
 funny.results <- results %>% filter(truth > `97.5` | truth < `2.5`)
@@ -126,13 +195,13 @@ tail(HPD.400)
 levels(factor(HPD.400$interval))
 
 #Create dataframes for viz and analysis
-HPD.200.4viz <- results2 %>% filter(total_samples == 200) %>% 
+HPD.200.4viz <- results %>% filter(total_samples == 200) %>% 
   right_join(HPD.200, by = c("parameter", "iteration"))
 
-HPD.300.4viz <- results2 %>% filter(total_samples == 300) %>% 
+HPD.300.4viz <- results %>% filter(total_samples == 300) %>% 
   right_join(HPD.300, by = c("parameter", "iteration"))
 
-HPD.400.4viz <- results2 %>% filter(total_samples == 400) %>% 
+HPD.400.4viz <- results %>% filter(total_samples == 400) %>% 
   right_join(HPD.400, by = c("parameter", "iteration"))
 
 

@@ -31,11 +31,11 @@ load("rseeds_12.27.rda")
 seeds <- "Seeds12.27"
 
 
-purpose <- "estSurv"
+purpose <- "testUniformPrior"
 
-temp_locaton <- "~/R/working_directory/temp_results/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"
+temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/"
 
 results_prefix <- "CKMR_results"
@@ -44,12 +44,12 @@ jags.model.prefix <- "HS_"
 parents_prefix <- "CKMR_parents.breakdown"
 sample.prefix <- "CKMR_sample.info"
 
+
 ########## DATA-GENERATING MODEL ##########
 # Note on sequencing: Births happen at beginning of each year, followed by deaths 
 # (i.e. a female who dies in year 10 can still give birth and have surviving pups in year 10)
 
 ####---------Simulation parameters---------####
-
 init.adult.pop.size <- 1000 # CHANGED FROM 3000; Initial adult population size
 init.prop.female <- 0.5 # proportion of the initial population size that is female
 birth.sex.ratio <- c(0.5,0.5) # The probability that each baby is F:M - has to add up to 1
@@ -83,7 +83,15 @@ init.pop.size <- sum(Nages) # all ages except YOYs
 burn.in <- 40 # number of years to use as simulation burn in period
 Num.years <- 50 # The number of years to run in the simulation beyond the burn in
 n_yrs <- burn.in + Num.years #Total number of simulation years
-min_cohort <- n_yrs - 5 # Set year of estimation
+est.year <- n_yrs - 5 # Set year of estimation
+
+
+####-------------- Sampling parameters -------------####
+#sample.years <- c(n_yrs - c(1:0)) #For two years of sampling
+sample.years <- n_yrs #One year of sampling
+#sample.size <- 300 #sample size per year
+sample.vec <- c(200, 300, 400) #vector to sample over per year
+
 
 ####------------- MCMC parameters ----------------####
 ni <- 15000 # number of post-burn-in samples per chain
@@ -91,16 +99,10 @@ nb <- 20000 # number of burn-in samples
 nt <- 15     # thinning rate
 nc <- 2      # number of chains
 
-####-------------- Sampling parameters -------------####
-#sample.years <- c(n_yrs - c(2:0)) #For three years of sampling
-sample.years <- n_yrs #One year of sampling
-#sample.size <- 300 #sample size per year
-sample.vec <- c(200, 300, 400) #vector to sample over per year
-
 
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 10 # CHANGED FROM 100; Number of iterations to loop over
 
 # Initialize arrays for saving results
 results <- NULL
@@ -193,6 +195,7 @@ for(iter in 1:iterations) {
     #Need priors for:
     #Number of adults (uninformative)
     #Survival (beta -- conjugate prior for binomial; uninformative)
+    lam.tau <- 1/(0.02342^2)
     
     #Define data
     jags_data = list(
@@ -212,9 +215,9 @@ for(iter in 1:iterations) {
       
       #Fix other potential parameters
       #surv = surv,
-      lam = mean.adult.lambda, # fix lambda to mean lambda of adults over estimation period
-      min_cohort = min_cohort, # estimation year i.e. year the estimate will be focused on
-      tau = 1E-6
+      est.year = est.year, # estimation year i.e. year the estimate will be focused on
+      N.tau = 1E-6,
+      lam.tau = lam.tau
     )
     
 
@@ -222,25 +225,34 @@ for(iter in 1:iterations) {
     #Convert tau to SD (for interpretation)
     #tau <- 1E-6
     #(sd <- sqrt(1/tau))
+    #tau <- 
+    #Nf ~ dunif(0, 3000) # Uninformative prior for female abundance
+    #Nm ~ dnorm(0, N.tau) # Uninformative prior for male abundance
     
+        
     HS_model = function(){
 
       #PRIORS
-      Nf ~ dnorm(0, tau) # Uninformative prior for female abundance
-      Nm ~ dnorm(0, tau) # Uninformative prior for male abundance
+      mu.F ~ dnorm(0, N.tau)
+      mu.M ~ dnorm(0, N.tau)
+      
+      #Use loop for Nf and Nm and use binomial model, but instead of Nf and Nm, use mu?
+      Nf ~ dnorm(mu.F, N.tau) # Uninformative prior for female abundance
+      Nm ~ dnorm(mu.M, N.tau) # Uninformative prior for male abundance
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
+      lam ~ dnorm(1, lam.tau)
       
       #Likelihood
       for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
-        MHSP[i] ~ dbin((surv^(mom_ys_birth[i] - mom_os_birth[i]))/(Nf*lam^(mom_ys_birth[i]-min_cohort)), mom_n_comps[i]) # Sex-specific CKMR model equation
+        MHSP[i] ~ dbin((surv^(mom_ys_birth[i] - mom_os_birth[i]))/(Nf*lam^(mom_ys_birth[i]-est.year)), mom_n_comps[i]) # Sex-specific CKMR model equation
       }
       for(j in 1:dad_yrs){ # Loop over paternal cohort comparisons
-        FHSP[j] ~ dbin((surv^(dad_ys_birth[j] - dad_os_birth[j]))/(Nm*lam^(dad_ys_birth[j]-min_cohort)), dad_n_comps[j]) # Sex-specific CKMR model equation
+        FHSP[j] ~ dbin((surv^(dad_ys_birth[j] - dad_os_birth[j]))/(Nm*lam^(dad_ys_birth[j]-est.year)), dad_n_comps[j]) # Sex-specific CKMR model equation
       }
     }
 
     # Write model    
-    jags_file = paste0(jags.model_location, jags.model.prefix,  "_", purpose, "_iteration", iter,".txt")
+    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_neutralGrowth_est_SurvLam_iteration_", iter, ".txt")
     write_model(HS_model, jags_file)
     
     
@@ -251,14 +263,15 @@ for(iter in 1:iterations) {
         inits[[c]] = list(
           surv = 0.8,
           Nf = rnorm(1, mean = 500, sd = 100),
-          Nm = rnorm(1, mean = 500, sd = 100)
+          Nm = rnorm(1, mean = 500, sd = 100),
+          lam = 1
         )
       }
       return(inits)
     }
     
     #------------ STEP 4: SET NODES TO MONITOR ---------------#
-    jags_params = c("Nf", "Nm", "surv")
+    jags_params = c("Nf", "Nm", "surv", "lam")
     n_params = length(jags_params) #used to autofill dataframe later
     
     
@@ -284,7 +297,7 @@ for(iter in 1:iterations) {
                               n.thin = jags_dims["nt"],
                               n.burnin = jags_dims["nb"],
                               n.chains = jags_dims["nc"],
-                              parallel = T
+                              parallel = F
     )
     
 
@@ -308,47 +321,50 @@ for(iter in 1:iterations) {
       data.frame() %>% 
       rownames_to_column(var = "parameter")
     post.95 <- post.95 %>% filter(parameter %in% jags_params) #Remove deviance
-    
+      
     
     #Combine into data.frame
     model.summary2 <- model.summary %>% left_join(post.95, by = "parameter") %>% 
       rename(HPD2.5 = lower, HPD97.5 = upper) %>% 
       dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff)
-    
+
     ########## Compile and report results #########
     # Combine above to make dataframe with truth and estimates side-by-side
     # store years from youngest sibling in comparisons to end of study
-    yrs <- c(min_cohort:n_yrs)
+    yrs <- c(est.year:n_yrs)
     
-    #Extract true values from year of estimation (ie min_cohort)
-    Mom_truth <- round(pop.size$Female.adult.pop[min_cohort],0) # True Nf
-    Dad_truth <- round(pop.size$Male.adult.pop[min_cohort], 0) # True Nm
-    surv_truth <- round(mean(sVec[min_cohort:n_yrs]), 4) # True adult survival over estimation period
-    #Adult_truth <- round(pop.size$Total.adult.pop[min_cohort], 0) # Used for sex-aggregated model
-    Mom_min <- min(pop.size$Female.adult.pop[min_cohort:n_yrs]) #Minimum Nf over estimation period
-    Mom_max <- max(pop.size$Female.adult.pop[min_cohort:n_yrs]) #Maximum Nf over estimation period
-    Dad_min <- min(pop.size$Male.adult.pop[min_cohort:n_yrs]) #Minimum Nm over estimation period
-    Dad_max <- max(pop.size$Male.adult.pop[min_cohort:n_yrs]) #Maximum Nm over estimation period
-    #Adult_min <- min(pop.size$Total.adult.pop[min_cohort:n_yrs]) # Used for sex-aggregated model
-    #Adult_max <- max(pop.size$Total.adult.pop[min_cohort:n_yrs]) # Used for sex-aggregated model
-    surv_min <- min(sVec[min_cohort:n_yrs]) #Minimum survival over estimation period
-    surv_max <- max(sVec[min_cohort:n_yrs]) #Maximum survival over estimation period
-    mean.num.mothers.total <- round(mean(pop.size$Num.mothers[min_cohort:n_yrs]), 0) #Mean number of mothers in population over estimation period
-    mean.num.fathers.total <- round(mean(pop.size$Num.fathers[min_cohort:n_yrs]), 0) #Mean number of fathers in population over estimation period
+    #Extract true values from year of estimation (ie est.year)
+    Mom_truth <- round(pop.size$Female.adult.pop[est.year],0) # True Nf
+    Dad_truth <- round(pop.size$Male.adult.pop[est.year], 0) # True Nm
+    surv_truth <- round(mean(sVec[est.year:n_yrs]), 4) # True adult survival over estimation period
+    #Adult_truth <- round(pop.size$Total.adult.pop[est.year], 0) # Used for sex-aggregated model
+    lam_truth <- round(mean.adult.lambda, 4)
+    Mom_min <- min(pop.size$Female.adult.pop[est.year:n_yrs]) #Minimum Nf over estimation period
+    Mom_max <- max(pop.size$Female.adult.pop[est.year:n_yrs]) #Maximum Nf over estimation period
+    Dad_min <- min(pop.size$Male.adult.pop[est.year:n_yrs]) #Minimum Nm over estimation period
+    Dad_max <- max(pop.size$Male.adult.pop[est.year:n_yrs]) #Maximum Nm over estimation period
+    #Adult_min <- min(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
+    #Adult_max <- max(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
+    surv_min <- min(sVec[est.year:n_yrs]) #Minimum survival over estimation period
+    surv_max <- max(sVec[est.year:n_yrs]) #Maximum survival over estimation period
+    lam_min <- min(adult.lambda[est.year:n_yrs]) #Minimum lambda over estimation period
+    lam_max <- max(adult.lambda[est.year:n_yrs]) #Maximum lambda over estimation period
+    mean.num.mothers.total <- round(mean(pop.size$Num.mothers[est.year:n_yrs]), 0) #Mean number of mothers in population over estimation period
+    mean.num.fathers.total <- round(mean(pop.size$Num.fathers[est.year:n_yrs]), 0) #Mean number of fathers in population over estimation period
     
     #Create dataframe of estimates and truth
-    estimates <- model.summary %>% rownames_to_column(var = "parameter") %>% 
-      mutate(min = c(Mom_min, Dad_min, surv_min), max = c(Mom_max, Dad_max, surv_max), truth = c(Mom_truth, Dad_truth, surv_truth)) %>%
+    estimates <- model.summary2 %>% 
+      mutate(min = c(Mom_min, Dad_min, surv_min, lam_min), max = c(Mom_max, Dad_max, surv_max, lam_max), truth = c(Mom_truth, Dad_truth, surv_truth, lam_truth)) %>%
       as_tibble()
     
     #Extract more metrics that can help with troubleshooting and visualization
     total_samples <- sample.size * length(sample.years) # total samples
-    pop_size_mean <- round(mean(pop.size$population_size[min_cohort:n_yrs]),0) #Mean TOTAL population size over estimation period
+    pop_size_mean <- round(mean(pop.size$population_size[est.year:n_yrs]),0) #Mean TOTAL population size over estimation period
     
     #Bind metrics together
-    metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), sum(mom_comps[,3]) + sum(dad_comps[3])), # number of positive IDs i.e. half-sibs
-                     c(mean.num.mothers.total, mean.num.fathers.total, mean.num.mothers.total + mean.num.fathers.total), #Mean number of parents in population over estimation period
-                     c(length(sampled.mothers), length(sampled.fathers), length(sampled.mothers) + length(sampled.fathers)), #number of unique sampled parents
+    metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), rep(sum(mom_comps[,3]) + sum(dad_comps[3]), times = n_params-2)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
+                     c(mean.num.mothers.total, mean.num.fathers.total, rep(mean.num.mothers.total + mean.num.fathers.total, times = n_params - 2)), #Mean number of parents in population over estimation period
+                     c(length(sampled.mothers), length(sampled.fathers), rep(length(sampled.mothers) + length(sampled.fathers), times = n_params-2)), #number of unique sampled parents
                      c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
                      c(rep(total_samples, times = n_params)), # total samples
                      c(rep(pop_size_mean, times = n_params)), # mean population size over estimation period
@@ -365,58 +381,90 @@ for(iter in 1:iterations) {
   
   } # end loop over sample sizes
   
+  
   #-----------------Save output files iteratively--------------------
   #in case R crashes or computer shuts down
-  
+
   sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
   sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
   sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
   
-  #   #Results
-  write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-  #   
-  #   #Model output for diagnostics
-  saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
-  #   
-  saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-  #   
-  saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-  
-  # Detailed info on samples and parents to examine in more detail
-  saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-  
-  saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-  
+#Results
+#    write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+# 
+#    #Model output for diagnostics
+#     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+# 
+#    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+# 
+#    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+# 
+# # Detailed info on samples and parents to examine in more detail
+#    saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+# 
+#    saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
 
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
-results2 <- results %>% 
+#--------------------------Normal prior-----------------------------------#
+results2.normal <- results %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
   mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0)) %>% 
   mutate(percent_parents_sampled = unique_parents_in_sample/mean_unique_parents_in_pop)
+#Need to switch HPDI for survival and lambda
 
 #Within HPD interval?
-results2 %>% group_by(total_samples, parameter) %>% 
+results2.normal %>% group_by(total_samples, parameter) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
 #Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter) %>% 
+ results2.normal %>% group_by(total_samples, parameter) %>% 
    dplyr::summarize(median = median(relative_bias), n = n())
 
  #Mean number of parents detected
  #Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter) %>% 
-   dplyr::summarize(mean = mean(parents_detected), n = n())
- 
- #-----------------------------Save major output files---------------------------------------------
-#Home computer: Dell Precision
+ results2.normal %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(median = median(parents_detected), n = n())
  
  #Save model estimates
- write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+ write.table(results2.normal, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+ 
+ #--------------------------Uniform prior-----------------------------------#
+#Prior w/ max 3000; estimates appear to be slightly more positively biased than with normal
+  results2.uniform <- results %>% 
+   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
+   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
+   mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0)) %>% 
+   mutate(percent_parents_sampled = unique_parents_in_sample/mean_unique_parents_in_pop)
+ #Need to switch HPDI for survival and lambda
+ 
+ #Within HPD interval?
+ results2.uniform %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
+ 
+ #Median relative bias by sample size
+ results2.uniform %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(median = median(relative_bias), n = n())
+ 
+ results2.normal %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(median = median(relative_bias), n = n())
+ 
+ #Mean number of parents detected
+ #Median relative bias by sample size
+ results2.uniform %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(median = median(parents_detected), n = n())
+ 
+ #Save model estimates
+ write.table(results2.uniform, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "uniform3000max.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+ 
+ 
 
+ #-----------------------------Save major output files---------------------------------------------
+ #Home computer: Dell Precision
  #Save draws from posterior for model diagnostics 
  saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
  
@@ -426,9 +474,10 @@ results2 %>% group_by(total_samples, parameter) %>%
  
  #Save detailed info about samples from population
  saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-
+ 
  #Save detailed info about parents
  saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+ 
 
 #To read in RDS file
 #pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")

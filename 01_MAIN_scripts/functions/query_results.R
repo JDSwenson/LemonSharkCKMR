@@ -24,7 +24,7 @@ for(l in 2:nrow(pop.size)){
 total.lambda <- c(NA, total.lambda)
 adult.lambda <- c(NA, adult.lambda)
 
-mean.adult.lambda <- mean(adult.lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
+mean.adult.lambda <- mean(adult.lambda[est.year:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
 
 #Add population growth per year to pop.size dataframe
 pop.size$total.lambda <- total.lambda

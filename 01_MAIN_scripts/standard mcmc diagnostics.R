@@ -1,62 +1,107 @@
 ## Diagnostics
 library(coda)
 library(tidyverse)
+library(R2jags)
+library(postpack)
 
 #rm(list=ls())
 
+#----------------Read in files ------------------------------
+#Check results from model diagnostics
+date.of.simulation <- "01Jan2022"
+seeds <- "Seeds12.27"
+purpose <- "estSurvLam"
+sim.samples.1 <- "200.samples"
+sim.samples.2 <- "300.samples"
+sim.samples.3 <- "400.samples"
+MCMC.settings <- "thin15_draw15000_burn20000"
+
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/"
+plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/"
+results_prefix <- "CKMR_results"
+MCMC_prefix <- "CKMR_modelout"
+parents_prefix <- "CKMR_parents.breakdown"
+sample.prefix <- "CKMR_sample.info"
+
+#Results
+results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"))
+
+#MCMC samples/output
+sim.samples.1_MCMC <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+
+head(sim.samples.1_MCMC[[1]])
+
+sim.samples.2_MCMC <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+head(sim.samples.2_MCMC[[1]])
+
+sim.samples.3_MCMC <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+head(sim.samples.3_MCMC[[1]])
+
+# Breakdown of offspring for each parent
+rents <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+
+#Breakdown of samples drawn from simulation
+sample.info <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+
+jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
+
+
+head(results)
+
 #-----------------------------Trace plots---------------------------------------------------
 #Specify parameters to plot
-jags_params_4plot <- c("Nf", "Nm", "surv") #Specify parameters
+jags_params_4plot <- c("Nf", "Nm", "surv", "lam") #Specify parameters
 
 #Specify save location for pdf of plots
-tracePlot.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/TracePlots_", today, "_400samples.pdf")
+tracePlot.file <- paste0(plots_location, "TracePlots_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
 pdf(file = tracePlot.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(jags.model.400)){
-  diag_plots(jags.model.400[[i]], jags_params_4plot, layout = "4x1")
+for(i in 1:length(sim.samples.3_MCMC)){
+  diag_plots(sim.samples.3_MCMC[[i]], jags_params_4plot, layout = "4x1")
 }
 
 dev.off()
 
 #-----------------------------Autocorrelation---------------------------------------------------
 #Specify save location for pdf of plots
-autocorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/Autocorrelation.plots_", today, "_400samples_longChain.pdf")
+autocorr.file <- paste0(plots_location, "Autocorrelation.plots_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
 pdf(file = autocorr.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(jags.model.400)){
-  autocorr.plot(jags.model.400[[i]])
+for(i in 1:length(sim.samples.3_MCMC)){
+  autocorr.plot(sim.samples.3_MCMC[[i]])
 }
 
 dev.off()
 
 #Visual check for one iteration
-autocorr.diag(jags.model.400[[5]], lags = c(0, 1, 5, 10, 15, 20))
+autocorr.diag(sim.samples.3_MCMC[[5]], lags = c(0, 1, 5, 10, 15, 20))
 
 #-----------------------------Cross-correlation---------------------------------------------------
 #Specify save location for pdf of plots
-crosscorr.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/Cross_correlation.plots_", today, "_400samples_longChain.pdf")
+crosscorr.file <- paste0(plots_location, "Cross_correlation.plots_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
 pdf(file = crosscorr.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(c in 1:length(jags.model.400)){
-  crosscorr.plot(jags.model.400[[c]])
+for(c in 1:length(sim.samples.3_MCMC)){
+  crosscorr.plot(sim.samples.3_MCMC[[c]])
 }
 
 dev.off()
 
 #Visual check for one iteration
-crosscorr(jags.model.400[[5]])
+crosscorr(sim.samples.3_MCMC[[5]])
 
 #-----------------------------Effective chain length---------------------------------------------------
 #Initialize dataframes
 effectiveSize.df = EF.temp <- NULL
-for(j in 1:length(jags.model.400)){
-  EF.temp <- data.frame(t(effectiveSize(jags.model.400[[j]]))) %>% 
+for(j in 1:length(sim.samples.3_MCMC)){
+  EF.temp <- data.frame(t(effectiveSize(sim.samples.3_MCMC[[j]]))) %>% 
     mutate(iteration = j)
   effectiveSize.df <- rbind(effectiveSize.df, EF.temp)
 }
@@ -71,10 +116,10 @@ geweke.df = geweke.temp.c1 = geweke.temp.c2 <- NULL
 g.thresh <- 1.65 # Set threshold for geweke failure
 
 # Loop through all chains and iterations and store geweke diagnostic results
-for(w in 1:length(jags.model.400)){
-  geweke.temp.c1 <- data.frame(t(geweke.diag(jags.model.400[[w]])[[1]][[1]])) %>% 
+for(w in 1:length(sim.samples.3_MCMC)){
+  geweke.temp.c1 <- data.frame(t(geweke.diag(sim.samples.3_MCMC[[w]])[[1]][[1]])) %>% 
     mutate(iteration = w, chain = 1)
-  geweke.temp.c2 <- data.frame(t(geweke.diag(jags.model.400[[w]])[[2]][[1]])) %>% 
+  geweke.temp.c2 <- data.frame(t(geweke.diag(sim.samples.3_MCMC[[w]])[[2]][[1]])) %>% 
     mutate(iteration = w, chain = 2)
   geweke.df <- rbind(geweke.df, geweke.temp.c1, geweke.temp.c2)
 }
@@ -109,13 +154,13 @@ geweke.df %>% summarize(`0.05` = sum(abs(surv) > 1.96))
 
 #Save plots of geweke diagnostic
 #Specify save location for pdf of plots
-geweke.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/Geweke_", today, "_400samples_longChain.pdf")
+geweke.file <- paste0(plots_location, "Geweke_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
 pdf(file = geweke.file) #Open pdf file for plotting
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(jags.model.400)){
-  geweke.plot(jags.model.400[[i]])
+for(i in 1:length(sim.samples.3_MCMC)){
+  geweke.plot(sim.samples.3_MCMC[[i]])
 }
 
 dev.off() #Close pdf file
@@ -126,9 +171,9 @@ dev.off() #Close pdf file
 #Calculate gelman diagnostic for each iteration
 gelman.df = gelman.temp <- NULL
 
-for(g in 1:length(jags.model.400)){
+for(g in 1:length(sim.samples.3_MCMC)){
 
-  gelman.temp <- data.frame(t(gelman.diag(jags.model.400[[g]])[[1]])) %>% 
+  gelman.temp <- data.frame(t(gelman.diag(sim.samples.3_MCMC[[g]])[[1]])) %>% 
     rownames_to_column(var = "type") %>% 
     mutate(iteration = g)
   
@@ -137,13 +182,13 @@ for(g in 1:length(jags.model.400)){
 
 #Save plots of gelman diagnostic
 #Specify save location for pdf of plots
-gelman.file <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/Gelman_", today, "_400samples_longChain.pdf")
+gelman.file <- paste0(plots_location, "Gelman_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
 pdf(file = gelman.file) #Open pdf file for plotting
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(jags.model.400)){
-  gelman.plot(jags.model.400[[i]])
+for(i in 1:length(sim.samples.3_MCMC)){
+  gelman.plot(sim.samples.3_MCMC[[i]])
 }
 
 dev.off() #Close pdf file
@@ -154,7 +199,7 @@ dev.off() #Close pdf file
 # It iteratively removes proportions of the samples, and reports the iteration at which we should start the chain i.e. increase the burn-in period by the iteration reported here.
 # We do NOT want to reject the null.
 
-heidel.diag(jags.model.400[[1]])
+heidel.diag(sim.samples.3_MCMC[[1]])
 
 
 #-----------------------------Raftery-Lewis---------------------------------------------------
@@ -164,10 +209,10 @@ heidel.diag(jags.model.400[[1]])
 # N = total number of iterations that should be run for each variable
 # Nmin = the minimum number of iterations that should be run for each variable
 # I = the increase in number of iterations needed to reach convergence.
-raftery.diag(jags.model.400[[1]])
+raftery.diag(sim.samples.3_MCMC[[1]])
 
 
-superdiag(jags.model.400[[1]])
+superdiag(sim.samples.3_MCMC[[1]])
 ##===============================================================================
 
 #Charlotte's code

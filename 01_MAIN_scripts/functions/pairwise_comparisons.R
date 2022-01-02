@@ -9,7 +9,7 @@ colnames(pairwise.df) <- c("Ind_1", "indv.name") #Rename columns so they can eas
 
 #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
 Ind1_birthyears <- samples %>%
-  select(indv.name, birth.year, age.x, mother.x, father.x) %>% #select relevant columns only
+  dplyr::select(indv.name, birth.year, age.x, mother.x, father.x) %>% #select relevant columns only
   dplyr::rename("Ind_1" = indv.name, "Ind_1_birth" = birth.year, "Ind_1_age" = age.x, "Ind_1_mom" = mother.x, "Ind_1_dad" = father.x) 
 
 #Combine the two dataframes above to extract birth year and parents for each individual in the pairwise comparison matrix. 
@@ -17,7 +17,7 @@ Ind1_birthyears <- samples %>%
 pairwise.df_all.info <- pairwise.df %>% left_join(Ind1_birthyears, by = "Ind_1") %>% 
   left_join(sample.df_all.info, by = "indv.name") %>% 
   dplyr::rename("Ind_2" = indv.name, "Ind_2_birth" = birth.year, "Ind_2_age" = age.x, "Ind_2_mom" = mother.x, "Ind_2_dad" = father.x) %>% 
-  select(Ind_1, Ind_1_birth, Ind_1_age, Ind_2, Ind_2_birth, Ind_2_age, Ind_1_mom, Ind_2_mom, Ind_1_dad, Ind_2_dad) %>% 
+  dplyr::select(Ind_1, Ind_1_birth, Ind_1_age, Ind_2, Ind_2_birth, Ind_2_age, Ind_1_mom, Ind_2_mom, Ind_1_dad, Ind_2_dad) %>% 
   filter(Ind_1_birth != Ind_2_birth) #Filter intra-cohort comparisons (for now)
 
 #head(pairwise.df_all.info)
@@ -29,21 +29,21 @@ positives <- pairwise.df_all.info %>% filter(Ind_1_mom == Ind_2_mom | Ind_1_dad 
 ####----------------Split dataframes into final form for model----------####
 #Sex-specific
 mom_positives <- positives %>% filter(Ind_1_mom == Ind_2_mom) %>% 
-  select(Ind_1_birth, Ind_2_birth) %>% 
+  dplyr::select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count() 
 
 dad_positives <- positives %>% filter(Ind_1_dad == Ind_2_dad)  %>%
-  select(Ind_1_birth, Ind_2_birth) %>%
+  dplyr::select(Ind_1_birth, Ind_2_birth) %>%
   plyr::count()
 
 #Make dataframes for negative comparisons
 #Sex-specific
 mom_negatives <- pairwise.df_all.info %>% filter(Ind_1_mom != Ind_2_mom & Ind_1_birth != Ind_2_birth) %>% #filter for same cohort is repetitive
-  select(Ind_1_birth, Ind_2_birth) %>% 
+  dplyr::select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
 
 dad_negatives <- pairwise.df_all.info %>% filter(Ind_1_dad != Ind_2_dad & Ind_1_birth != Ind_2_birth) %>% 
-  select(Ind_1_birth, Ind_2_birth) %>% 
+  dplyr::select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count()
 
 mom_comps <- mom_positives %>% 

@@ -18,32 +18,6 @@ rm(list=ls())
 source("./01_MAIN_scripts/functions/Dovi_IBS.R")
 source("./01_MAIN_scripts//functions/pairwise_comparisons.R")
 
-
-#----------------Set output file locations ------------------------------
-#Check results from model diagnostics
-today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-date.of.simulation <- today
-
-#rseeds <- sample(1:1000000,iterations)
-#save(rseeds, file = "rseeds_12.27.rda")
-load("rseeds_12.27.rda")
-
-seeds <- "Seeds12.27"
-
-
-purpose <- "estSurv"
-
-temp_locaton <- "~/R/working_directory/temp_results/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/"
-
-results_prefix <- "CKMR_results"
-MCMC_prefix <- "CKMR_modelout"
-jags.model.prefix <- "HS_"
-parents_prefix <- "CKMR_parents.breakdown"
-sample.prefix <- "CKMR_sample.info"
-
 ########## DATA-GENERATING MODEL ##########
 # Note on sequencing: Births happen at beginning of each year, followed by deaths 
 # (i.e. a female who dies in year 10 can still give birth and have surviving pups in year 10)
@@ -85,11 +59,14 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 min_cohort <- n_yrs - 5 # Set year of estimation
 
-####------------- MCMC parameters ----------------####
-ni <- 15000 # number of post-burn-in samples per chain
-nb <- 20000 # number of burn-in samples
-nt <- 15     # thinning rate
-nc <- 2      # number of chains
+iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
+#rseeds <- sample(1:1000000,iterations)
+#save(rseeds, file = "rseeds_12.27.rda")
+
+#load("rseeds.rda")
+
+#set.seed(885767)
+
 
 ####-------------- Sampling parameters -------------####
 #sample.years <- c(n_yrs - c(2:0)) #For three years of sampling
@@ -100,8 +77,6 @@ sample.vec <- c(200, 300, 400) #vector to sample over per year
 
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
-
 # Initialize arrays for saving results
 results <- NULL
 sample.info <- NULL
@@ -240,7 +215,7 @@ for(iter in 1:iterations) {
     }
 
     # Write model    
-    jags_file = paste0(jags.model_location, jags.model.prefix,  "_", purpose, "_iteration", iter,".txt")
+    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/models/HS_neutralGrowth_estSurv_iteration_", iter, ".txt")
     write_model(HS_model, jags_file)
     
     
@@ -264,13 +239,12 @@ for(iter in 1:iterations) {
     
     #------------- STEP 5: SET MCMC DIMENSIONS ---------------#
     jags_dims = c(
-      ni = ni,  # number of post-burn-in samples per chain
-      nb = nb,  # number of burn-in samples
-      nt = nt,     # thinning rate
-      nc = nc      # number of chains
+      ni = 15000,  # number of post-burn-in samples per chain
+      nb = 20000,  # number of burn-in samples
+      nt = 15,     # thinning rate
+      nc = 2      # number of chains
     )
     
-    MCMC.settings <- paste0("thin", jags_dims[names(jags_dims) == "nt"], "_draw", jags_dims[names(jags_dims) == "ni"], "_burn", jags_dims[names(jags_dims) == "nb"])
     
     #---------------- STEP 6: RUN JAGS ---------------#
     post = jagsUI::jags.basic(data = jags_data, #If using postpack from AFS workshop
@@ -299,22 +273,18 @@ for(iter in 1:iterations) {
     #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
     # view convergence diagnostic summaries for all monitored nodes
     # 2.5, 50, and 97.5 are quantiles in model.summary
-    model.summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T))) %>% 
-      rownames_to_column(var = "parameter")
+    model.summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T)))
     
     #Calculate HPD intervals - 95%
     post.95 <- combine.mcmc(post) %>% 
       HPDinterval() %>% 
-      data.frame() %>% 
-      rownames_to_column(var = "parameter")
-    post.95 <- post.95 %>% filter(parameter %in% jags_params) #Remove deviance
-    
+      data.frame()
+    post.95 <- post.95[row.names(post.95) %in% jags_params,] #Remove deviance
     
     #Combine into data.frame
-    model.summary2 <- model.summary %>% left_join(post.95, by = "parameter") %>% 
-      rename(HPD2.5 = lower, HPD97.5 = upper) %>% 
-      dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff)
-    
+    model.summary <- model.summary %>% mutate(HPD2.5 = post.95$lower, HPD97.5 = post.95$upper) %>% 
+      select(Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff)
+
     ########## Compile and report results #########
     # Combine above to make dataframe with truth and estimates side-by-side
     # store years from youngest sibling in comparisons to end of study
@@ -365,28 +335,27 @@ for(iter in 1:iterations) {
   
   } # end loop over sample sizes
   
-  #-----------------Save output files iteratively--------------------
-  #in case R crashes or computer shuts down
-  
-  sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
-  sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
-  sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
-  
-  #   #Results
-  write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-  #   
-  #   #Model output for diagnostics
-  saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
-  #   
-  saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-  #   
-  saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-  
-  # Detailed info on samples and parents to examine in more detail
-  saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-  
-  saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-  
+# # Write files iteratively in case R crashes or computer shuts down
+#   #Results
+   write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+#   
+   today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
+#   
+#   #Model output for diagnostics
+   total.samples.1 <- sample.vec[1] * length(sample.years)
+   saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples_Seeds12.27"))
+#   
+   total.samples.2 <- sample.vec[2] * length(sample.years)
+   saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples_Seeds12.27"))
+#   
+   total.samples.3 <- sample.vec[3] * length(sample.years)
+   saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples_Seeds12.27"))
+   
+   # Detailed info on samples and parents to examine in more detail
+   saveRDS(sample.info, file = paste0("~/R/working_directory/temp_results/sample.info_", today, "_Seeds12.27"))
+   
+   saveRDS(parents.tibble, file = paste0("~/R/working_directory/temp_results/parents.breakdown_", today, "_Seeds12.27"))
+   
   print(paste0("finished iteration", iter, " at: ", Sys.time()))
 } # end loop over iterations
 
@@ -411,24 +380,22 @@ results2 %>% group_by(total_samples, parameter) %>%
  results2 %>% group_by(total_samples, parameter) %>% 
    dplyr::summarize(mean = mean(parents_detected), n = n())
  
- #-----------------------------Save major output files---------------------------------------------
 #Home computer: Dell Precision
- 
- #Save model estimates
- write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
+write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/CKMR_results_", today, "_Seeds12.27.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
- #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
- 
- saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
- 
- saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
- 
- #Save detailed info about samples from population
- saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+total.samples.1 <- sample.vec[1] * length(sample.years)
+saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples_thin15_draw15000_Seeds12.27"))
 
- #Save detailed info about parents
- saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+total.samples.2 <- sample.vec[2] * length(sample.years)
+saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples_thin15_draw15000_Seeds12.27"))
+
+total.samples.3 <- sample.vec[3] * length(sample.years)
+saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples_thin15_draw15000_Seeds12.27"))
+
+saveRDS(sample.info, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/sample.info_", today, "_Seeds12.27"))
+
+saveRDS(parents.tibble, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/CKMR_parents.breakdown_", today, "_thin15_draw15000_Seeds12.27"))
 
 #To read in RDS file
 #pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")
