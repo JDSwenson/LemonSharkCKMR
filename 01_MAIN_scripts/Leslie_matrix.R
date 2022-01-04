@@ -99,6 +99,8 @@ lambda.df <- rbind(lambda.df, lambda.temp.df)
   }
 }
 
+lambda.df %>% arrange(lambda) %>% 
+  View()
 
 low.lambda <- min(lambda.df$lambda)
 high.lambda <- max(lambda.df$lambda)

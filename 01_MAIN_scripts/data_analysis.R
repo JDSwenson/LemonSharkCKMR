@@ -3,41 +3,34 @@ library(ggpubr)
 library(RColorBrewer)
 library(coda)
 library(runjags)
+library(ggmcmc)
 
 rm(list=ls())
 
-#View different priors and posteriors
-runif(10000, min = 0, max = 3000) %>%
-  as_tibble() %>% 
-  ggplot(aes(x = value)) + 
-  geom_density(alpha = 0.6)
 
-sd <- 1000
-tau <- 1/(sd^2)
-
-rnorm(1000, mean = 0, sd = sd) %>% 
-  as_tibble() %>% 
-  ggplot(aes(x = value)) + 
-  geom_density()
-
-ggplot(data = dunif(s = ))
 
 #----------------Read in files ------------------------------
 #Check results from model diagnostics
+####------------- MCMC parameters ----------------####
+ni <- 15000 # number of post-burn-in samples per chain
+nb <- 20000 # number of burn-in samples
+nt <- 15     # thinning rate
+nc <- 2      # number of chains
+
 date.of.simulation <- "01Jan2022"
 seeds <- "Seeds12.27"
 purpose <- "estSurvLam"
 sim.samples.1 <- "200.samples"
 sim.samples.2 <- "300.samples"
 sim.samples.3 <- "400.samples"
-MCMC.settings <- "thin15_draw15000_burn20000"
+MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/"
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
-parents_prefix <- "CKMR_parents.breakdown"
-sample.prefix <- "CKMR_sample.info"
+parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
+sample.prefix <- "sample_info/CKMR_sample.info"
 
 
 #Results
@@ -60,13 +53,58 @@ rents <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulatio
 #Breakdown of samples drawn from simulation
 sample.info <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
+#----------------------View prior and posterior----------------------------
+it <- 10 #Simulation iteration to visualize
+#make dataframe of draws from prior distribution
+tau = 1E-6
+sd <- sqrt(1/tau)
+lam.tau <- 1/(0.02342^2)
+lam.sd <- sqrt(1/lam.tau)
+#tau <- 1/(sd^2)
 
+N.prior <- rnorm(n = 10000, mean = 0, sd = sd) %>% 
+  as_tibble() %>% 
+  mutate(Chain = "prior")
+
+surv.prior <- rbeta(n = 10000, shape1 = 1, shape2 = 2) %>% 
+  as_tibble() %>% 
+  mutate(Chain = "prior")
+
+lam.prior <- rnorm(n = 10000, mean = 1, sd = lam.sd) %>% 
+  as_tibble() %>% 
+  mutate(Chain = "prior")
+
+#Prepare posteriors for plotting
+Nf.post <- ggs(sim.samples.1_MCMC[[it]]) %>% 
+  filter(Parameter == "Nf")
+
+Nm.post <- ggs(sim.samples.1_MCMC[[it]]) %>% 
+  filter(Parameter == "Nm")
+
+surv.post <- ggs(sim.samples.1_MCMC[[it]]) %>% 
+  filter(Parameter == "surv")
+
+lam.post <- ggs(sim.samples.1_MCMC[[it]]) %>% 
+  filter(Parameter == "lam")
+
+Nf.density <- ggs_density(Nf.post) + 
+  geom_density(data = N.prior, aes(x = value), alpha = 0.6)
+
+Nm.density <- ggs_density(Nm.post) + 
+  geom_density(data = N.prior, aes(x = value), alpha = 0.6)
+
+surv.density <- ggs_density(surv.post) + 
+  geom_density(data = surv.prior, aes(x = value), alpha = 0.6)
+
+lam.density <- ggs_density(lam.post) + 
+  geom_density(data = lam.prior, aes(x = value), alpha = 0.6)
+
+ggarrange(Nf.density, Nm.density, surv.density, lam.density)
 
 
 #----------------------Quick analysis of results----------------------------
 #today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
-
 
 head(results)
 
@@ -111,23 +149,33 @@ results %>% summarize(converged = sum(Rhat >= 1.1))
 results2 %>% group_by(total_samples, parameter) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
-funny.results <- results %>% filter(truth > `97.5` | truth < `2.5`)
+funny.results <- results %>% filter(truth > Q97.5 | truth < Q2.5)
 View(funny.results)
 
 
 #Violin plot
-RB_violin <- ggplot(data=results, aes(x=factor(parameter))) +
-  geom_violin(aes(y=relative_bias)) +
+RB_violin <- ggplot(data=results, aes(x=factor(parameter), fill = factor(parameter))) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   #ylim(-50, 160) +
   geom_hline(yintercept=0, col="black", size=1.25) +
-  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
   labs(x="Iteration", y="Relative bias", title="Relative bias by iteration") +
   scale_fill_brewer(palette="Set2") +
   font("title", size = 10, face = "bold")
 
 RB_violin
 
+#boxplot plot
+RB_boxplot <- ggplot(data=results, aes(x=factor(parameter), fill = factor(parameter))) +
+  geom_boxplot(aes(y=relative_bias)) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Iteration", y="Relative bias", title="Relative bias by iteration") +
+  scale_fill_brewer(palette="Set2") +
+  font("title", size = 10, face = "bold")
 
+RB_boxplot
 
 
 
@@ -139,9 +187,9 @@ iterations = 100
 
 #200 samples
 HPD.200 <- NULL
-for(i in 1:length(jags.model.200)){
+for(i in 1:length(sim.samples.1_MCMC)){
   for(j in 1:length(intervals)){
-    post.HPD <- combine.mcmc(jags.model.200[[i]]) %>% 
+    post.HPD <- combine.mcmc(sim.samples.1_MCMC[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
@@ -158,9 +206,9 @@ levels(factor(HPD.200$interval))
 
 #300 samples
 HPD.300 <- NULL
-for(i in 1:length(jags.model.300)){
+for(i in 1:length(sim.samples.2_MCMC)){
   for(j in 1:length(intervals)){
-    post.HPD <- combine.mcmc(jags.model.300[[i]]) %>% 
+    post.HPD <- combine.mcmc(sim.samples.2_MCMC[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
@@ -177,9 +225,9 @@ levels(factor(HPD.300$interval))
 
 #400 samples
 HPD.400 <- NULL
-for(i in 1:length(jags.model.400)){
+for(i in 1:length(sim.samples.3_MCMC)){
   for(j in 1:length(intervals)){
-    post.HPD <- combine.mcmc(jags.model.400[[i]]) %>% 
+    post.HPD <- combine.mcmc(sim.samples.3_MCMC[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
@@ -230,7 +278,7 @@ HPD.summary.tidy <- HPD.summary %>%
     values_to = "percent_in_interval"
     )
 
-write_csv(HPD.summary, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/HPD.summary", today, ".csv"))
+write_csv(HPD.summary, file = paste0(results_location, "HPD.summary_", date.of.simulation, "_", purpose, ".csv"))
 
 #-----------------------Viz----------------------------------------------------
 #---------------------line plot -----------------------------------------------
@@ -265,12 +313,20 @@ surv.HPDI.plot <- ggplot(data = HPD.summary.tidy %>% filter(parameter == "surv")
        y = "Percent in HPDI") +
   theme(legend.title = element_blank())
 
+lam.HPDI.plot <- ggplot(data = HPD.summary.tidy %>% filter(parameter == "lam"), 
+                         aes(x = interval.scale)) +
+  geom_point(aes(y = percent_in_interval, color = samples)) + 
+  geom_smooth(aes(y = percent_in_interval, color = samples), se = FALSE) + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("Lambda") + 
+  labs(x = "HPDI",
+       y = "Percent in HPDI") +
+  theme(legend.title = element_blank())
 
-ggarrange(Nf.HPDI.plot, Nm.HPDI.plot, surv.HPDI.plot)
+ggarrange(Nf.HPDI.plot, Nm.HPDI.plot, surv.HPDI.plot, lam.HPDI.plot, common.legend = TRUE)
 
 
 #-------------------More elaborate/specific line plots-------------------------------
-
 #Specify save location for pdf of plots
 coverage.file.400 <- paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Plots/Statistical.coverage_", today, "_400Samps.pdf")
 

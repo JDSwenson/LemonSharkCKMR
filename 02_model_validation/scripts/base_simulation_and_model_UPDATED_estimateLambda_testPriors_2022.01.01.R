@@ -30,8 +30,7 @@ load("rseeds_12.27.rda")
 
 seeds <- "Seeds12.27"
 
-
-purpose <- "testNormalPrior"
+purpose <- "testUniformPriors"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -94,15 +93,17 @@ sample.vec <- c(200, 300, 400) #vector to sample over per year
 
 
 ####------------- MCMC parameters ----------------####
-ni <- 15000 # number of post-burn-in samples per chain
+ni <- 30000 # number of post-burn-in samples per chain
 nb <- 20000 # number of burn-in samples
 nt <- 15     # thinning rate
 nc <- 2      # number of chains
+N.prior.vec <- c(1000, 2000, 3000)
+
 
 
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 10 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 50 # CHANGED FROM 100; Number of iterations to loop over
 
 # Initialize arrays for saving results
 results <- NULL
@@ -111,8 +112,11 @@ sims.list.1 <- NULL
 sims.list.2 <- NULL
 sims.list.3 <- NULL
 
-for(iter in 1:iterations) {
-  set.seed(rseeds[iter])
+for(p in 1:length(N.prior.vec)){
+  N.prior.max <- N.prior.vec[p]
+
+    for(iter in 1:iterations) {
+      set.seed(rseeds[iter])
 
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -216,8 +220,9 @@ for(iter in 1:iterations) {
       #Fix other potential parameters
       #surv = surv,
       est.year = est.year, # estimation year i.e. year the estimate will be focused on
-      N.tau = 1E-6,
-      lam.tau = lam.tau
+      #N.tau = 1E-6,
+      lam.tau = lam.tau,
+      N.prior.max = N.prior.max
     )
     
 
@@ -230,8 +235,8 @@ for(iter in 1:iterations) {
     HS_model = function(){
 
       #PRIORS
-      Nf ~ dnorm(0, N.tau) # Uninformative prior for female abundance
-      Nm ~ dnorm(0, N.tau) # Uninformative prior for male abundance
+      Nf ~ dunif(0, N.prior.max) # Uninformative prior for female abundance
+      Nm ~ dunif(0, N.prior.max) # Uninformative prior for male abundance
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       lam ~ dnorm(1, lam.tau)
       
@@ -290,7 +295,7 @@ for(iter in 1:iterations) {
                               n.thin = jags_dims["nt"],
                               n.burnin = jags_dims["nb"],
                               n.chains = jags_dims["nc"],
-                              parallel = F
+                              parallel = T
     )
     
 
@@ -322,54 +327,14 @@ for(iter in 1:iterations) {
       dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff)
 
     ########## Compile and report results #########
-    # Combine above to make dataframe with truth and estimates side-by-side
-    # store years from youngest sibling in comparisons to end of study
-    yrs <- c(est.year:n_yrs)
-    
-    #Extract true values from year of estimation (ie est.year)
-    Mom_truth <- round(pop.size$Female.adult.pop[est.year],0) # True Nf
-    Dad_truth <- round(pop.size$Male.adult.pop[est.year], 0) # True Nm
-    surv_truth <- round(mean(sVec[est.year:n_yrs]), 4) # True adult survival over estimation period
-    #Adult_truth <- round(pop.size$Total.adult.pop[est.year], 0) # Used for sex-aggregated model
-    lam_truth <- round(mean.adult.lambda, 4)
-    Mom_min <- min(pop.size$Female.adult.pop[est.year:n_yrs]) #Minimum Nf over estimation period
-    Mom_max <- max(pop.size$Female.adult.pop[est.year:n_yrs]) #Maximum Nf over estimation period
-    Dad_min <- min(pop.size$Male.adult.pop[est.year:n_yrs]) #Minimum Nm over estimation period
-    Dad_max <- max(pop.size$Male.adult.pop[est.year:n_yrs]) #Maximum Nm over estimation period
-    #Adult_min <- min(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
-    #Adult_max <- max(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
-    surv_min <- min(sVec[est.year:n_yrs]) #Minimum survival over estimation period
-    surv_max <- max(sVec[est.year:n_yrs]) #Maximum survival over estimation period
-    lam_min <- min(adult.lambda[est.year:n_yrs]) #Minimum lambda over estimation period
-    lam_max <- max(adult.lambda[est.year:n_yrs]) #Maximum lambda over estimation period
-    mean.num.mothers.total <- round(mean(pop.size$Num.mothers[est.year:n_yrs]), 0) #Mean number of mothers in population over estimation period
-    mean.num.fathers.total <- round(mean(pop.size$Num.fathers[est.year:n_yrs]), 0) #Mean number of fathers in population over estimation period
-    
-    #Create dataframe of estimates and truth
-    estimates <- model.summary2 %>% 
-      mutate(min = c(Mom_min, Dad_min, surv_min, lam_min), max = c(Mom_max, Dad_max, surv_max, lam_max), truth = c(Mom_truth, Dad_truth, surv_truth, lam_truth)) %>%
-      as_tibble()
-    
-    #Extract more metrics that can help with troubleshooting and visualization
-    total_samples <- sample.size * length(sample.years) # total samples
-    pop_size_mean <- round(mean(pop.size$population_size[est.year:n_yrs]),0) #Mean TOTAL population size over estimation period
-    
-    #Bind metrics together
-    metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), rep(sum(mom_comps[,3]) + sum(dad_comps[3]), times = n_params-2)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
-                     c(mean.num.mothers.total, mean.num.fathers.total, rep(mean.num.mothers.total + mean.num.fathers.total, times = n_params - 2)), #Mean number of parents in population over estimation period
-                     c(length(sampled.mothers), length(sampled.fathers), rep(length(sampled.mothers) + length(sampled.fathers), times = n_params-2)), #number of unique sampled parents
-                     c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
-                     c(rep(total_samples, times = n_params)), # total samples
-                     c(rep(pop_size_mean, times = n_params)), # mean population size over estimation period
-                     c(rep(iter, times = n_params))) #iteration
-    colnames(metrics) <- c("parents_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
+    source("./01_MAIN_scripts/functions/compile_results.R")
     
     #-----------------Loop end-----------------------------#
     #Bind results from previous iterations with current iteration
     results <- rbind(results, cbind(estimates, metrics))
     
     #Save info for samples to examine in more detail
-    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size)
+    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size, N.prior.max = N.prior.max)
     sample.info <- rbind(sample.info, sample.df_all.info)
   
   } # end loop over sample sizes
@@ -382,23 +347,25 @@ for(iter in 1:iterations) {
   sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
   sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
   
-#Results
-#    write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-# 
-#    #Model output for diagnostics
-#     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
-# 
-#    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-# 
-#    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-# 
-# # Detailed info on samples and parents to examine in more detail
-#    saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-# 
-#    saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+
    
-  print(paste0("finished iteration", iter, " at: ", Sys.time()))
-} # end loop over iterations
+  print(paste0("finished prior ", p, "iteration", iter, " at: ", Sys.time()))
+  } # end loop over iterations
+  #Results
+     write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+
+     #Model output for diagnostics
+      saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
+
+     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
+
+     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
+
+  # Detailed info on samples and parents to examine in more detail
+     saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
+
+     saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
+}
 
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
@@ -427,20 +394,20 @@ results2 %>% group_by(total_samples, parameter) %>%
  #Home computer: Dell Precision
  
  #Save model estimates
- write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+ write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
  
  #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
+ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 1
  
- saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
+ saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 2
  
- saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
+ saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 3
  
  #Save detailed info about samples from population
- saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+ saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
  
  #Save detailed info about parents
- saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+ saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
  
 
 #To read in RDS file

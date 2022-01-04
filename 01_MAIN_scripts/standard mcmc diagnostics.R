@@ -8,13 +8,13 @@ library(postpack)
 
 #----------------Read in files ------------------------------
 #Check results from model diagnostics
-date.of.simulation <- "01Jan2022"
+date.of.simulation <- "02Jan2022"
 seeds <- "Seeds12.27"
-purpose <- "estSurvLam"
+purpose <- "estSurvLam_longchain"
 sim.samples.1 <- "200.samples"
 sim.samples.2 <- "300.samples"
 sim.samples.3 <- "400.samples"
-MCMC.settings <- "thin15_draw15000_burn20000"
+MCMC.settings <- "thin1_draw1e+05_burn0"
 
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/"
@@ -54,26 +54,26 @@ head(results)
 jags_params_4plot <- c("Nf", "Nm", "surv", "lam") #Specify parameters
 
 #Specify save location for pdf of plots
-tracePlot.file <- paste0(plots_location, "TracePlots_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
+tracePlot.file <- paste0(plots_location, "TracePlots_", date.of.simulation, "_", sim.samples.1, "_", seeds, ".pdf")
 pdf(file = tracePlot.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(sim.samples.3_MCMC)){
-  diag_plots(sim.samples.3_MCMC[[i]], jags_params_4plot, layout = "4x1")
+for(i in 1:length(s1)){
+  diag_plots(s1[[i]], jags_params_4plot, layout = "4x1")
 }
 
 dev.off()
 
 #-----------------------------Autocorrelation---------------------------------------------------
 #Specify save location for pdf of plots
-autocorr.file <- paste0(plots_location, "Autocorrelation.plots_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
+autocorr.file <- paste0(plots_location, "Autocorrelation.plots_", date.of.simulation, "_", sim.samples.1, "_", seeds, ".pdf")
 pdf(file = autocorr.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(sim.samples.3_MCMC)){
-  autocorr.plot(sim.samples.3_MCMC[[i]])
+for(i in 1:length(s1)){
+  autocorr.plot(s1[[i]])
 }
 
 dev.off()
@@ -83,13 +83,13 @@ autocorr.diag(sim.samples.3_MCMC[[5]], lags = c(0, 1, 5, 10, 15, 20))
 
 #-----------------------------Cross-correlation---------------------------------------------------
 #Specify save location for pdf of plots
-crosscorr.file <- paste0(plots_location, "Cross_correlation.plots_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
+crosscorr.file <- paste0(plots_location, "Cross_correlation.plots_", date.of.simulation, "_", sim.samples.1, "_", seeds, ".pdf")
 pdf(file = crosscorr.file)
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(c in 1:length(sim.samples.3_MCMC)){
-  crosscorr.plot(sim.samples.3_MCMC[[c]])
+for(c in 1:length(s1)){
+  crosscorr.plot(s1[[c]])
 }
 
 dev.off()
@@ -171,9 +171,9 @@ dev.off() #Close pdf file
 #Calculate gelman diagnostic for each iteration
 gelman.df = gelman.temp <- NULL
 
-for(g in 1:length(sim.samples.3_MCMC)){
+for(g in 1:length(s1)){
 
-  gelman.temp <- data.frame(t(gelman.diag(sim.samples.3_MCMC[[g]])[[1]])) %>% 
+  gelman.temp <- data.frame(t(gelman.diag(s1[[g]])[[1]])) %>% 
     rownames_to_column(var = "type") %>% 
     mutate(iteration = g)
   
@@ -182,13 +182,13 @@ for(g in 1:length(sim.samples.3_MCMC)){
 
 #Save plots of gelman diagnostic
 #Specify save location for pdf of plots
-gelman.file <- paste0(plots_location, "Gelman_", date.of.simulation, "_", sim.samples.3, "_", seeds, ".pdf")
+gelman.file <- paste0(plots_location, "Gelman_", date.of.simulation, "_", sim.samples.1, "_", seeds, ".pdf")
 pdf(file = gelman.file) #Open pdf file for plotting
 
 #Loop through each list element (i.e. each iteration aka mcmc object) and save to pdf.
 #In the pdf, the page will correspond to the iteration
-for(i in 1:length(sim.samples.3_MCMC)){
-  gelman.plot(sim.samples.3_MCMC[[i]])
+for(i in 1:length(s1)){
+  gelman.plot(s1[[i]])
 }
 
 dev.off() #Close pdf file
@@ -215,32 +215,44 @@ raftery.diag(sim.samples.3_MCMC[[1]])
 superdiag(sim.samples.3_MCMC[[1]])
 ##===============================================================================
 
-#Charlotte's code
-# Nyears <- 16
-# N.saved <- length(jags.model$sims.list$deviance)/2
-# xx <- 1:N.saved
-# 
-# labs <- c("final year abundance", "long-term trend", "deviance")
-# 
-# outs <- array(NA, c(N.saved, 2, 3)) #Dimensions are row, column, matrix; here, 
-# for(i in 1:N.saved)
-# {
-#   outs[i,1,1] <- jags.model$sims.list$N[i,Nyears]
-#   outs[i,2,1] <- jags.model$sims.list$N[N.saved+i,Nyears]
-#   
-#   outs[i,1,2] <- jags.model$sims.list$u[i]
-#   outs[i,2,2] <- jags.model$sims.list$u[N.saved+i]
-#   
-#   outs[i,1,3] <- jags.model$sims.list$deviance[i]
-#   outs[i,2,3] <- jags.model$sims.list$deviance[N.saved+i]
-# }
-# 
-# par(mfrow=c(2,2))
-# for(k in 1:3) 
-# {
-#   yy <- outs[,1,k]
-#   plot(xx, yy, xlab="cycle number", ylab="", main=labs[k], type='b', pch=16, ylim=range(outs[,,k]))
-#   yy <- outs[,2,k]
-#   lines(xx, yy, type='b',pch=16, col="gray50")
-# }
-# 
+#----------------Subsetting a long chain to dial in MCMC parameters--------------------
+head(sim.samples.1_MCMC)
+length(sim.samples.1_MCMC)
+
+mcmc.end <- nrow(sim.samples.1_MCMC[[1]][[1]])
+burn_in <- 20000
+thin <- 15
+
+#Subset for proposed burn in and thinning rate
+#Sim samples 1
+sim.samples.1_MCMC.subset <- NULL
+for(l in 1:length(sim.samples.1_MCMC)){
+    sim.samples.1_MCMC.subset[[l]] <- window(sim.samples.1_MCMC[[l]], 
+                                             start = burn_in +1,
+                                             end = mcmc.end, 
+                                             thin = thin)
+  }
+
+
+#Sim samples 2
+sim.samples.2_MCMC.subset <- NULL
+for(l in 1:length(sim.samples.2_MCMC)){
+  sim.samples.2_MCMC.subset[[l]] <- window(sim.samples.2_MCMC[[l]], 
+                                           start = burn_in +1,
+                                           end = mcmc.end, 
+                                           thin = thin)
+}
+
+#Sim samples 3
+sim.samples.3_MCMC.subset <- NULL
+for(l in 1:length(sim.samples.3_MCMC)){
+  sim.samples.3_MCMC.subset[[l]] <- window(sim.samples.3_MCMC[[l]], 
+                                           start = burn_in +1,
+                                           end = mcmc.end, 
+                                           thin = thin)
+}
+
+s1 <- sim.samples.1_MCMC.subset
+s2 <- sim.samples.2_MCMC.subset
+s3 <- sim.samples.3_MCMC.subset
+
