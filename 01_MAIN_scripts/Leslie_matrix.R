@@ -8,6 +8,7 @@ library(tidyverse)
 library(ggpubr)
 library(MASS)
 library(popbio)
+#devtools::install_github("BruceKendall/mpmtools")
 library(mpmtools)
 
 #-----------------Leslie Matrix--------------------
@@ -123,29 +124,29 @@ ggplot(lambda.plot.df, aes(x=lambda)) +
 
 
 
-
+#Irrelevant
 #--------------Population simulation-------------------
 #Project population forward in time
-Abundance_year0 <- c(20000, rep(0, times = (max_age-1)))
-
-Year1 <- A %*% Abundance_year0
-
-nYears <- n_yrs        # set the number of years to project
-TMat <- A     # define the projection matrix
-InitAbund <- Abundance_year0    # define the initial abundance
-
-## NOTE: the code below can be re-used without modification:
-allYears <- matrix(0,nrow=nrow(TMat),ncol=nYears+1)     # build a storage array for all abundances!
-allYears[,1] <- InitAbund  # set the year 0 abundance                                    
-for(t in 2:(nYears+1)){   # loop through all years
-  allYears[,t] <-  TMat %*% allYears[,t-1]
-}
-
-#in allYears, columns are years, rows are ages
-allYears <- data.frame(allYears)
-colnames(allYears) <- paste("Yr_", c(1:(nYears+1)))
-allYears <- allYears %>% mutate_all(round, digits=0)
-
-#Sum mature ages for each year
-adult_truth <- allYears %>% slice(12:30) %>% 
-  summarise_all(sum)
+# Abundance_year0 <- c(20000, rep(0, times = (max_age-1)))
+# 
+# Year1 <- A %*% Abundance_year0
+# 
+# nYears <- n_yrs        # set the number of years to project
+# TMat <- A     # define the projection matrix
+# InitAbund <- Abundance_year0    # define the initial abundance
+# 
+# ## NOTE: the code below can be re-used without modification:
+# allYears <- matrix(0,nrow=nrow(TMat),ncol=nYears+1)     # build a storage array for all abundances!
+# allYears[,1] <- InitAbund  # set the year 0 abundance                                    
+# for(t in 2:(nYears+1)){   # loop through all years
+#   allYears[,t] <-  TMat %*% allYears[,t-1]
+# }
+# 
+# #in allYears, columns are years, rows are ages
+# allYears <- data.frame(allYears)
+# colnames(allYears) <- paste("Yr_", c(1:(nYears+1)))
+# allYears <- allYears %>% mutate_all(round, digits=0)
+# 
+# #Sum mature ages for each year
+# adult_truth <- allYears %>% slice(12:30) %>% 
+#   summarise_all(sum)

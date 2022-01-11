@@ -37,6 +37,5 @@ metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), rep(sum(mom_comps[,3]
                  c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
                  c(rep(total_samples, times = n_params)), # total samples
                  c(rep(pop_size_mean, times = n_params)), # mean population size over estimation period
-                 c(rep(iter, times = n_params)),
-                 c(rep(N.prior.max, times = n_params))) #iteration
-colnames(metrics) <- c("parents_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration", "N.prior_max")
+                 c(rep(iter, times = n_params))) #iteration
+colnames(metrics) <- c("parents_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")

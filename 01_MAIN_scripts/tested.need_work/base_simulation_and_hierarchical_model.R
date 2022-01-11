@@ -1,4 +1,4 @@
-#### LEMON SHARKS: DOVI'S IBS MODEL
+#Fits a hierarchical CKMR model that calculates priors INSIDE the model
 
 #Load packages
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
@@ -16,7 +16,7 @@ library(coda)
 rm(list=ls())
 
 source("./01_MAIN_scripts/functions/Dovi_IBS.R")
-source("./01_MAIN_scripts//functions/pairwise_comparisons.R")
+source("./01_MAIN_scripts//functions/pairwise_comparisons_hierarchical.R")
 
 
 #----------------Set output file locations ------------------------------
@@ -30,7 +30,7 @@ load("rseeds_12.27.rda")
 
 seeds <- "Seeds12.27"
 
-purpose <- "testUniformPriors"
+purpose <- "testHierarchical"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -97,13 +97,11 @@ ni <- 30000 # number of post-burn-in samples per chain
 nb <- 20000 # number of burn-in samples
 nt <- 15     # thinning rate
 nc <- 2      # number of chains
-N.prior.vec <- c(1000, 2000, 3000)
-
 
 
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 50 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 
 # Initialize arrays for saving results
 results <- NULL
@@ -111,9 +109,6 @@ sample.info <- NULL
 sims.list.1 <- NULL
 sims.list.2 <- NULL
 sims.list.3 <- NULL
-
-for(p in 2:length(N.prior.vec)){
-  N.prior.max <- N.prior.vec[p]
 
     for(iter in 1:iterations) {
       set.seed(rseeds[iter])
@@ -192,18 +187,35 @@ for(p in 2:length(N.prior.vec)){
     positives.filt <- pairwise.out.filt[[2]]
     mom_comps <- pairwise.out.filt[[3]] 
     dad_comps <- pairwise.out.filt[[4]]
+    mc.prior <- pairwise.out.filt[[5]] 
+    mc.sd <- pairwise.out.filt[[6]]
+    dc.prior <- pairwise.out.filt[[7]] 
+    dc.sd <- pairwise.out.filt[[8]]
+    mom_comps.gap <- pairwise.out.filt[[9]] 
+    dad_comps.gap <- pairwise.out.filt[[10]]
+    
 
 
     ########## Fit CKMR model ##########
     #-------------- STEP 1: PREPARE DATA ----------------#
-    #Need priors for:
-    #Number of adults (uninformative)
-    #Survival (beta -- conjugate prior for binomial; uninformative)
+    #Derived from Leslie matrix simulations
     lam.tau <- 1/(0.02342^2)
     
     #Define data
     jags_data = list(
-      #Moms
+      #Moms - gap for global mean
+      MHSP.gap = mom_comps.gap$yes, # Positive maternal half-sibs; Y
+      mom_n_comps.gap = mom_comps.gap$all, # Number of total maternal comparisons; R
+      mom_yr.gap = mom_comps.gap$yr_gap, # year gap between individuals being compared
+      mom_yrs.gap = nrow(mom_comps.gap), # number of cohort comparisons to loop over 
+      
+      #Dads - gap for global mean
+      FHSP.gap = dad_comps.gap$yes, # Positive paternal half-sibs; Y
+      dad_n_comps.gap = dad_comps.gap$all, # Number of total paternal comparisons; R
+      dad_yr.gap = dad_comps.gap$yr_gap, # year gap between individuals being compared
+      dad_yrs.gap = nrow(dad_comps.gap), # number of cohort comparisons to loop over
+
+      #Moms - year specific
       MHSP = mom_comps$yes, # Positive maternal half-sibs; Y
       mom_n_comps = mom_comps$all, # Number of total maternal comparisons; R
       mom_ys_birth = mom_comps$Ind_2_birth, # birth year of younger sib; b
@@ -217,12 +229,11 @@ for(p in 2:length(N.prior.vec)){
       dad_os_birth = dad_comps$Ind_1_birth, # birth year of older sib; a
       dad_yrs = nrow(dad_comps), # number of cohort comparisons to loop over
       
+            
       #Fix other potential parameters
       #surv = surv,
       est.year = est.year, # estimation year i.e. year the estimate will be focused on
-      #N.tau = 1E-6,
-      lam.tau = lam.tau,
-      N.prior.max = N.prior.max
+      lam.tau = lam.tau
     )
     
 
@@ -235,10 +246,27 @@ for(p in 2:length(N.prior.vec)){
     HS_model = function(){
 
       #PRIORS
-      Nf ~ dunif(0, N.prior.max) # Uninformative prior for female abundance
-      Nm ~ dunif(0, N.prior.max) # Uninformative prior for male abundance
+      Nf ~ dnorm(mom_total.mu, mom_total.prec)
+      Nm ~  dnorm(dad_total.mu, dad_total.prec) # 
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       lam ~ dnorm(1, lam.tau)
+      mom_total.prec = 1/(mom_total.sd^2)
+      dad_total.prec = 1/(dad_total.sd^2)
+      
+      #Mom global
+      for(m in 1:mom_yrs.gap){
+        mom_mu.yr[m] = ((mom_yr.gap[m] ^ surv) *  mom_n_comps.gap[m])/MHSP.gap[m]
+      }
+      mom_total.mu <- mean(mom_mu.yr)
+      mom_total.sd <- sd(mom_mu.yr)
+      
+      #Dad global
+      for(m2 in 1:dad_yrs.gap){
+        dad_mu.yr[m2] = ((dad_yr.gap[m2] ^ surv) *  dad_n_comps.gap[m2])/FHSP.gap[m2]
+      }
+      dad_total.mu <- mean(dad_mu.yr)
+      dad_total.sd <- sd(dad_mu.yr)
+      
       
       #Likelihood
       for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
@@ -250,7 +278,7 @@ for(p in 2:length(N.prior.vec)){
     }
 
     # Write model    
-    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_neutralGrowth_est_SurvLam_iteration_", iter, ".txt")
+    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_hierarchical_est_SurvLam_iteration_", iter, ".txt")
     write_model(HS_model, jags_file)
     
     
@@ -334,7 +362,7 @@ for(p in 2:length(N.prior.vec)){
     results <- rbind(results, cbind(estimates, metrics))
     
     #Save info for samples to examine in more detail
-    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size, N.prior.max = N.prior.max)
+    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size)
     sample.info <- rbind(sample.info, sample.df_all.info)
   
   } # end loop over sample sizes
@@ -347,25 +375,26 @@ for(p in 2:length(N.prior.vec)){
   sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
   sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
   
+  #Results
+  write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  
+  #Model output for diagnostics
+  saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+  
+  saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+  
+  saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+  
+  # Detailed info on samples and parents to examine in more detail
+  saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  
+  saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  
 
    
-  print(paste0("finished prior ", p, " iteration ", iter, " at: ", Sys.time()))
+  print(paste0("finished iteration ", iter, " at: ", Sys.time()))
+  Sys.time_prev <- Sys.time()
   } # end loop over iterations
-  #Results
-     write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-
-     #Model output for diagnostics
-      saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
-
-     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
-
-     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
-
-  # Detailed info on samples and parents to examine in more detail
-     saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
-
-     saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
-}
 
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
@@ -377,14 +406,12 @@ results2 <- results %>%
 #Need to switch HPDI for survival and lambda
 
 #Within HPD interval?
-results2 %>% group_by(total_samples, parameter, N.prior_max) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% 
-  View()
+results2 %>% group_by(total_samples, parameter) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
 #Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter, N.prior_max) %>% 
-   dplyr::summarize(median = median(relative_bias), n = n()) %>% 
-   View()
+ results2 %>% group_by(total_samples, parameter) %>% 
+   dplyr::summarize(median = median(relative_bias), n = n())
 
  #Mean number of parents detected
  #Median relative bias by sample size
@@ -396,20 +423,20 @@ results2 %>% group_by(total_samples, parameter, N.prior_max) %>%
  #Home computer: Dell Precision
  
  #Save model estimates
- write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+ write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
  
  #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 1
+ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
  
- saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 2
+ saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
  
- saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 3
+ saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
  
  #Save detailed info about samples from population
- saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
+ saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
  #Save detailed info about parents
- saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
+ saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
 
 #To read in RDS file
@@ -422,7 +449,7 @@ results2 %>% group_by(total_samples, parameter, N.prior_max) %>%
 
 #-------------Quick viz of results--------------#
 #Box plot of relative bias
-ggplot(data=results2, aes(x=factor(N.prior_max))) +
+ggplot(data=results2, aes(x=factor(total_samples))) +
   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
   ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +
