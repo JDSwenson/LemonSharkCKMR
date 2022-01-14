@@ -72,7 +72,7 @@ effectiveSize.df
 #-----------------------------Geweke---------------------------------------------------
 # Tests the means of the first and last parts of the chain and compares their z scores. We expect that the means will be the same; otherwise, our model may not be converging until a later sample is drawn.
 # the test statistic is the standard z score for the equality of two means - value greater than 1.64 (p<0.1) or 1.96 (p<0.05) two-tailed
-# We do NOT want to reject the null here, as that means the beginning and end of the chains is very different
+# We do NOT want to reject the null here, as that means the beginning and end of the chains are very different
 
 geweke.df = geweke.temp.c1 = geweke.temp.c2 <- NULL
 g.thresh <- 1.65 # Set threshold for geweke failure

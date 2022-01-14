@@ -10,7 +10,6 @@ library(R2jags)
 library(jagsUI)
 library(Rlab)
 library(postpack)
-library(coda)
 
 rm(list=ls())
 
@@ -58,9 +57,9 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 min_cohort <- n_yrs - 5 # Set year of estimation
 
-iterations <- 1 # CHANGED FROM 100; Number of iterations to loop over
-#rseeds <- sample(1:1000000,iterations)
-load("rseeds.rda")
+iterations <- 100 # Number of iterations to loop over
+rseeds <- sample(1:1000000,iterations)
+#load("rseeds.rda")
 
 #set.seed(885767)
 
@@ -69,16 +68,12 @@ load("rseeds.rda")
 #sample.years <- c(n_yrs - c(2:0)) #For three years of sampling
 sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
-sample.vec <- c(80, 100, 120) #vector to sample over per year
+sample.vec <- c(400, 600, 800) #vector to sample over per year
 
 
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
-# Initialize arrays for saving results
-results <- NULL
-sims.list.1 <- NULL
-sims.list.2 <- NULL
-sims.list.3 <- NULL
+results <- NULL #initialize results array
 
 for(iter in 1:iterations) {
   set.seed(rseeds[iter])
@@ -128,8 +123,7 @@ for(iter in 1:iterations) {
   #Add NA to first element of population growth vectors
   total.lambda <- c(NA, total.lambda)
   adult.lambda <- c(NA, adult.lambda)
-  
-  mean.adult.lambda <- mean(adult.lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
+  mean.adult.lambda <- mean(pop.size$adult.lambda[min_cohort:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
   
   #Add population growth per year to pop.size dataframe
   pop.size$total.lambda <- total.lambda
@@ -228,21 +222,16 @@ for(yr in 2:length(loopy.list)){
       #Fix other potential parameters
       #surv = surv,
       lam = mean.adult.lambda, # fix lambda to mean lambda of adults over estimation period
-      min_cohort = min_cohort, # estimation year i.e. year the estimate will be focused on
-      tau = 1E-6
+      min_cohort = min_cohort # estimation year i.e. year the estimate will be focused on
     )
     
 
     #----------------- STEP 2: SPECIFY JAGS MODEL CODE ---------------#
-    #Convert tau to SD (for interpretation)
-    #tau <- 1E-6
-    #(sd <- sqrt(1/tau))
-    
     HS_model = function(){
 
       #PRIORS
-      Nf ~ dnorm(0, tau) # Uninformative prior for female abundance
-      Nm ~ dnorm(0, tau) # Uninformative prior for male abundance
+      Nf ~ dnorm(0, 1.0E-6) # Uninformative prior for female abundance
+      Nm ~ dnorm(0, 1.0E-6) # Uninformative prior for male abundance
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       
       #Likelihood
@@ -279,8 +268,8 @@ for(yr in 2:length(loopy.list)){
     
     #------------- STEP 5: SET MCMC DIMENSIONS ---------------#
     jags_dims = c(
-      ni = 100000,  # number of post-burn-in samples per chain
-      nb = 0,  # number of burn-in samples
+      ni = 5000,  # number of post-burn-in samples per chain
+      nb = 5000,  # number of burn-in samples
       nt = 1,     # thinning rate
       nc = 2      # number of chains
     )
@@ -301,130 +290,8 @@ for(yr in 2:length(loopy.list)){
                               parallel = F
     )
     
-
-    if(samps == 1){
-      sims.list.1[[iter]] <- post
-    } else if(samps == 2){
-      sims.list.2[[iter]] <- post
-    } else if(samps == 3){
-      sims.list.3[[iter]] <- post
-    }
-    
     #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
     # view convergence diagnostic summaries for all monitored nodes
     model_summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T)))
-    
-
-    ########## Compile and report results #########
-    # Combine above to make dataframe with truth and estimates side-by-side
-    # store years from youngest sibling in comparisons to end of study
-    yrs <- c(min_cohort:n_yrs)
-    
-    #Extract true values from year of estimation (ie min_cohort)
-    Mom_truth <- round(pop.size$Female.adult.pop[min_cohort],0) # True Nf
-    Dad_truth <- round(pop.size$Male.adult.pop[min_cohort], 0) # True Nm
-    surv_truth <- round(mean(sVec[min_cohort:n_yrs]), 4) # True adult survival over estimation period
-    #Adult_truth <- round(pop.size$Total.adult.pop[min_cohort], 0) # Used for sex-aggregated model
-    Mom_min <- min(pop.size$Female.adult.pop[min_cohort:n_yrs]) #Minimum Nf over estimation period
-    Mom_max <- max(pop.size$Female.adult.pop[min_cohort:n_yrs]) #Maximum Nf over estimation period
-    Dad_min <- min(pop.size$Male.adult.pop[min_cohort:n_yrs]) #Minimum Nm over estimation period
-    Dad_max <- max(pop.size$Male.adult.pop[min_cohort:n_yrs]) #Maximum Nm over estimation period
-    #Adult_min <- min(pop.size$Total.adult.pop[min_cohort:n_yrs]) # Used for sex-aggregated model
-    #Adult_max <- max(pop.size$Total.adult.pop[min_cohort:n_yrs]) # Used for sex-aggregated model
-    surv_min <- min(sVec[min_cohort:n_yrs]) #Minimum survival over estimation period
-    surv_max <- max(sVec[min_cohort:n_yrs]) #Maximum survival over estimation period
-    
-    #Create dataframe of estimates and truth
-    estimates <- model_summary %>% rownames_to_column(var = "parameter") %>% 
-      mutate(min = c(Mom_min, Dad_min, surv_min), max = c(Mom_max, Dad_max, surv_max), truth = c(Mom_truth, Dad_truth, surv_truth)) %>%
-      as_tibble() %>% 
-      rename(`50` = X50., `2.5` = X2.5., `97.5` = X97.5.)
-    
-    #Extract more metrics that can help with troubleshooting and visualization
-    total_samples <- sample.size * length(sample.years) # total samples
-    pop_size_mean <- round(mean(pop.size$population_size[min_cohort:n_yrs]),0) #Mean TOTAL population size over estimation period
-    
-    #Bind metrics together
-    metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), sum(mom_comps[,3]) + sum(dad_comps[3])), # number of positive IDs i.e. half-sibs
-                     c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
-                     c(rep(total_samples, times = n_params)), # total samples
-                     c(rep(pop_size_mean, times = n_params)), #mean population size over estimation period
-                     c(rep(iter, times = n_params))) #iteration
-    colnames(metrics) <- c("parents_detected", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
-    
-    #-----------------Loop end-----------------------------#
-    #Bind results from previous iterations with current iteration
-    results <- rbind(results, cbind(estimates, metrics))
-  
-  } # end loop over sample sizes
-  
-# Write files iteratively in case R crashes or computer shuts down
-  #Results
-  write.table(results, file = paste0("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-  
-  today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-  
-  #Model output for diagnostics
-  total.samples.1 <- sample.vec[1] * length(sample.years)
-  saveRDS(sims.list.1, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
-  
-  total.samples.2 <- sample.vec[2] * length(sample.years)
-  saveRDS(sims.list.2, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
-  
-  total.samples.3 <- sample.vec[3] * length(sample.years)
-  saveRDS(sims.list.3, file = paste0("~/R/working_directory/temp_results/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
-  
-  print(paste0("finished iteration", iter, " at: ", Sys.time()))
-} # end loop over iterations
-
-########## Save and check results ##########
-#Calculate relative bias for all estimates
-
-results2 <- results %>% 
-  mutate(relative_bias = round(((mean - truth)/truth)*100,1)) %>%
-  mutate(in_interval = ifelse(`2.5` < truth & truth < `97.5`, "Y", "N")) %>% 
-  mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
-
-#Within HPD interval?
-results2 %>% group_by(total_samples, parameter) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
-
-#Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter) %>% 
-   dplyr::summarize(median = median(relative_bias), n = n())
-
-#Home computer: Dell Precision
-today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
-write.table(results2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model_validation/neutralGrowth_estSurv_", today, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-
-total.samples.1 <- sample.vec[1] * length(sample.years)
-saveRDS(sims.list.1, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.1, "_samples"))
-
-total.samples.2 <- sample.vec[2] * length(sample.years)
-saveRDS(sims.list.2, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.2, "_samples"))
-
-total.samples.3 <- sample.vec[3] * length(sample.years)
-saveRDS(sims.list.3, file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.diagnostics/Model.output/CKMR_modelout_", today, "_", total.samples.3, "_samples"))
-
-#To read in RDS file
-#pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")
-
-
-#MGHPCC
-#write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-
-
-#-------------Quick viz of results--------------#
-#Box plot of relative bias
-ggplot(data=results2, aes(x=factor(total_samples))) +
-  geom_boxplot(aes(y=relative_bias, fill=parameter)) +
-  ylim(-100, 100) +
-  geom_hline(yintercept=0, col="black", size=1.25) +
-  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Sample size", y="Relative bias", title="Relative Bias by sample size") +
-  scale_fill_brewer(palette="Set2") +
-  font("title", size = 10, face = "bold")
-
-
-
-####################### End ##############################
+  }
+}
