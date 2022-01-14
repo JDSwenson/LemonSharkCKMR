@@ -31,7 +31,7 @@ load("rseeds_12.27.rda")
 seeds <- "Seeds12.27"
 
 
-purpose <- "estSurvLam_longchain"
+purpose <- "estSurvLam"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -86,16 +86,13 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 est.year <- n_yrs - 5 # Set year of estimation
 
-<<<<<<< HEAD
-iterations <- 1 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
-load("rseeds.rda")
-=======
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f
+load("rseeds_12.27.rda")
 
 ####------------- MCMC parameters ----------------####
-ni <- 15000 # number of post-burn-in samples per chain
-nb <- 20000 # number of burn-in samples
+ni <- 30000 # number of post-burn-in samples per chain
+nb <- 40000 # number of burn-in samples
 nt <- 15     # thinning rate
 nc <- 2      # number of chains
 
@@ -104,12 +101,7 @@ nc <- 2      # number of chains
 #sample.years <- c(n_yrs - c(1:0)) #For two years of sampling
 sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
-<<<<<<< HEAD
-sample.vec <- c(80, 100, 120) #vector to sample over per year
-=======
 sample.vec <- c(200, 300, 400) #vector to sample over per year
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f
-
 
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
@@ -197,8 +189,8 @@ for(iter in 1:iterations) {
     #Separate list elements into different dataframes
     pairwise.df_all.info.filt <- pairwise.out.filt[[1]] 
     positives.filt <- pairwise.out.filt[[2]]
-    mom_comps <- pairwise.out.filt[[3]] 
-    dad_comps <- pairwise.out.filt[[4]]
+    mom_comps <- pairwise.out.filt[[3]] %>% as_tibble()
+    dad_comps <- pairwise.out.filt[[4]] %>% as_tibble()
 
 
     ########## Fit CKMR model ##########
@@ -281,17 +273,10 @@ for(iter in 1:iterations) {
     
     #------------- STEP 5: SET MCMC DIMENSIONS ---------------#
     jags_dims = c(
-<<<<<<< HEAD
-      ni = 100000,  # number of post-burn-in samples per chain
-      nb = 0,  # number of burn-in samples
-      nt = 1,     # thinning rate
-      nc = 2      # number of chains
-=======
       ni = ni,  # number of post-burn-in samples per chain
       nb = nb,  # number of burn-in samples
       nt = nt,     # thinning rate
       nc = nc      # number of chains
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f
     )
     
     MCMC.settings <- paste0("thin", jags_dims[names(jags_dims) == "nt"], "_draw", jags_dims[names(jags_dims) == "ni"], "_burn", jags_dims[names(jags_dims) == "nb"])
