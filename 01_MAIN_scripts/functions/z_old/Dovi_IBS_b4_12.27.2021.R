@@ -91,8 +91,6 @@ print(paste("year 0", "N_mothers=", length(mothers), "N_pups=", nrow(YOY.df), "N
 pop.size <- data.frame()
 
 loopy.list <- list() # Make list to store dataframe of population for each year, where each element corresponds to the year e.g. loopy.list[[1]] is the population from the first year
-parents.tibble <- tibble()
-moms.temp = dads.temp <- NULL
 
 for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulation - the burn in and the years that matter
   
@@ -135,11 +133,9 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
     } # end loop over mates
     
     YOY.df <- rbind(YOY.df,inter.df) #add all of the offspring from each mother to a data frame of all the YOY for the year
-    
   } # end loop over mothers
   
   loopy.pop <- rbind(data1, YOY.df) #Combine the YOY data with the other individuals present this year. YOY go at the bottom.
-  
   
   #Assign a column with whether or not an individual this year will survive to next year. The survival is randomly drawn based on the life stage and the probabilities defined in the parameter section
   loopy.pop$Survival <- ifelse(loopy.pop$age.x==0, sample(c("S","M"), size=length(which(loopy.pop$age.x==0)), prob=c(YOY.survival, 1-YOY.survival), replace=T),
@@ -149,18 +145,6 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
   #assign(paste("year.end.pop.", v, sep=""),loopy.pop) # save the current year's population data as an object
   
   loopy.list[[v]] <- loopy.pop # Save the current year's population data as a list element, where the index corresponds to the year
-  
-  moms.temp <- YOY.df %>% group_by(mother.x) %>% 
-    summarize(num.off = n()) %>% 
-    rename(parent = mother.x) %>% 
-    mutate(year = v, parent.sex = "mother")
-  
-  dads.temp <- YOY.df %>% group_by(father.x) %>% 
-    summarize(num.off = n()) %>% 
-    rename(parent = father.x) %>% 
-    mutate(year = v, parent.sex = "father")
-  
-  parents.tibble <- rbind(parents.tibble, moms.temp, dads.temp)
   
   #  print(paste("year", v, "N= ", nrow(loopy.pop) , sep=" ")) # print the simulation year and the population size in the R console so they can be observed
   print(paste("year", v, "N_mothers=", length(mothers), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # CHANGED THIS
@@ -178,5 +162,5 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
 #Label the list elements with the year
 names(loopy.list) <- paste0("year.end.pop.", seq(1:(burn.in + Num.years)))
 
-return(invisible(list(loopy.list, pop.size, parents.tibble)))
+return(invisible(list(loopy.list, pop.size)))
 }

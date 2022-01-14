@@ -1,4 +1,2 @@
 # LemonSharkCKMR
 This is a project to test the sensitivity of close-kin mark-recapture models when applied to simulated and real populations of a long-lived marine species, with a focus on the Lemon Shark and Cownose Ray.
-
-The main scripts that form the basis of this project are located in the 01_MAIN_scripts directory. These scripts have been validated and can be modified as desired to test different aspects of the CKMR framework (e.g. ability to estimate other parameters). When running a validation or test, open the `base_simulation_and_model` script and immediately save with a new name to avoid overwriting the main file.

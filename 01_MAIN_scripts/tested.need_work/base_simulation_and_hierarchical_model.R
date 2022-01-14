@@ -1,4 +1,4 @@
-#### LEMON SHARKS: DOVI'S IBS MODEL
+#Fits a hierarchical CKMR model that calculates priors INSIDE the model
 
 #Load packages
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
@@ -16,7 +16,7 @@ library(coda)
 rm(list=ls())
 
 source("./01_MAIN_scripts/functions/Dovi_IBS.R")
-source("./01_MAIN_scripts//functions/pairwise_comparisons.R")
+source("./01_MAIN_scripts//functions/pairwise_comparisons_hierarchical.R")
 
 
 #----------------Set output file locations ------------------------------
@@ -30,8 +30,7 @@ load("rseeds_12.27.rda")
 
 seeds <- "Seeds12.27"
 
-
-purpose <- "estSurvLam_longchain"
+purpose <- "testHierarchical"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -41,8 +40,8 @@ results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.r
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
 jags.model.prefix <- "HS_"
-parents_prefix <- "CKMR_parents.breakdown"
-sample.prefix <- "CKMR_sample.info"
+parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
+sample.prefix <- "sample_info/CKMR_sample.info"
 
 
 ########## DATA-GENERATING MODEL ##########
@@ -50,7 +49,6 @@ sample.prefix <- "CKMR_sample.info"
 # (i.e. a female who dies in year 10 can still give birth and have surviving pups in year 10)
 
 ####---------Simulation parameters---------####
-
 init.adult.pop.size <- 1000 # CHANGED FROM 3000; Initial adult population size
 init.prop.female <- 0.5 # proportion of the initial population size that is female
 birth.sex.ratio <- c(0.5,0.5) # The probability that each baby is F:M - has to add up to 1
@@ -86,29 +84,19 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 est.year <- n_yrs - 5 # Set year of estimation
 
-<<<<<<< HEAD
-iterations <- 1 # CHANGED FROM 100; Number of iterations to loop over
-#rseeds <- sample(1:1000000,iterations)
-load("rseeds.rda")
-=======
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f
-
-####------------- MCMC parameters ----------------####
-ni <- 15000 # number of post-burn-in samples per chain
-nb <- 20000 # number of burn-in samples
-nt <- 15     # thinning rate
-nc <- 2      # number of chains
-
 
 ####-------------- Sampling parameters -------------####
 #sample.years <- c(n_yrs - c(1:0)) #For two years of sampling
 sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
-<<<<<<< HEAD
-sample.vec <- c(80, 100, 120) #vector to sample over per year
-=======
 sample.vec <- c(200, 300, 400) #vector to sample over per year
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f
+
+
+####------------- MCMC parameters ----------------####
+ni <- 30000 # number of post-burn-in samples per chain
+nb <- 20000 # number of burn-in samples
+nt <- 15     # thinning rate
+nc <- 2      # number of chains
 
 
 ####-------------- Start simulation loop -------------------####
@@ -122,8 +110,8 @@ sims.list.1 <- NULL
 sims.list.2 <- NULL
 sims.list.3 <- NULL
 
-for(iter in 1:iterations) {
-  set.seed(rseeds[iter])
+    for(iter in 1:iterations) {
+      set.seed(rseeds[iter])
 
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -199,18 +187,35 @@ for(iter in 1:iterations) {
     positives.filt <- pairwise.out.filt[[2]]
     mom_comps <- pairwise.out.filt[[3]] 
     dad_comps <- pairwise.out.filt[[4]]
+    mc.prior <- pairwise.out.filt[[5]] 
+    mc.sd <- pairwise.out.filt[[6]]
+    dc.prior <- pairwise.out.filt[[7]] 
+    dc.sd <- pairwise.out.filt[[8]]
+    mom_comps.gap <- pairwise.out.filt[[9]] 
+    dad_comps.gap <- pairwise.out.filt[[10]]
+    
 
 
     ########## Fit CKMR model ##########
     #-------------- STEP 1: PREPARE DATA ----------------#
-    #Need priors for:
-    #Number of adults (uninformative)
-    #Survival (beta -- conjugate prior for binomial; uninformative)
+    #Derived from Leslie matrix simulations
     lam.tau <- 1/(0.02342^2)
     
     #Define data
     jags_data = list(
-      #Moms
+      #Moms - gap for global mean
+      MHSP.gap = mom_comps.gap$yes, # Positive maternal half-sibs; Y
+      mom_n_comps.gap = mom_comps.gap$all, # Number of total maternal comparisons; R
+      mom_yr.gap = mom_comps.gap$yr_gap, # year gap between individuals being compared
+      mom_yrs.gap = nrow(mom_comps.gap), # number of cohort comparisons to loop over 
+      
+      #Dads - gap for global mean
+      FHSP.gap = dad_comps.gap$yes, # Positive paternal half-sibs; Y
+      dad_n_comps.gap = dad_comps.gap$all, # Number of total paternal comparisons; R
+      dad_yr.gap = dad_comps.gap$yr_gap, # year gap between individuals being compared
+      dad_yrs.gap = nrow(dad_comps.gap), # number of cohort comparisons to loop over
+
+      #Moms - year specific
       MHSP = mom_comps$yes, # Positive maternal half-sibs; Y
       mom_n_comps = mom_comps$all, # Number of total maternal comparisons; R
       mom_ys_birth = mom_comps$Ind_2_birth, # birth year of younger sib; b
@@ -224,10 +229,10 @@ for(iter in 1:iterations) {
       dad_os_birth = dad_comps$Ind_1_birth, # birth year of older sib; a
       dad_yrs = nrow(dad_comps), # number of cohort comparisons to loop over
       
+            
       #Fix other potential parameters
       #surv = surv,
       est.year = est.year, # estimation year i.e. year the estimate will be focused on
-      N.tau = 1E-6,
       lam.tau = lam.tau
     )
     
@@ -241,10 +246,27 @@ for(iter in 1:iterations) {
     HS_model = function(){
 
       #PRIORS
-      Nf ~ dnorm(0, N.tau) # Uninformative prior for female abundance
-      Nm ~ dnorm(0, N.tau) # Uninformative prior for male abundance
+      Nf ~ dnorm(mom_total.mu, mom_total.prec)
+      Nm ~  dnorm(dad_total.mu, dad_total.prec) # 
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       lam ~ dnorm(1, lam.tau)
+      mom_total.prec = 1/(mom_total.sd^2)
+      dad_total.prec = 1/(dad_total.sd^2)
+      
+      #Mom global
+      for(m in 1:mom_yrs.gap){
+        mom_mu.yr[m] = ((mom_yr.gap[m] ^ surv) *  mom_n_comps.gap[m])/MHSP.gap[m]
+      }
+      mom_total.mu <- mean(mom_mu.yr)
+      mom_total.sd <- sd(mom_mu.yr)
+      
+      #Dad global
+      for(m2 in 1:dad_yrs.gap){
+        dad_mu.yr[m2] = ((dad_yr.gap[m2] ^ surv) *  dad_n_comps.gap[m2])/FHSP.gap[m2]
+      }
+      dad_total.mu <- mean(dad_mu.yr)
+      dad_total.sd <- sd(dad_mu.yr)
+      
       
       #Likelihood
       for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
@@ -256,7 +278,7 @@ for(iter in 1:iterations) {
     }
 
     # Write model    
-    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_neutralGrowth_est_SurvLam_iteration_", iter, ".txt")
+    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_hierarchical_est_SurvLam_iteration_", iter, ".txt")
     write_model(HS_model, jags_file)
     
     
@@ -281,17 +303,10 @@ for(iter in 1:iterations) {
     
     #------------- STEP 5: SET MCMC DIMENSIONS ---------------#
     jags_dims = c(
-<<<<<<< HEAD
-      ni = 100000,  # number of post-burn-in samples per chain
-      nb = 0,  # number of burn-in samples
-      nt = 1,     # thinning rate
-      nc = 2      # number of chains
-=======
       ni = ni,  # number of post-burn-in samples per chain
       nb = nb,  # number of burn-in samples
       nt = nt,     # thinning rate
       nc = nc      # number of chains
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f
     )
     
     MCMC.settings <- paste0("thin", jags_dims[names(jags_dims) == "nt"], "_draw", jags_dims[names(jags_dims) == "ni"], "_burn", jags_dims[names(jags_dims) == "nb"])
@@ -340,47 +355,7 @@ for(iter in 1:iterations) {
       dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff)
 
     ########## Compile and report results #########
-    # Combine above to make dataframe with truth and estimates side-by-side
-    # store years from youngest sibling in comparisons to end of study
-    yrs <- c(est.year:n_yrs)
-    
-    #Extract true values from year of estimation (ie est.year)
-    Mom_truth <- round(pop.size$Female.adult.pop[est.year],0) # True Nf
-    Dad_truth <- round(pop.size$Male.adult.pop[est.year], 0) # True Nm
-    surv_truth <- round(mean(sVec[est.year:n_yrs]), 4) # True adult survival over estimation period
-    #Adult_truth <- round(pop.size$Total.adult.pop[est.year], 0) # Used for sex-aggregated model
-    lam_truth <- round(mean.adult.lambda, 4)
-    Mom_min <- min(pop.size$Female.adult.pop[est.year:n_yrs]) #Minimum Nf over estimation period
-    Mom_max <- max(pop.size$Female.adult.pop[est.year:n_yrs]) #Maximum Nf over estimation period
-    Dad_min <- min(pop.size$Male.adult.pop[est.year:n_yrs]) #Minimum Nm over estimation period
-    Dad_max <- max(pop.size$Male.adult.pop[est.year:n_yrs]) #Maximum Nm over estimation period
-    #Adult_min <- min(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
-    #Adult_max <- max(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
-    surv_min <- min(sVec[est.year:n_yrs]) #Minimum survival over estimation period
-    surv_max <- max(sVec[est.year:n_yrs]) #Maximum survival over estimation period
-    lam_min <- min(adult.lambda[est.year:n_yrs]) #Minimum lambda over estimation period
-    lam_max <- max(adult.lambda[est.year:n_yrs]) #Maximum lambda over estimation period
-    mean.num.mothers.total <- round(mean(pop.size$Num.mothers[est.year:n_yrs]), 0) #Mean number of mothers in population over estimation period
-    mean.num.fathers.total <- round(mean(pop.size$Num.fathers[est.year:n_yrs]), 0) #Mean number of fathers in population over estimation period
-    
-    #Create dataframe of estimates and truth
-    estimates <- model.summary2 %>% 
-      mutate(min = c(Mom_min, Dad_min, surv_min, lam_min), max = c(Mom_max, Dad_max, surv_max, lam_max), truth = c(Mom_truth, Dad_truth, surv_truth, lam_truth)) %>%
-      as_tibble()
-    
-    #Extract more metrics that can help with troubleshooting and visualization
-    total_samples <- sample.size * length(sample.years) # total samples
-    pop_size_mean <- round(mean(pop.size$population_size[est.year:n_yrs]),0) #Mean TOTAL population size over estimation period
-    
-    #Bind metrics together
-    metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), rep(sum(mom_comps[,3]) + sum(dad_comps[3]), times = n_params-2)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
-                     c(mean.num.mothers.total, mean.num.fathers.total, rep(mean.num.mothers.total + mean.num.fathers.total, times = n_params - 2)), #Mean number of parents in population over estimation period
-                     c(length(sampled.mothers), length(sampled.fathers), rep(length(sampled.mothers) + length(sampled.fathers), times = n_params-2)), #number of unique sampled parents
-                     c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
-                     c(rep(total_samples, times = n_params)), # total samples
-                     c(rep(pop_size_mean, times = n_params)), # mean population size over estimation period
-                     c(rep(iter, times = n_params))) #iteration
-    colnames(metrics) <- c("parents_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
+    source("./01_MAIN_scripts/functions/compile_results.R")
     
     #-----------------Loop end-----------------------------#
     #Bind results from previous iterations with current iteration
@@ -400,23 +375,26 @@ for(iter in 1:iterations) {
   sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
   sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
   
-#Results
-   write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  #Results
+  write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  
+  #Model output for diagnostics
+  saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+  
+  saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+  
+  saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+  
+  # Detailed info on samples and parents to examine in more detail
+  saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  
+  saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  
 
-   #Model output for diagnostics
-    saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
-
-   saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-
-   saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-
-# Detailed info on samples and parents to examine in more detail
-   saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-
-   saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
    
-  print(paste0("finished iteration", iter, " at: ", Sys.time()))
-} # end loop over iterations
+  print(paste0("finished iteration ", iter, " at: ", Sys.time()))
+  Sys.time_prev <- Sys.time()
+  } # end loop over iterations
 
 ########## Save and check results ##########
 #Calculate relative bias for all estimates

@@ -27,43 +27,100 @@ positives <- pairwise.df_all.info %>% filter(Ind_1_mom == Ind_2_mom | Ind_1_dad 
 #nrow(positives)
 
 ####----------------Split dataframes into final form for model----------####
+#Sex-specific, focus on gap year for prior
+mom_positives.gap <- positives %>% filter(Ind_1_mom == Ind_2_mom) %>% 
+  mutate(yr_gap = Ind_2_birth - Ind_1_birth) %>% 
+  dplyr::select(yr_gap) %>% 
+  plyr::count() 
+
+dad_positives.gap <- positives %>% filter(Ind_1_dad == Ind_2_dad)  %>%
+  mutate(yr_gap = Ind_2_birth - Ind_1_birth) %>% 
+  dplyr::select(yr_gap) %>% 
+  plyr::count() 
+
+#Make dataframes for negative comparisons
 #Sex-specific
+mom_negatives.gap <- pairwise.df_all.info %>% filter(Ind_1_mom != Ind_2_mom & Ind_1_birth != Ind_2_birth) %>% #filter for same cohort is repetitive
+  mutate(yr_gap = Ind_2_birth - Ind_1_birth) %>% 
+  dplyr::select(yr_gap) %>% 
+  plyr::count() 
+
+dad_negatives.gap <- pairwise.df_all.info %>% filter(Ind_1_dad != Ind_2_dad & Ind_1_birth != Ind_2_birth) %>% 
+  mutate(yr_gap = Ind_2_birth - Ind_1_birth) %>% 
+  dplyr::select(yr_gap) %>% 
+  plyr::count() 
+
+mom_comps.gap <- mom_positives.gap %>% 
+  rename(yes = freq) %>% 
+  full_join(mom_negatives.gap, by = "yr_gap") %>% 
+  rename(no = freq) %>% 
+  mutate(yes = replace_na(yes, 0), no = replace_na(no, 0)) %>% 
+  mutate(all = yes + no) %>% 
+  filter(yes > 0)
+
+mc <- mom_comps.gap %>% mutate(all.adj = all * Adult.survival) %>% 
+  mutate(mom.N = all.adj/yes)
+
+mc.all <- sum(mc$all.adj)
+mc.pos <- sum(mc$yes)
+mc.mean <- mean(mc$mom.N)
+mc.sd <- sd(mc$mom.N)
+
+mc.prior <- mc.all/mc.pos
+
+dad_comps.gap <- dad_positives.gap %>% 
+  rename(yes = freq) %>% 
+  full_join(dad_negatives.gap, by = "yr_gap") %>% 
+  rename(no = freq) %>% 
+  mutate(yes = replace_na(yes, 0), no = replace_na(no, 0)) %>% 
+  mutate(all = yes + no) %>% 
+  filter(yes > 0)
+
+dc <- dad_comps.gap %>% mutate(all.adj = all * Adult.survival) %>% 
+  mutate(dad.N = all.adj/yes)
+
+dc.all <- sum(dc$all.adj)
+dc.pos <- sum(dc$yes)
+dc.mean <- mean(dc$dad.N)
+dc.sd <- sd(dc$dad.N)
+
+dc.prior <- dc.all/dc.pos
+
+
+#Sex-specific, w/ individual years
 mom_positives <- positives %>% filter(Ind_1_mom == Ind_2_mom) %>% 
   dplyr::select(Ind_1_birth, Ind_2_birth) %>% 
   plyr::count() 
 
 dad_positives <- positives %>% filter(Ind_1_dad == Ind_2_dad)  %>%
-  dplyr::select(Ind_1_birth, Ind_2_birth) %>%
-  plyr::count()
+  dplyr::select(Ind_1_birth, Ind_2_birth) %>% 
+  plyr::count() 
 
 #Make dataframes for negative comparisons
 #Sex-specific
 mom_negatives <- pairwise.df_all.info %>% filter(Ind_1_mom != Ind_2_mom & Ind_1_birth != Ind_2_birth) %>% #filter for same cohort is repetitive
   dplyr::select(Ind_1_birth, Ind_2_birth) %>% 
-  plyr::count()
+  plyr::count() 
 
 dad_negatives <- pairwise.df_all.info %>% filter(Ind_1_dad != Ind_2_dad & Ind_1_birth != Ind_2_birth) %>% 
   dplyr::select(Ind_1_birth, Ind_2_birth) %>% 
-  plyr::count()
+  plyr::count() 
 
 mom_comps <- mom_positives %>% 
   rename(yes = freq) %>% 
   full_join(mom_negatives, by = c("Ind_1_birth", "Ind_2_birth")) %>% 
   rename(no = freq) %>% 
   mutate(yes = replace_na(yes, 0), no = replace_na(no, 0)) %>% 
-  mutate(all = yes + no) #%>% 
-  #filter(yes > 0)
+  mutate(all = yes + no)
 
 dad_comps <- dad_positives %>% 
   rename(yes = freq) %>% 
-  full_join(dad_negatives, by = c("Ind_1_birth", "Ind_2_birth")) %>% 
-  rename(no = freq) %>% 
+  full_join(dad_negatives, by = c("Ind_1_birth", "Ind_2_birth")) %>%   rename(no = freq) %>% 
   mutate(yes = replace_na(yes, 0), no = replace_na(no, 0)) %>% 
-  mutate(all = yes + no) #%>% 
-  #filter(yes > 0)
+  mutate(all = yes + no)
 
 
-return(list(pairwise.df_all.info, positives, mom_comps, dad_comps))
+return(list(pairwise.df_all.info, positives, mom_comps, dad_comps, mc.prior, mc.sd, dc.prior, dc.sd, mom_comps.gap, dad_comps.gap))
 }
 
 

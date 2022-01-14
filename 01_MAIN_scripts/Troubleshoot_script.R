@@ -1,3 +1,14 @@
+mc <- mom_comps.gap %>% mutate(all.adj = all * surv_truth) %>% 
+  mutate(mom.N = all.adj/yes)
+
+mc.all <- sum(mc$all.adj)
+mc.pos <- sum(mc$yes)
+mc.mean = mean(mc$mom.N)
+mc.sd = sd(mc$mom.N)
+
+mc.all/mc.pos
+
+
 #Neg log like when estimate lambda with PO model
 Negatives_Mother <- mom_negatives   
 Negatives_Father <- dad_negatives
