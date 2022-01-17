@@ -11,7 +11,6 @@ rm(list=ls())
 
 #----------------Read in files ------------------------------
 #Check results from model diagnostics
-<<<<<<< HEAD
 # Results
 results <- read_csv("G://My Drive/Personal_Drive/R/CKMR/Model.results/Model.validation/CKMR_results_08Dec2021_longChain.csv")
 
@@ -22,7 +21,6 @@ results <- results %>% mutate(relative_bias2 = round(((`50` - truth)/truth)*100,
 #Median relative bias by sample size
 results %>% group_by(total_samples, parameter) %>% 
   dplyr::summarize(median = median(relative_bias2), n = n())
-=======
 ####------------- MCMC parameters ----------------####
 ni <- 30000 # number of post-burn-in samples per chain
 nb <- 40000 # number of burn-in samples
@@ -202,8 +200,7 @@ results2.norm <- results.norm %>% dplyr::select(-c(in_interval, relative_bias))
    mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
    mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) 
  #%>% 
-  # mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f
+  # mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0)
 
  
  #-----------Median Relative bias by sample size-------------------------
@@ -234,13 +231,8 @@ results2.norm %>% group_by(total_samples, parameter) %>%
 
 
 #Violin plot
-<<<<<<< HEAD
-RB_violin <- ggplot(data=results, aes(x=factor(parameter), fill = factor(total_samples))) +
-  geom_violin(aes(y=relative_bias2), draw_quantiles = .5) +
-=======
 RB_violin <- ggplot(data=results, aes(x=factor(parameter), fill = factor(parameter))) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f
   #ylim(-50, 160) +
   geom_hline(yintercept=0, col="black", size=1.25) +
   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
@@ -249,8 +241,6 @@ RB_violin <- ggplot(data=results, aes(x=factor(parameter), fill = factor(paramet
   font("title", size = 10, face = "bold")
 
 RB_violin
-<<<<<<< HEAD
-=======
 
 #---------------------------Box plots----------------------------------
 #Specify save location for pdf of plots
@@ -878,4 +868,3 @@ plotlist[[it]] <- annotate_figure(plots, top = text_grob(paste0("Statistical cov
 }
 
 ggexport(plotlist, filename = coverage.file.400)
->>>>>>> a16988e1e211d3f8570e1bb409286eb9ee7da96f

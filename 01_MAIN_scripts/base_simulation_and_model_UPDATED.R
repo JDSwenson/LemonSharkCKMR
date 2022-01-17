@@ -198,7 +198,7 @@ for(iter in 1:iterations) {
     #Need priors for:
     #Number of adults (uninformative)
     #Survival (beta -- conjugate prior for binomial; uninformative)
-    lam.tau <- 1/(0.02342^2)
+    lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
     
     #Define data
     jags_data = list(
@@ -233,8 +233,8 @@ for(iter in 1:iterations) {
     HS_model = function(){
 
       #PRIORS
-      Nf ~ dnorm(0, N.tau) # Uninformative prior for female abundance
-      Nm ~ dnorm(0, N.tau) # Uninformative prior for male abundance
+      Nf ~ dunif(1, 10000) # Uninformative prior for female abundance
+      Nm ~ dunif(1, 10000) # Uninformative prior for male abundance
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       lam ~ dnorm(1, lam.tau)
       
