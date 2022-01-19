@@ -111,7 +111,8 @@ sims.list.2 <- NULL
 sims.list.3 <- NULL
 
 for(iter in 1:iterations) {
-      set.seed(rseeds[iter])
+  set.seed(rseeds[iter])
+  sim.start <- Sys.time()
 
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -343,7 +344,7 @@ for(iter in 1:iterations) {
     results <- rbind(results, cbind(estimates, metrics))
     
     #Save info for samples to examine in more detail
-    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size, N.prior.max = N.prior.max)
+    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size)
     sample.info <- rbind(sample.info, sample.df_all.info)
   
   } # end loop over sample sizes
@@ -357,23 +358,25 @@ for(iter in 1:iterations) {
   sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
 
     #Results
-  write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
   
   #Model output for diagnostics
-  saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
+  saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
   
-  saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
+  saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
   
-  saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max))
+  saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
   
   # Detailed info on samples and parents to examine in more detail
-  saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
+  saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
   
-  saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
+  saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
   
 
-   
-  print(paste0("finished prior ", p, " iteration ", iter, " at: ", Sys.time()))
+  sim.end <- Sys.time() 
+  
+  iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
+  cat(paste0("Finished iteration ", iter, ". \n Took ", iter.time, " minutes"))
   } # end loop over iterations
 
 ########## Save and check results ##########
@@ -403,20 +406,20 @@ results2 %>% group_by(total_samples, parameter) %>%
  #Home computer: Dell Precision
  
  #Save model estimates
- write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+ write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
  
  #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 1
+ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
  
- saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 2
+ saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
  
- saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose, "_priorMax_", N.prior.max)) #Sample size 3
+ saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
  
  #Save detailed info about samples from population
- saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
+ saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
  #Save detailed info about parents
- saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_priorMax_", N.prior.max))
+ saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
 
 #To read in RDS file
