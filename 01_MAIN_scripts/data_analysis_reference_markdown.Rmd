@@ -40,6 +40,7 @@ MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/"
+results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/figures/"
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
 parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
@@ -50,14 +51,14 @@ sample.prefix <- "sample_info/CKMR_sample.info"
 results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"))
 
 #MCMC samples/output
-s1.norm <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+s1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
 
 head(sim.samples.1_MCMC[[1]])
 
-sim.samples.2_MCMC <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+s2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
 head(sim.samples.2_MCMC[[1]])
 
-sim.samples.3_MCMC <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+s3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
 head(sim.samples.3_MCMC[[1]])
 
 # Breakdown of offspring for each parent
@@ -127,31 +128,31 @@ head(results)
 
 #Temporary fix since results saved funny ... 
 #Lambda and survival were switched, so switching them back ... 
-HPD2.5_surv <- results %>% filter(parameter == "lam") %>% 
-  pull(HPD2.5)
-
-HPD2.5_lam <- results %>% filter(parameter == "surv") %>% 
-  pull(HPD2.5)  
-
-
-HPD97.5_surv <- results %>% filter(parameter == "lam") %>% 
-  pull(HPD97.5)
-
-HPD97.5_lam <- results %>% filter(parameter == "surv") %>% 
-  pull(HPD97.5)  
-
-results[results$parameter == "lam",]$HPD2.5 <- HPD2.5_lam
-results[results$parameter == "surv",]$HPD2.5 <- HPD2.5_surv
-
-results[results$parameter == "lam",]$HPD97.5 <- HPD97.5_lam
-results[results$parameter == "surv",]$HPD97.5 <- HPD97.5_surv
-
-results2 <- results %>% dplyr::select(-c(in_interval, relative_bias))
-
-#Calculate relative bias
- results2 <- results2 %>% 
-   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) 
+# HPD2.5_surv <- results %>% filter(parameter == "lam") %>% 
+#   pull(HPD2.5)
+# 
+# HPD2.5_lam <- results %>% filter(parameter == "surv") %>% 
+#   pull(HPD2.5)  
+# 
+# 
+# HPD97.5_surv <- results %>% filter(parameter == "lam") %>% 
+#   pull(HPD97.5)
+# 
+# HPD97.5_lam <- results %>% filter(parameter == "surv") %>% 
+#   pull(HPD97.5)  
+# 
+# results[results$parameter == "lam",]$HPD2.5 <- HPD2.5_lam
+# results[results$parameter == "surv",]$HPD2.5 <- HPD2.5_surv
+# 
+# results[results$parameter == "lam",]$HPD97.5 <- HPD97.5_lam
+# results[results$parameter == "surv",]$HPD97.5 <- HPD97.5_surv
+# 
+# results2 <- results %>% dplyr::select(-c(in_interval, relative_bias))
+# 
+# #Calculate relative bias
+#  results2 <- results2 %>% 
+#    mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
+#    mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) 
  #%>% 
   # mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
 
@@ -202,9 +203,9 @@ iterations = 100
 
 #200 samples
 HPD.200 <- NULL
-for(i in 1:length(sim.samples.1_MCMC)){
+for(i in 1:length(s1)){
   for(j in 1:length(intervals)){
-    post.HPD <- combine.mcmc(sim.samples.1_MCMC[[i]]) %>% 
+    post.HPD <- combine.mcmc(s1[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
@@ -221,9 +222,9 @@ levels(factor(HPD.200$interval))
 
 #300 samples
 HPD.300 <- NULL
-for(i in 1:length(sim.samples.2_MCMC)){
+for(i in 1:length(s2)){
   for(j in 1:length(intervals)){
-    post.HPD <- combine.mcmc(sim.samples.2_MCMC[[i]]) %>% 
+    post.HPD <- combine.mcmc(s2[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
@@ -240,9 +241,9 @@ levels(factor(HPD.300$interval))
 
 #400 samples
 HPD.400 <- NULL
-for(i in 1:length(sim.samples.3_MCMC)){
+for(i in 1:length(s3)){
   for(j in 1:length(intervals)){
-    post.HPD <- combine.mcmc(sim.samples.3_MCMC[[i]]) %>% 
+    post.HPD <- combine.mcmc(s3[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
@@ -340,7 +341,12 @@ lam.HPDI.plot <- ggplot(data = HPD.summary.tidy %>% filter(parameter == "lam"),
        y = "Percent in HPDI") +
   theme(legend.title = element_blank())
 
-ggarrange(Nf.HPDI.plot, Nm.HPDI.plot, surv.HPDI.plot, lam.HPDI.plot, common.legend = TRUE)
+HPDI.file <- paste0(results_plots_location, "HPDI_linePlot_", date.of.simulation, "_", seeds, "_", purpose, "_", "allSampleSizes.pdf")
+
+HPDI.plot <- ggarrange(Nf.HPDI.plot, Nm.HPDI.plot, surv.HPDI.plot, lam.HPDI.plot, common.legend = TRUE) %>% 
+  annotate_figure(top = text_grob(purpose, size = 18, face = "bold"))
+
+ggsave(filename = HPDI.file, plot = HPDI.plot, device = "pdf")
 ```
 
 
