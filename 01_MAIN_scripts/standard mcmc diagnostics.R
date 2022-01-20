@@ -8,13 +8,13 @@ rm(list=ls())
 
 #----------------Read in files ------------------------------
 #Check results from model diagnostics
-date.of.simulation <- "09Jan2022"
+date.of.simulation <- "18Jan2022"
 seeds <- "Seeds12.27"
-purpose <- "testHierarchical2"
+purpose <- "testHierarchical_calculatePriorsFirst"
 sim.samples.1 <- "200.samples"
 sim.samples.2 <- "300.samples"
 sim.samples.3 <- "400.samples"
-burn.in <- 40000
+burn.in <- 50000
 post.draws <- 30000
 thinning.rate <- 15
 MCMC.settings <- paste0("thin", thinning.rate, "_draw", post.draws, "_burn", burn.in)
@@ -143,6 +143,8 @@ for(j in 1:length(s.all)){
     mutate(iteration = j)
   effectiveSize.df <- rbind(effectiveSize.df, EF.temp)
 }
+
+#This will be double bc I'm running two chains
 effectiveSize.df
 
 #-----------------------------Geweke---------------------------------------------------
