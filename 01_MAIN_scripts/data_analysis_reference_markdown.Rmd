@@ -25,14 +25,14 @@ rm(list=ls())
 #----------------Read in files ------------------------------
 #Check results from model diagnostics
 ####------------- MCMC parameters ----------------####
-ni <- 15000 # number of post-burn-in samples per chain
-nb <- 20000 # number of burn-in samples
+ni <- 30000 # number of post-burn-in samples per chain
+nb <- 50000 # number of burn-in samples
 nt <- 15     # thinning rate
 nc <- 2      # number of chains
 
-date.of.simulation <- "01Jan2022"
+date.of.simulation <- "18Jan2022"
 seeds <- "Seeds12.27"
-purpose <- "estSurvLam"
+purpose <- "testHierarchical_calculatePriorsFirst"
 sim.samples.1 <- "200.samples"
 sim.samples.2 <- "300.samples"
 sim.samples.3 <- "400.samples"
@@ -53,13 +53,13 @@ results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simula
 #MCMC samples/output
 s1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
 
-head(sim.samples.1_MCMC[[1]])
+head(s1[[1]])
 
 s2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-head(sim.samples.2_MCMC[[1]])
+head(s2[[1]])
 
 s3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-head(sim.samples.3_MCMC[[1]])
+head(s3[[1]])
 
 # Breakdown of offspring for each parent
 rents <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
@@ -157,12 +157,12 @@ head(results)
   # mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0))
 
 #Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter) %>% 
+ results %>% group_by(total_samples, parameter) %>% 
    dplyr::summarize(median = median(relative_bias), n = n())
 
 
 #Within HPD interval?
-results2 %>% group_by(total_samples, parameter) %>% 
+results %>% group_by(total_samples, parameter) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
 funny.results <- results %>% filter(truth > Q97.5 | truth < Q2.5)

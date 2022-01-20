@@ -22,8 +22,8 @@ results <- results %>% mutate(relative_bias2 = round(((`50` - truth)/truth)*100,
 results %>% group_by(total_samples, parameter) %>% 
   dplyr::summarize(median = median(relative_bias2), n = n())
 ####------------- MCMC parameters ----------------####
-ni <- 30000 # number of post-burn-in samples per chain
-nb <- 40000 # number of burn-in samples
+ni <- 15000 # number of post-burn-in samples per chain
+nb <- 20000 # number of burn-in samples
 nt <- 15     # thinning rate
 nc <- 2      # number of chains
 MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
@@ -65,8 +65,13 @@ sample.info.norm <- readRDS(paste0(results_location, sample.prefix, "_", date.of
 
 
 #Results - uniform prior (uninformative)
-date.of.simulation <- "03Jan2022"
-purpose <- "testUniformPriors"
+date.of.simulation <- "17Jan2022"
+purpose <- "Uniform_10kMax"
+ni <- 30000 # number of post-burn-in samples per chain
+nb <- 40000 # number of burn-in samples
+nt <- 15     # thinning rate
+nc <- 2      # number of chains
+MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
 results.uniform <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv")) %>% 
   mutate(prior = "uniform")
@@ -87,8 +92,14 @@ sample.info.uniform <- readRDS(paste0(results_location, sample.prefix, "_", date
 
 
 #Results - hierarchical approach
-date.of.simulation <- "09Jan2022"
-purpose <- "testHierarchical2"
+date.of.simulation <- "18Jan2022"
+purpose <- "testHierarchical_calculatePriorsFirst"
+ni <- 30000 # number of post-burn-in samples per chain
+nb <- 50000 # number of burn-in samples
+nt <- 15     # thinning rate
+nc <- 2      # number of chains
+MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
+
 
 results.hier <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv")) %>% 
   mutate(N.prior_max = NA, prior = "hier")
@@ -170,7 +181,7 @@ ggarrange(Nf.density, Nm.density, surv.density, lam.density)
 #today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
 
-head(results)
+head(results.all)
 
 #Temporary fix since results saved funny ... 
 #Lambda and survival were switched, so switching them back ... 
@@ -210,7 +221,6 @@ results2.norm <- results.norm %>% dplyr::select(-c(in_interval, relative_bias))
  
 #Median relative bias by sample size - uniform prior
  results.uniform %>% group_by(total_samples, parameter) %>% 
-   filter(N.prior_max == 1000) %>% 
    dplyr::summarize(median = median(relative_bias), n = n())
  
  #Median relative bias by sample size - hierarchical
@@ -223,7 +233,6 @@ results2.norm %>% group_by(total_samples, parameter) %>%
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
  results.uniform %>% group_by(total_samples, parameter) %>%
-   filter(N.prior_max == 1000) %>% 
    dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
  
  results.hier %>% group_by(total_samples, parameter) %>% 
@@ -244,10 +253,9 @@ RB_violin
 
 #---------------------------Box plots----------------------------------
 #Specify save location for pdf of plots
-boxPlots.file <- paste0(results_plots_location, "BoxPlots_comparison.pdf")
+boxPlots.file <- paste0(results_plots_location, "BoxPlots_Priorcomparison.pdf")
 pdf(file = boxPlots.file, width = 14, height = 4)
 sim.samples.all <- c(200, 300, 400)
-prior.max <- c(1000, 2000, 3000)
 plot.list <- NULL
 
 for(i in 1:length(sim.samples.all)){
@@ -266,7 +274,7 @@ for(i in 1:length(sim.samples.all)){
     theme(legend.title = element_blank()) + 
     ylim(-50, 150)
   
-  RB_boxplot.uniform <- results.uniform %>% filter(N.prior_max == 1000 & total_samples == samps) %>% 
+  RB_boxplot.uniform <- results.uniform %>% filter(total_samples == samps) %>% 
   ggplot(aes(x=factor(parameter), fill = factor(parameter))) +
   geom_boxplot(aes(y=relative_bias)) +
   #ylim(-50, 160) +
@@ -390,51 +398,88 @@ for(i in 1:length(s1.norm)){
       rownames_to_column(var = "parameter")
     
     HPD.400.hier <- rbind(HPD.400.hier, post.HPD.400.hier)
+
+    #Uniform
+    #Uniform prior
+    #200 samples
+    post.HPD.200.uniform <- combine.mcmc(s1.uniform[[i]]) %>% 
+      HPDinterval(prob = intervals[j]) %>%
+      data.frame() %>% 
+      mutate(interval = intervals[j], iteration = i)
+    
+    post.HPD.200.uniform <- post.HPD.200.uniform[row.names(post.HPD.200.uniform) %in% jags_params,] %>% #Remove deviance
+      rownames_to_column(var = "parameter")
+    
+    HPD.200.uniform <- rbind(HPD.200.uniform, post.HPD.200.uniform)
+    
+    #Uniform prior
+    #300 samples
+    post.HPD.300.uniform <- combine.mcmc(s2.uniform[[i]]) %>% 
+      HPDinterval(prob = intervals[j]) %>%
+      data.frame() %>% 
+      mutate(interval = intervals[j], iteration = i)
+    
+    post.HPD.300.uniform <- post.HPD.300.uniform[row.names(post.HPD.300.uniform) %in% jags_params,] %>% #Remove deviance
+      rownames_to_column(var = "parameter")
+    
+    HPD.300.uniform <- rbind(HPD.300.uniform, post.HPD.300.uniform)
+    
+    #Uniform prior
+    #400 samples
+    post.HPD.400.uniform <- combine.mcmc(s3.uniform[[i]]) %>% 
+      HPDinterval(prob = intervals[j]) %>%
+      data.frame() %>% 
+      mutate(interval = intervals[j], iteration = i)
+    
+    post.HPD.400.uniform <- post.HPD.400.uniform[row.names(post.HPD.400.uniform) %in% jags_params,] %>% #Remove deviance
+      rownames_to_column(var = "parameter")
+    
+    HPD.400.uniform <- rbind(HPD.400.uniform, post.HPD.400.uniform)
     
   }
 }
 
 
-for(i in 1:length(s1.uniform)){
-  for(j in 1:length(intervals)){
-#Uniform
-#Uniform prior
-#200 samples
-post.HPD.200.uniform <- combine.mcmc(s1.uniform[[i]]) %>% 
-  HPDinterval(prob = intervals[j]) %>%
-  data.frame() %>% 
-  mutate(interval = intervals[j], iteration = i)
-
-post.HPD.200.uniform <- post.HPD.200.uniform[row.names(post.HPD.200.uniform) %in% jags_params,] %>% #Remove deviance
-  rownames_to_column(var = "parameter")
-
-HPD.200.uniform <- rbind(HPD.200.uniform, post.HPD.200.uniform)
-
-#Uniform prior
-#300 samples
-post.HPD.300.uniform <- combine.mcmc(s2.uniform[[i]]) %>% 
-  HPDinterval(prob = intervals[j]) %>%
-  data.frame() %>% 
-  mutate(interval = intervals[j], iteration = i)
-
-post.HPD.300.uniform <- post.HPD.300.uniform[row.names(post.HPD.300.uniform) %in% jags_params,] %>% #Remove deviance
-  rownames_to_column(var = "parameter")
-
-HPD.300.uniform <- rbind(HPD.300.uniform, post.HPD.300.uniform)
-
-#Uniform prior
-#400 samples
-post.HPD.400.uniform <- combine.mcmc(s3.uniform[[i]]) %>% 
-  HPDinterval(prob = intervals[j]) %>%
-  data.frame() %>% 
-  mutate(interval = intervals[j], iteration = i)
-
-post.HPD.400.uniform <- post.HPD.400.uniform[row.names(post.HPD.400.uniform) %in% jags_params,] %>% #Remove deviance
-  rownames_to_column(var = "parameter")
-
-HPD.400.uniform <- rbind(HPD.400.uniform, post.HPD.400.uniform)
-  }
-}
+# for(i in 1:length(s1.uniform)){
+#   for(j in 1:length(intervals)){
+# #Uniform
+# #Uniform prior
+# #200 samples
+# post.HPD.200.uniform <- combine.mcmc(s1.uniform[[i]]) %>% 
+#   HPDinterval(prob = intervals[j]) %>%
+#   data.frame() %>% 
+#   mutate(interval = intervals[j], iteration = i)
+# 
+# post.HPD.200.uniform <- post.HPD.200.uniform[row.names(post.HPD.200.uniform) %in% jags_params,] %>% #Remove deviance
+#   rownames_to_column(var = "parameter")
+# 
+# HPD.200.uniform <- rbind(HPD.200.uniform, post.HPD.200.uniform)
+# 
+# #Uniform prior
+# #300 samples
+# post.HPD.300.uniform <- combine.mcmc(s2.uniform[[i]]) %>% 
+#   HPDinterval(prob = intervals[j]) %>%
+#   data.frame() %>% 
+#   mutate(interval = intervals[j], iteration = i)
+# 
+# post.HPD.300.uniform <- post.HPD.300.uniform[row.names(post.HPD.300.uniform) %in% jags_params,] %>% #Remove deviance
+#   rownames_to_column(var = "parameter")
+# 
+# HPD.300.uniform <- rbind(HPD.300.uniform, post.HPD.300.uniform)
+# 
+# #Uniform prior
+# #400 samples
+# post.HPD.400.uniform <- combine.mcmc(s3.uniform[[i]]) %>% 
+#   HPDinterval(prob = intervals[j]) %>%
+#   data.frame() %>% 
+#   mutate(interval = intervals[j], iteration = i)
+# 
+# post.HPD.400.uniform <- post.HPD.400.uniform[row.names(post.HPD.400.uniform) %in% jags_params,] %>% #Remove deviance
+#   rownames_to_column(var = "parameter")
+# 
+# HPD.400.uniform <- rbind(HPD.400.uniform, post.HPD.400.uniform)
+#   }
+# }
 
 # tail(HPD.200)
 # levels(factor(HPD.200$interval))
@@ -519,7 +564,7 @@ HPD.norm.summary.tidy <- HPD.norm.summary %>%
   mutate(prior = "normal")
 
 date.of.simulation <- "01Jan2022"
-purpose <- "estSurvLam"
+purpose <- "NormalPrior"
 
 write_csv(HPD.norm.summary, file = paste0(results_location, "HPD.summary_", date.of.simulation, "_", purpose, "normalPrior.csv"))
 
@@ -561,8 +606,8 @@ HPD.uniform.summary.tidy <- HPD.uniform.summary %>%
   ) %>% 
   mutate(prior = "uniform")
 
-date.of.simulation <- "03Jan2022"
-purpose <- "testUniformPriors"
+date.of.simulation <- "17Jan2022"
+purpose <- "Uniform_10kMax"
 write_csv(HPD.uniform.summary, file = paste0(results_location, "HPD.summary_", date.of.simulation, "_", purpose, "uniformPrior.csv"))
 
 
@@ -604,8 +649,8 @@ HPD.hier.summary.tidy <- HPD.hier.summary %>%
   mutate(prior = "hier")
 
 
-date.of.simulation <- "09Jan2022"
-purpose <- "testHierarchical2"
+date.of.simulation <- "18Jan2022"
+purpose <- "testHierarchical_calculatePriorsFirst"
 write_csv(HPD.hier.summary, file = paste0(results_location, "HPD.summary_", date.of.simulation, "_", purpose, "hierarchical.csv"))
 
 #create dataframes for plotting by sample size
