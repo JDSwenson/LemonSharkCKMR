@@ -31,7 +31,7 @@ load("rseeds_12.27.rda")
 seeds <- "Seeds12.27"
 
 
-purpose <- "SB_w_uninformativePrior"
+purpose <- "SB_w_uninformativePrior2"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -86,7 +86,7 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 est.year <- n_yrs - 5 # Set year of estimation
 
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
+iterations <- 25 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds_12.27.rda")
 
@@ -120,17 +120,25 @@ sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
 sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
 
 # #Results
-# results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
-# 
-# #Model output for diagnostics
-# sims.list.1 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
-# 
-# sims.list.2 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-# 
-# sims.list.3 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-# 
-# # Detailed info on samples and parents to examine in more detail
-# sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+#  results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
+# # 
+#  #Model output for diagnostics
+#  sims.list.1 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+#  
+#  sims.list.2 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+#  
+#  sims.list.3 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+#  
+#  # Detailed info on samples and parents to examine in more detail
+#  sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+
+results <- NULL
+ 
+#Model output for diagnostics
+sims.list.1 <- NULL
+sims.list.2 <- NULL
+sims.list.3 <- NULL
+sample.info <- NULL
 
 
 for(iter in 1:iterations) {
@@ -260,7 +268,7 @@ for(iter in 1:iterations) {
       
       #Likelihood
       for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
-        MHSP[i] ~ dbin(((surv^(mom_ys_birth[i] - mom_os_birth[i]))*0.5)/(Nf*lam^(mom_ys_birth[i]-est.year)), mom_n_comps[i]) # Sex-specific CKMR model equation
+        MHSP[i] ~ dbin((surv^(mom_ys_birth[i] - mom_os_birth[i]))/((Nf/2)*lam^(mom_ys_birth[i]-est.year)), mom_n_comps[i]) # Sex-specific CKMR model equation
       }
       for(j in 1:dad_yrs){ # Loop over paternal cohort comparisons
         FHSP[j] ~ dbin((surv^(dad_ys_birth[j] - dad_os_birth[j]))/(Nm*lam^(dad_ys_birth[j]-est.year)), dad_n_comps[j]) # Sex-specific CKMR model equation
@@ -428,6 +436,11 @@ for(iter in 1:iterations) {
    cat(paste0("Finished iteration ", iter, ". \n Took ", iter.time, " minutes"))
 } # end loop over iterations
 
+
+
+
+
+
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
 results2 <- results %>% 
@@ -483,7 +496,7 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
 #Box plot of relative bias
 ggplot(data=results2, aes(x=factor(total_samples))) +
   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
-  ylim(-100, 100) +
+#  ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +
   annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
   labs(x="Sample size", y="Relative bias", title="Relative Bias by sample size") +
