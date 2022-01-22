@@ -210,6 +210,8 @@ ggplot(fecSurv.draw, aes(x=as.numeric(fec), y=as.numeric(surv), col=case)) +
   geom_point()
 
 
+#----------------------Load life history info----------------------
+elh <- read_csv("00_key_resources/Elasmobranch_life_history.csv") #Read in file with elasmobranch life history traits.
 
 
 #Irrelevant

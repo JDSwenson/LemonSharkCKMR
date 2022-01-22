@@ -5,6 +5,8 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+devtools::install_github("pconn/HierarchicalGOF/HierarchicalGOF")
+#install.packages("ggmcmc")
 ```
 
 ```{r read in files}
@@ -14,6 +16,7 @@ library(RColorBrewer)
 library(coda)
 library(runjags)
 library(ggmcmc)
+
 
 
 rm(list=ls())
