@@ -16,7 +16,7 @@ library(coda)
 rm(list=ls())
 
 source("./01_MAIN_scripts/functions/Dovi_IBS.R")
-source("./01_MAIN_scripts/functions/pairwise_comparisons.R")
+source("./01_MAIN_scripts//functions/pairwise_comparisons_hierarchical_UPDATED.R")
 
 
 #----------------Set output file locations ------------------------------
@@ -31,7 +31,7 @@ load("rseeds_12.27.rda")
 seeds <- "Seeds12.27"
 
 
-purpose <- "Uniform_10kMax"
+purpose <- "Uniform_10kMax_reparam"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -119,21 +119,21 @@ sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
 sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
 sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
 
-#Results
-results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
+# #Results
+# results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
+# 
+# #Model output for diagnostics
+# sims.list.1 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+# 
+# sims.list.2 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+# 
+# sims.list.3 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+# 
+# # Detailed info on samples and parents to examine in more detail
+# sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
-#Model output for diagnostics
-sims.list.1 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
 
-sims.list.2 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-
-sims.list.3 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-
-# Detailed info on samples and parents to examine in more detail
-sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-
-
-for(iter in 58:iterations) {
+for(iter in 1:iterations) {
   set.seed(rseeds[iter])
   sim.start <- Sys.time()
 
@@ -209,9 +209,15 @@ for(iter in 58:iterations) {
     #Separate list elements into different dataframes
     pairwise.df_all.info.filt <- pairwise.out.filt[[1]] 
     positives.filt <- pairwise.out.filt[[2]]
-    mom_comps <- pairwise.out.filt[[3]] %>% as_tibble()
-    dad_comps <- pairwise.out.filt[[4]] %>% as_tibble()
-
+    mom_comps <- pairwise.out.filt[[3]] 
+    dad_comps <- pairwise.out.filt[[4]]
+    mc.prior <- pairwise.out.filt[[5]]
+    mc.sd <- pairwise.out.filt[[6]]
+    dc.prior <- pairwise.out.filt[[7]]
+    dc.sd <- pairwise.out.filt[[8]]
+    mom_comps.gap <- pairwise.out.filt[[9]]
+    dad_comps.gap <- pairwise.out.filt[[10]]
+    
 
     ########## Fit CKMR model ##########
     #-------------- STEP 1: PREPARE DATA ----------------#
@@ -229,12 +235,22 @@ for(iter in 58:iterations) {
       mom_os_birth = mom_comps$Ind_1_birth, # birth year of older sib; a
       mom_yrs = nrow(mom_comps), # number of cohort comparisons to loop over 
       
+      MHSP.p = mom_comps.gap$yes, # Positive maternal half-sibs; Y
+      mom_n_comps.p = mom_comps.gap$all, # Number of total maternal comparisons; R
+      mom_gap.p = mom_comps.gap$yr_gap, # birth year of older sib; a
+      mom_yrs.p = nrow(mom_comps.gap), # number of cohort comparisons to loop over
+      
       #Dads
       FHSP = dad_comps$yes, # Positive paternal half-sibs; Y
       dad_n_comps = dad_comps$all, # Number of total paternal comparisons; R
       dad_ys_birth = dad_comps$Ind_2_birth, # birth year of younger sib; b
       dad_os_birth = dad_comps$Ind_1_birth, # birth year of older sib; a
       dad_yrs = nrow(dad_comps), # number of cohort comparisons to loop over
+      
+      FHSP.p = dad_comps.gap$yes, # Positive maternal half-sibs; Y
+      dad_n_comps.p = dad_comps.gap$all, # Number of total maternal comparisons; R
+      dad_gap.p = dad_comps.gap$yr_gap, # birth year of older sib; a
+      dad_yrs.p = nrow(dad_comps.gap), # number of cohort comparisons to loop over
       
       #Fix other potential parameters
       #surv = surv,
@@ -260,6 +276,9 @@ for(iter in 58:iterations) {
       
       #Likelihood
       for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
+        
+        Nf*(lam^(mom_ys_birth[i]-est.year)) ~ dpois() #Not sure how to do this ... 
+        
         MHSP[i] ~ dbin((surv^(mom_ys_birth[i] - mom_os_birth[i]))/(Nf*lam^(mom_ys_birth[i]-est.year)), mom_n_comps[i]) # Sex-specific CKMR model equation
       }
       for(j in 1:dad_yrs){ # Loop over paternal cohort comparisons

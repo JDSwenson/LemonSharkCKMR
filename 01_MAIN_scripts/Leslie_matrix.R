@@ -211,8 +211,28 @@ ggplot(fecSurv.draw, aes(x=as.numeric(fec), y=as.numeric(surv), col=case)) +
 
 
 #----------------------Load life history info----------------------
-elh <- read_csv("00_key_resources/Elasmobranch_life_history.csv") #Read in file with elasmobranch life history traits.
+elh <- read_csv("00_key_resources/Elasmobranch_life_history.csv") %>% 
+  mutate(litter.size = as.numeric(litter.size)) %>% #Read in file with elasmobranch life history traits; convert litter size column from character to numeric
+  mutate(annual.fecundity = litter.size/periodicity) %>% 
+mutate(age.mat.bin = ifelse(age.at.maturity <= 3, "early", 
+                                    ifelse(age.at.maturity > 3 & age.at.maturity <= 7, "moderate", 
+                                           "late"))) %>% 
+  mutate(fecundity.bin = ifelse(annual.fecundity <= 5, "low", 
+                                  ifelse(annual.fecundity > 5 & annual.fecundity <= 10, "moderate"
+                                         , "high"))) %>%
+  as.data.frame()
 
+elh2 <- elh %>% dplyr::select(Species, `Common name`, age.at.maturity, litter.size, periodicity, annual.fecundity, fecundity.bin, age.mat.bin)
+
+elh2 %>% group_by(fecundity.bin) %>% 
+  summarize(n())
+
+elh2 %>% group_by(age.mat.bin, fecundity.bin) %>% #View numbers in each category
+  summarize(n())
+
+elh2 %>% filter(annual.fecundity < 2)
+
+elh2 %>% filter(`Common name` == "whale shark")
 
 #Irrelevant
 #--------------Population simulation-------------------

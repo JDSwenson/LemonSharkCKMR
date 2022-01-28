@@ -31,7 +31,7 @@ load("rseeds_12.27.rda")
 seeds <- "Seeds12.27"
 
 
-purpose <- "Uniform_10kMax"
+purpose <- "test_Waples_equation"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -92,7 +92,7 @@ load("rseeds_12.27.rda")
 
 ####------------- MCMC parameters ----------------####
 ni <- 30000 # number of post-burn-in samples per chain
-nb <- 40000 # number of burn-in samples
+nb <- 50000 # number of burn-in samples
 nt <- 15     # thinning rate
 nc <- 2      # number of chains
 
@@ -260,13 +260,18 @@ for(iter in 58:iterations) {
       
       #Likelihood
       for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
-        MHSP[i] ~ dbin((surv^(mom_ys_birth[i] - mom_os_birth[i]))/(Nf*lam^(mom_ys_birth[i]-est.year)), mom_n_comps[i]) # Sex-specific CKMR model equation
+        Nf*lam^(mom_ys_birth[i]-est.year) ~ dpois((mom_n_comps[i] * surv)/MHSP[i])
       }
+      
+
+      
       for(j in 1:dad_yrs){ # Loop over paternal cohort comparisons
-        FHSP[j] ~ dbin((surv^(dad_ys_birth[j] - dad_os_birth[j]))/(Nm*lam^(dad_ys_birth[j]-est.year)), dad_n_comps[j]) # Sex-specific CKMR model equation
+        Nm*lam^(mom_ys_birth[i]-est.year) ~ dpois((mom_n_comps[i] * surv)/FHSP[i])
       }
     }
 
+    
+    
     # Write model    
     jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_neutralGrowth_est_SurvLam_iteration_", iter, ".txt")
     write_model(HS_model, jags_file)
