@@ -12,11 +12,12 @@ library(Rlab)
 library(runjags)
 library(postpack)
 library(coda)
+library(ggmcmc)
 
 rm(list=ls())
 
 source("./01_MAIN_scripts/functions/Dovi_IBS.R")
-source("./01_MAIN_scripts/functions/pairwise_comparisons.R")
+source("./01_MAIN_scripts//functions/pairwise_comparisons.R")
 
 
 #----------------Set output file locations ------------------------------
@@ -30,7 +31,7 @@ load("rseeds_12.27.rda")
 
 seeds <- "Seeds12.27"
 
-purpose <- "TestSD"
+purpose <- "prior_posterior_density_SDMax"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -85,7 +86,6 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 est.year <- n_yrs - 5 # Set year of estimation
 
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 #rseeds <- sample(1:1000000,iterations)
 load("rseeds_12.27.rda")
 
@@ -104,7 +104,6 @@ sample.vec <- c(200, 300, 400) #vector to sample over per year
 
 ####-------------- Start simulation loop -------------------####
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 
 # Initialize arrays for saving results
  results <- NULL
@@ -132,10 +131,6 @@ sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
 # sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
 
-for(iter in 1:iterations) {
-  set.seed(rseeds[iter])
-  sim.start <- Sys.time()
-
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
                init.prop.female = init.prop.female,
@@ -154,18 +149,15 @@ for(iter in 1:iterations) {
 #Outputs a list, where the first element is a list of various population parameters for each year, and the second is the population size for each year
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size <- out[[2]] #population parameters for each year of simulation
-  parents.tibble <- out[[3]] %>% #Tibble for each parent for each year to check the distribution later
-    mutate(iteration = iter) 
+  parents.tibble <- out[[3]] #%>% #Tibble for each parent for each year to check the distribution later
+    #mutate(iteration = iter) 
 
   
   #Save results from the simulation
   source("./01_MAIN_scripts/functions/query_results.R")
 
-  ####--------------------Collect samples---------------------####
-  #Loop over sample sizes stored in sample.vec  
-  for(samps in 1:length(sample.vec)){
 
-        sample.size <- sample.vec[samps] #Specify sample size
+  sample.size <- sample.vec[samps] #Specify sample size
     
     #Initialize dataframes
     sample.df_all.info <- NULL
@@ -217,8 +209,13 @@ for(iter in 1:iterations) {
     #Need priors for:
     #Number of adults (uninformative)
     #Survival (beta -- conjugate prior for binomial; uninformative)
-    lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
-    N.tau <- 1/(sd^2)
+    lam.sd <- 0.02277 #Value derived from Leslie matrix
+    lam.tau <- 1/(lam.sd^2) 
+    sd.vec <- c(100, 500, 1000, 2000, 5000, 10000)
+  
+      for(i in 1:length(sd.vec)){
+    sd.max <- sd.vec[i]
+    tau.max <- 1/(sd.max^2)
     
     #Define data
     jags_data = list(
@@ -239,8 +236,8 @@ for(iter in 1:iterations) {
       #Fix other potential parameters
       #surv = surv,
       est.year = est.year, # estimation year i.e. year the estimate will be focused on
-      #N.tau = 1E-6,
-      lam.tau = lam.tau
+      lam.tau = lam.tau,
+      tau.max = tau.max
     )
     
 
@@ -254,9 +251,9 @@ for(iter in 1:iterations) {
 
       #PRIORS
       mu ~ dunif(1, 10000)
-      sd ~ dunif(1, 10000)
-      Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
-      Nm ~ dunif(mu, 1/(sd^2)) # Uninformative prior for male abundance
+      tau ~ dunif(.000000000000001, tau.max)
+      Nf ~ dnorm(mu, tau) # Uninformative prior for female abundance
+      Nm ~ dnorm(mu, tau) # Uninformative prior for male abundance
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       lam ~ dnorm(1, lam.tau)
       
@@ -270,7 +267,7 @@ for(iter in 1:iterations) {
     }
 
     # Write model    
-    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_neutralGrowth_est_SurvLam_iteration_", iter, ".txt")
+    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_neutralGrowth_testPriors.txt")
     write_model(HS_model, jags_file)
     
     
@@ -318,15 +315,6 @@ for(iter in 1:iterations) {
                               parallel = T
     )
     
-
-    if(samps == 1){
-      sims.list.1[[iter]] <- post
-    } else if(samps == 2){
-      sims.list.2[[iter]] <- post
-    } else if(samps == 3){
-      sims.list.3[[iter]] <- post
-    }
-    
     #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
     # view convergence diagnostic summaries for all monitored nodes
     # 2.5, 50, and 97.5 are quantiles in model.summary
@@ -346,152 +334,57 @@ for(iter in 1:iterations) {
       rename(HPD2.5 = lower, HPD97.5 = upper) %>% 
       dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff)
 
-    ########## Compile and report results #########
-    # Combine above to make dataframe with truth and estimates side-by-side
-    # store years from youngest sibling in comparisons to end of study
-    yrs <- c(est.year:n_yrs)
     
-    #Extract true values from year of estimation (ie est.year)
-    Mom_truth <- round(pop.size$Female.adult.pop[est.year],0) # True Nf
-    Dad_truth <- round(pop.size$Male.adult.pop[est.year], 0) # True Nm
-    surv_truth <- round(mean(sVec[est.year:n_yrs]), 4) # True adult survival over estimation period
-    #Adult_truth <- round(pop.size$Total.adult.pop[est.year], 0) # Used for sex-aggregated model
-    lam_truth <- round(mean.adult.lambda, 4)
-    Mom_min <- min(pop.size$Female.adult.pop[est.year:n_yrs]) #Minimum Nf over estimation period
-    Mom_max <- max(pop.size$Female.adult.pop[est.year:n_yrs]) #Maximum Nf over estimation period
-    Dad_min <- min(pop.size$Male.adult.pop[est.year:n_yrs]) #Minimum Nm over estimation period
-    Dad_max <- max(pop.size$Male.adult.pop[est.year:n_yrs]) #Maximum Nm over estimation period
-    #Adult_min <- min(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
-    #Adult_max <- max(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
-    surv_min <- min(sVec[est.year:n_yrs]) #Minimum survival over estimation period
-    surv_max <- max(sVec[est.year:n_yrs]) #Maximum survival over estimation period
-    lam_min <- min(adult.lambda[est.year:n_yrs]) #Minimum lambda over estimation period
-    lam_max <- max(adult.lambda[est.year:n_yrs]) #Maximum lambda over estimation period
-    mean.num.mothers.total <- round(mean(pop.size$Num.mothers[est.year:n_yrs]), 0) #Mean number of mothers in population over estimation period
-    mean.num.fathers.total <- round(mean(pop.size$Num.fathers[est.year:n_yrs]), 0) #Mean number of fathers in population over estimation period
+    #---------------Plot prior vs posterior-----------------
+    N.prior <- rnorm(n = 10000, mean = runif(1, min = 1, max = 10000), sd = runif(1, 1, sd.max)) %>% 
+      as_tibble() %>% 
+      mutate(Chain = "prior")
     
-    #Create dataframe of estimates and truth
-    estimates <- model.summary2 %>% 
-      mutate(min = c(Mom_min, Dad_min, surv_min, lam_min), max = c(Mom_max, Dad_max, surv_max, lam_max), truth = c(Mom_truth, Dad_truth, surv_truth, lam_truth)) %>%
-      as_tibble()
+    surv.prior <- rbeta(n = 10000, shape1 = 1, shape2 = 2) %>% 
+      as_tibble() %>% 
+      mutate(Chain = "prior")
     
-    #Extract more metrics that can help with troubleshooting and visualization
-    total_samples <- sample.size * length(sample.years) # total samples
-    pop_size_mean <- round(mean(pop.size$population_size[est.year:n_yrs]),0) #Mean TOTAL population size over estimation period
+    lam.prior <- rnorm(n = 10000, mean = 1, sd = lam.sd) %>% 
+      as_tibble() %>% 
+      mutate(Chain = "prior")
     
-    #Bind metrics together
-    metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), rep(sum(mom_comps[,3]) + sum(dad_comps[3]), times = n_params-2)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
-                     c(mean.num.mothers.total, mean.num.fathers.total, rep(mean.num.mothers.total + mean.num.fathers.total, times = n_params - 2)), #Mean number of parents in population over estimation period
-                     c(length(sampled.mothers), length(sampled.fathers), rep(length(sampled.mothers) + length(sampled.fathers), times = n_params-2)), #number of unique sampled parents
-                     c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
-                     c(rep(total_samples, times = n_params)), # total samples
-                     c(rep(pop_size_mean, times = n_params)), # mean population size over estimation period
-                     c(rep(iter, times = n_params))) #iteration
-    colnames(metrics) <- c("parents_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
+    #Prepare posteriors for plotting
+    Nf.post <- ggs(post) %>% 
+      filter(Parameter == "Nf") %>% 
+      mutate(Chain = ifelse(Chain == 1, "Chain 1", "Chain 2"))
     
-    #-----------------Loop end-----------------------------#
-    #Bind results from previous iterations with current iteration
-    results <- rbind(results, cbind(estimates, metrics))
+    Nm.post <- ggs(post) %>% 
+      filter(Parameter == "Nm") %>% 
+      mutate(Chain = ifelse(Chain == 1, "Chain 1", "Chain 2"))
     
-    #Save info for samples to examine in more detail
-    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size)
-    sample.info <- rbind(sample.info, sample.df_all.info)
-  
-  } # end loop over sample sizes
-  
-  
-  #-----------------Save output files iteratively--------------------
-  #in case R crashes or computer shuts down
+    surv.post <- ggs(post) %>% 
+      filter(Parameter == "surv") %>% 
+      mutate(Chain = ifelse(Chain == 1, "Chain 1", "Chain 2"))
+    
+    lam.post <- ggs(post) %>% 
+      filter(Parameter == "lam") %>% 
+      mutate(Chain = ifelse(Chain == 1, "Chain 1", "Chain 2"))
+    
+    Nf.density <- ggs_density(Nf.post) + 
+      geom_density(data = N.prior, aes(x = value), alpha = 0.6) + 
+      theme(legend.title = element_blank())
+    
+    Nm.density <- ggs_density(Nm.post) + 
+      geom_density(data = N.prior, aes(x = value), alpha = 0.6) +
+      theme(legend.title = element_blank())
+    
+    surv.density <- ggs_density(surv.post) + 
+      geom_density(data = surv.prior, aes(x = value), alpha = 0.6) + 
+      theme(legend.title = element_blank())
+    
+    lam.density <- ggs_density(lam.post) + 
+      geom_density(data = lam.prior, aes(x = value), alpha = 0.6) + 
+      theme(legend.title = element_blank())
+    
+    priorPostPlots <- ggarrange(Nf.density, Nm.density, surv.density, lam.density, common.legend = TRUE)
+    
+    ppp <- annotate_figure(priorPostPlots, top = text_grob(paste0("Density Plot: SD max = ", sd.max), face = "bold", size = 14))
 
-  sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
-  sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
-  sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
-  
-#Results
-   write.table(results, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-
-   #Model output for diagnostics
-    saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
-
-   saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-
-   saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-
-# Detailed info on samples and parents to examine in more detail
-   saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-
-   saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-   
-   
-   
-   sim.end <- Sys.time() 
-   
-   iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
-   cat(paste0("Finished iteration ", iter, ". \n Took ", iter.time, " minutes"))
-} # end loop over iterations
-
-########## Save and check results ##########
-#Calculate relative bias for all estimates
-results2 <- results %>% 
-  mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0)) %>% 
-  mutate(percent_parents_sampled = unique_parents_in_sample/mean_unique_parents_in_pop)
-#Need to switch HPDI for survival and lambda
-
-#Within HPD interval?
-results2 %>% group_by(total_samples, parameter) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
-
-#Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter) %>% 
-   dplyr::summarize(median = median(relative_bias), n = n())
-
- #Mean number of parents detected
- #Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter) %>% 
-   dplyr::summarize(mean = mean(parents_detected), n = n())
- 
- 
- #-----------------------------Save major output files---------------------------------------------
- #Home computer: Dell Precision
- 
- #Save model estimates
-write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
- 
- #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
- 
- saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
- 
- saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
- 
- #Save detailed info about samples from population
- saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
- 
- #Save detailed info about parents
- saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
- 
-
-#To read in RDS file
-#pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")
-
-
-#MGHPCC
-#write.table(results2, file = paste0("/home/js16a/R/working_directory/CKMR_simulations/Dovi_lambdaModel_06_22.2021_neutralPopGrowth.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-
-
-#-------------Quick viz of results--------------#
-#Box plot of relative bias
-ggplot(data=results2, aes(x=factor(total_samples))) +
-  geom_boxplot(aes(y=relative_bias, fill=parameter)) +
-  ylim(-100, 100) +
-  geom_hline(yintercept=0, col="black", size=1.25) +
-  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Sample size", y="Relative bias", title="Relative Bias by sample size") +
-  scale_fill_brewer(palette="Set2") +
-  font("title", size = 10, face = "bold")
-
-
-
-####################### End ##############################
+ggsave(filename = paste0(purpose, "_", sd.max,"_", date.of.simulation, ".pdf"))
+    }
+    
