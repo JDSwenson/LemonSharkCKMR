@@ -30,8 +30,7 @@ load("rseeds_12.27.rda")
 
 seeds <- "Seeds12.27"
 
-
-purpose <- "test_Waples_equation"
+purpose <- "TestSD"
 
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
@@ -108,32 +107,32 @@ sample.vec <- c(200, 300, 400) #vector to sample over per year
 iterations <- 100 # CHANGED FROM 100; Number of iterations to loop over
 
 # Initialize arrays for saving results
-# results <- NULL
-# sample.info <- NULL
-# sims.list.1 <- NULL
-# sims.list.2 <- NULL
-# sims.list.3 <- NULL
+ results <- NULL
+ sample.info <- NULL
+ sims.list.1 <- NULL
+ sims.list.2 <- NULL
+ sims.list.3 <- NULL
+
+#sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
+#sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
+#sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
 
 ####Initialize array from previous checkpoint
-sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
-sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
-sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
-
 #Results
-results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
-
-#Model output for diagnostics
-sims.list.1 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
-
-sims.list.2 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-
-sims.list.3 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+# results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
+# 
+# #Model output for diagnostics
+# sims.list.1 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+# 
+# sims.list.2 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+# 
+# sims.list.3 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
 
 # Detailed info on samples and parents to examine in more detail
-sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+# sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
 
-for(iter in 58:iterations) {
+for(iter in 1:iterations) {
   set.seed(rseeds[iter])
   sim.start <- Sys.time()
 
@@ -219,6 +218,7 @@ for(iter in 58:iterations) {
     #Number of adults (uninformative)
     #Survival (beta -- conjugate prior for binomial; uninformative)
     lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
+    #N.tau <- 1/(sd^2)
     
     #Define data
     jags_data = list(
@@ -239,7 +239,7 @@ for(iter in 58:iterations) {
       #Fix other potential parameters
       #surv = surv,
       est.year = est.year, # estimation year i.e. year the estimate will be focused on
-      N.tau = 1E-6,
+      #N.tau = 1E-6,
       lam.tau = lam.tau
     )
     
@@ -253,27 +253,31 @@ for(iter in 58:iterations) {
     HS_model = function(){
 
       #PRIORS
-      Nf ~ dunif(1, 10000) # Uninformative prior for female abundance
-      Nm ~ dunif(1, 10000) # Uninformative prior for male abundance
+      mu ~ dunif(1, 10000)
+      sd ~ dunif(1, 10000)
+      Nf1 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
+      Nm1 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       lam ~ dnorm(1, lam.tau)
       
+      #Have to generalize the first part and then focus the estimate on a specific year
       #Likelihood
       for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
-        Nf*lam^(mom_ys_birth[i]-est.year) ~ dpois((mom_n_comps[i] * surv)/MHSP[i])
+        Nf1[i] ~ dpois(((mom_n_comps[i] * surv)/MHSP[i]))
+        Nf = Nf1*lam^(mom_ys_birth[i]-est.year)
       }
-      
-
       
       for(j in 1:dad_yrs){ # Loop over paternal cohort comparisons
-        Nm*lam^(mom_ys_birth[i]-est.year) ~ dpois((mom_n_comps[i] * surv)/FHSP[i])
+        Nm1 ~ dpois(((dad_n_comps[j] * surv)/FHSP[j]))
+        Nm = Nm1*lam^(dad_ys_birth[j]-est.year)
       }
     }
+    
 
-    
-    
     # Write model    
     jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_neutralGrowth_est_SurvLam_iteration_", iter, ".txt")
+    #For single run w/o iterations
+    jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/HS_neutralGrowth_est_SurvLam.txt")
     write_model(HS_model, jags_file)
     
     
