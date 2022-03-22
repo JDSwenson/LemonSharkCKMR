@@ -264,7 +264,7 @@ for(iter in 1:iterations) {
       #Likelihood
       for(i in 1:mom_yrs){ # Loop over maternal cohort comparisons
         Nf1[i] ~ dpois(((mom_n_comps[i] * surv)/MHSP[i]))
-        Nf = Nf1*lam^(mom_ys_birth[i]-est.year)
+        Nf = Nf1[i]*lam^(mom_ys_birth[i]-est.year)
       }
       
       for(j in 1:dad_yrs){ # Loop over paternal cohort comparisons
