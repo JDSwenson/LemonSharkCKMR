@@ -16,7 +16,7 @@ library(coda)
 rm(list=ls())
 
 source("./01_MAIN_scripts/functions/Dovi_IBS.R")
-source("./01_MAIN_scripts//functions/pairwise_comparisons.R")
+source("./01_MAIN_scripts/functions/pairwise_comparisons.R")
 
 
 #----------------Set output file locations ------------------------------
