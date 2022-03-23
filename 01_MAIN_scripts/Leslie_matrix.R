@@ -210,6 +210,43 @@ ggplot(fecSurv.draw, aes(x=as.numeric(fec), y=as.numeric(surv), col=case)) +
   geom_point()
 
 
+
+
+####---------------------Sensitivity and elasticity------------------------------####
+#-------------------Survival---------------------#
+maxAge <- 50 
+repro.age <- 12
+juv.ages <- repro.age - 1 #Years of being a juvenile
+ages <- c(0:maxAge) #Total ages
+adult.ages <- length(ages) - (juv.ages + 1)
+YOY.survival <- 0.7 # young of year survival
+juvenile.survival <- 0.8 # juvenile survival
+adult.survival <- 0.825 #adult survival
+
+
+#-------------------Fecundity--------------------#
+mating.periodicity <- 1 # number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+num.mates <- c(1:3) # vector of potential number of mates per mating
+f <- (1-mean.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
+init.prop.female = 0.5
+ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
+fecundity <- ff
+
+
+#Input to Leslie matrix
+survival.vec <- c(YOY.survival, rep(juvenile.survival, times = juv.ages), rep(adult.survival, times = adult.ages - 1), 0)
+fecund.vec <- c(rep(0, times = repro.age), rep(fecundity, times = maxAge - juv.ages))
+
+Leslie_input <- data.frame(
+  x = c(0:maxAge), #age
+  sx = survival.vec, #survival
+  mx = fecund.vec
+)
+
+A1_pre <- make_Leslie_matrix(Leslie_input)
+
+sensitivity(A1_pre)
+
 #----------------------Load life history info----------------------
 elh <- read_csv("00_key_resources/Elasmobranch_life_history.csv") #Read in file with elasmobranch life history traits.
 
