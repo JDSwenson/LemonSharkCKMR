@@ -84,7 +84,7 @@ n_yrs <- burn.in + Num.years #Total number of simulation years
 estimation.year <- n_yrs - 5 # Set year of estimation
 
 #rseeds <- sample(1:1000000,iterations)
-load("rseeds_2022.03.23.rda")
+#load("rseeds_2022.03.23.rda")
 
 #----------------------- MCMC parameters ----------------------
 ni <- 30000 # number of post-burn-in samples per chain
@@ -93,15 +93,15 @@ nt <- 15     # thinning rate
 nc <- 2      # number of chains
 
 #--------------------- Sampling parameters ---------------------
-sample.years <- c(n_yrs - c(2:0)) #For two years of sampling
+sample.years <- c(n_yrs - c(3:0)) #For two years of sampling
 #sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
-sample.vec <- c(200, 300, 400) #vector to sample over per year
+sample.vec <- c(50, 150, 250) #vector to sample over per year
 
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 10 #Number of iterations to loop over
+iterations <- 100 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -171,7 +171,10 @@ for(iter in 1:iterations) {
     #Sample population each year in sample.years and make dataframe of samples with all metadata
     for(i in sample.years){
       sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
-        dplyr::slice_sample(n = sample.size)
+        dplyr::slice_sample(n = sample.size) #%>% 
+      #In case wanting to filter for one offspring per parent per cohort  
+      #dplyr::distinct(mother.x, birth.year, .keep_all = TRUE) %>% 
+      #dplyr::distinct(father.x, birth.year, .keep_all = TRUE)
       sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
     }
     
