@@ -1,10 +1,13 @@
 # Combine above to make dataframe with truth and estimates side-by-side
 # store years from youngest sibling in comparisons to end of study
 yrs <- c(est.year:n_yrs)
+ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
+
+mean.adult.lambda <- mean(adult.lambda[ref.year:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
 
 #Extract true values from year of estimation (ie est.year)
-Mom_truth <- round(pop.size$Female.adult.pop[est.year],0) # True Nf
-Dad_truth <- round(pop.size$Male.adult.pop[est.year], 0) # True Nm
+Mom_truth <- round(pop.size$Num.mothers[est.year],0) # True Nf
+Dad_truth <- round(pop.size$Num.fathers[est.year], 0) # True Nm
 surv_truth <- round(mean(sVec[est.year:n_yrs]), 4) # True adult survival over estimation period
 #Adult_truth <- round(pop.size$Total.adult.pop[est.year], 0) # Used for sex-aggregated model
 lam_truth <- round(mean.adult.lambda, 4)

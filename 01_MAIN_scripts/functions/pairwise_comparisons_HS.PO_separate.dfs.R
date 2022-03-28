@@ -1,5 +1,5 @@
 ####---------------Filter samples -------------####
-#Filters for full sibs, but also identifies appropriate sample sets for each offspring birth year (for PO) and each younger sib birth year (for half-sib)
+
 filter.samples <- function(samples){
 
   #------------------Filter 1: full siblings----------------------
@@ -30,8 +30,7 @@ filter.samples <- function(samples){
       mutate(relation = "parent")
     
     #Dataframe of offspring born in this year
-    offspring[[y]] <- NoFullSibs.df %>% 
-      mutate(age.in.OffBirth.year = age.x + (OffBirth.year - capture.year)) %>% #unnecessary line, I think
+    offspring[[y]] <- NoFullSibs.df %>% mutate(age.in.OffBirth.year = age.x + (est.year - capture.year)) %>% #unnecessary line, I think
       filter(birth.year == OffBirth.year) %>%
       mutate(relation = "offspring")
       
@@ -52,8 +51,8 @@ filter.samples <- function(samples){
   }
   
   #Name list elements to correspond to sample year
-  names(PO.samps.list) <- paste0("PO.samples.year_", c(OffBirth.years))
-  #names(HS.samps.list) <- paste0("HS.samples.year_", c(OffBirth.years))
+  names(PO.samps.list) <- paste0("PO.samples.year_", c(PO.years))
+  #names(HS.samps.list) <- paste0("HS.samples.year_", c(PO.years))
   
   #Not sure if this is needed, but create dataframes of samples for PO and HS comparisons. Think only need this for half-sibs
 #  PO.samps.df <- bind_rows(PO.samps.list) #Confirmed that it's the correct number of rows
@@ -68,13 +67,6 @@ filter.samples <- function(samples){
 ####--------------Build pairwise comparison matrices------------####
 #Input is the filtered list from above for POs, and the filtered dataframe for HS
 build.pairwise <- function(filtered.samples.PO.list = PO.samps.list, filtered.samples.HS.df = HS.samps.df){
-
-#Different birth years for abundance estimate
-  # OffBirth.years.PO.vec <- filtered.samples.PO.list %>% 
-  #   bind_rows() %>%
-  #   distinct(birth.year) %>% 
-  #   pull(birth.year) 
-
   
   #initialize lists for output
   PO.mom.pairwise.list <- list()
@@ -84,14 +76,14 @@ build.pairwise <- function(filtered.samples.PO.list = PO.samps.list, filtered.sa
   
   
   #Loop over each dataframe corresponding to the offspring birth year
-  for(y in 1:length(filtered.samples.PO.list)){
-    #PO.year <- OffBirth.years.PO.vec[y]
+  for(y in 1:length(PO.years)){
+    PO.year <- PO.years[y]
     
-    #Make vector of potential parents for the year
+    #Make dataframe of potential parents for the year
     PO.parents <- filtered.samples.PO.list[[y]] %>% dplyr::filter(relation == "parent") %>% 
       pull(indv.name)
 
-    #Make vector of potential offspring for the year
+    #Make dataframe of potential offspring for the year
     PO.offspring <- filtered.samples.PO.list[[y]] %>% dplyr::filter(relation == "offspring") %>% 
       pull(indv.name)
     
@@ -103,10 +95,12 @@ head(pairwise.df.PO)
 
 #Create dataframe that will be used to extract the birth years for the potential offspring from each comparison using joins.
 Offspring_birthyears.PO <- filtered.samples.PO.list[[y]] %>%
-  dplyr::select(offspring.name = indv.name, 
-                offspring.birth = birth.year, 
-                offspring.mom = mother.x, 
-                offspring.dad = father.x)
+  dplyr::select(indv.name, birth.year, mother.x, father.x) %>%
+  dplyr::rename("offspring.name" = indv.name, 
+                "offspring.birth" = birth.year, 
+                #"offspring.age" = age.x, 
+                "offspring.mom" = mother.x, 
+                "offspring.dad" = father.x)
 
 #Extract metadata for each individual in each comparison
 #This is the main pairwise comparison matrix with all (relevant) comparisons and individual data.###
@@ -129,7 +123,7 @@ pairwise.df_all.info.PO <- pairwise.df.PO %>% left_join(Offspring_birthyears.PO,
 head(pairwise.df_all.info.PO)
 
 #Ok. We have a pairwise comparison matrix with all the info we need to assign kinship.
-
+#
 #Don't think I need the commented code below, since I can just compare the assigned parent of the offspring with the potential parent in the comparison
 
 # unique_mothers <- filtered.samples.PO[[y]] %>% #Extract unique parents for sampled individuals
@@ -186,7 +180,7 @@ mom_comps.PO <- pairwise.df_all.info.PO %>%
   mutate(yes = replace_na(yes, 0)) %>% 
   mutate(no = all - yes) %>% 
   mutate(no = replace_na(no, 0)) %>% 
-  mutate(mort.yrs = ifelse(parent.capture.year < offspring.birth, offspring.birth - parent.capture.year, 0)) #Need a separate equation w/ survival for instances where the parent was sampled before the offspring. So flag here. Later, can sort based on whether there's a 0 here or not.
+  mutate(mort_yrs = ifelse(parent.capture.year < offspring.birth, offspring.birth - parent.capture.year, 0)) #Need a separate equation w/ survival for instances where the parent was sampled before the offspring. So flag here. Later, can sort based on whether there's a 0 here or not.
   
 dad_comps.PO <- pairwise.df_all.info.PO %>%
   dplyr::filter(parent.sex == "M") %>% 
@@ -198,14 +192,14 @@ dad_comps.PO <- pairwise.df_all.info.PO %>%
   mutate(yes = replace_na(yes, 0)) %>% 
   mutate(no = all - yes) %>% 
   mutate(no = replace_na(no, 0)) %>% 
-  mutate(mort.yrs = ifelse(parent.capture.year < offspring.birth, offspring.birth - parent.capture.year, 0)) #Need a separate equation w/ survival for instances where the parent was sampled before the offspring. So flag here. Later, can sort based on whether there's a 0 here or not.
+  mutate(mort_yrs = ifelse(parent.capture.year < offspring.birth, offspring.birth - parent.capture.year, 0)) #Need a separate equation w/ survival for instances where the parent was sampled before the offspring. So flag here. Later, can sort based on whether there's a 0 here or not.
 
 #Add the dataframe for this year to the list to be output
 PO.mom.pairwise.list[[y]] <- mom_comps.PO
-#names(PO.mom.pairwise.list)[[y]] <- paste0("PO.mom.pairwise.year_", PO.year)
+names(PO.mom.pairwise.list)[[y]] <- paste0("PO.mom.pairwise.year_", PO.year)
 
 PO.dad.pairwise.list[[y]] <- dad_comps.PO
-#names(PO.dad.pairwise.list)[[y]] <- paste0("PO.dad.pairwise.year_", est.year)
+names(PO.dad.pairwise.list)[[y]] <- paste0("PO.dad.pairwise.year_", est.year)
 }
 
 
@@ -220,12 +214,17 @@ head(pairwise.df.HS)
 
 #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
 OlderSib_birthyears.HS <- filtered.samples.HS.df %>%
-  select(older.sib = indv.name, 
-         older.sib.birth = birth.year, 
-         older.sib.age = age.x, 
-         older.sib.mom = mother.x,
-         older.sib.dad = father.x, 
-         parent.capture.year = capture.year)
+  select(indv.name, 
+         birth.year, 
+         age.x, 
+         mother.x, 
+         father.x, 
+         parent.capture.year = capture.year) %>% #select relevant columns only
+  dplyr::rename("older.sib" = indv.name, 
+                "older.sib.birth" = birth.year, 
+                "older.sib.age" = age.x, 
+                "older.sib.mom" = mother.x, 
+                "older.sib.dad" = father.x)
 
 #Combine the two dataframes above to extract birth year and parents for each individual in the pairwise comparison matrix. 
 #This is the main pairwise comparison matrix with all (relevant) comparisons and individual data.###
@@ -257,39 +256,37 @@ positives.HS <- pairwise.df_all.info.HS %>% filter(older.sib.mom == younger.sib.
 #Sex-specific half-sib
 mom_positives.HS <- positives.HS %>% filter(shared.parent == "mother") %>% 
   select(older.sib.birth, younger.sib.birth) %>% 
-  plyr::count() %>% 
-  rename(yes = freq)
+  plyr::count() 
 
 dad_positives.HS <- positives.HS %>% filter(shared.parent == "father")  %>%
   select(older.sib.birth, younger.sib.birth) %>%
-  plyr::count() %>% 
-  rename(yes = freq)
+  plyr::count()
 
 
 #Make dataframes for negative comparisons
 #Sex-specific
-# mom_negatives.HS <- pairwise.df_all.info.HS %>% filter(older.sib.mom != younger.sib.mom & older.sib.birth != younger.sib.birth) %>% #filter for same cohort is repetitive
-#   select(older.sib.birth, younger.sib.birth) %>% 
-#   plyr::count()
-# 
-# dad_negatives.HS <- pairwise.df_all.info.HS %>% filter(older.sib.dad != younger.sib.dad & older.sib.birth != younger.sib.birth) %>% 
-#   select(older.sib.birth, younger.sib.birth) %>% 
-#   plyr::count()
+mom_negatives.HS <- pairwise.df_all.info.HS %>% filter(older.sib.mom != younger.sib.mom & older.sib.birth != younger.sib.birth) %>% #filter for same cohort is repetitive
+  select(older.sib.birth, younger.sib.birth) %>% 
+  plyr::count()
 
-mom_comps.HS <- pairwise.df_all.info.HS %>% 
-  dplyr::select(older.sib.birth, younger.sib.birth) %>% 
-  plyr::count() %>% 
-  rename(all = freq) %>% 
-  left_join(mom_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
-  mutate(yes = replace_na(yes, 0)) %>% 
+dad_negatives.HS <- pairwise.df_all.info.HS %>% filter(older.sib.dad != younger.sib.dad & older.sib.birth != younger.sib.birth) %>% 
+  select(older.sib.birth, younger.sib.birth) %>% 
+  plyr::count()
+
+mom_comps.HS <- mom_positives.HS %>% 
+  rename(yes = freq) %>% 
+  full_join(mom_negatives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+  rename(no = freq) %>% 
+  mutate(yes = replace_na(yes, 0), no = replace_na(no, 0)) %>% 
+  mutate(all = yes + no) %>% 
   mutate(year_gap = younger.sib.birth - older.sib.birth)
 
-dad_comps.HS <- pairwise.df_all.info.HS %>% 
-  dplyr::select(older.sib.birth, younger.sib.birth) %>% 
-  plyr::count() %>% 
-  rename(all = freq) %>% 
-  left_join(dad_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
-  mutate(yes = replace_na(yes, 0)) %>% 
+dad_comps.HS <- dad_positives.HS %>% 
+  rename(yes = freq) %>% 
+  full_join(dad_negatives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+  rename(no = freq) %>% 
+  mutate(yes = replace_na(yes, 0), no = replace_na(no, 0)) %>% 
+  mutate(all = yes + no) %>% 
   mutate(year_gap = younger.sib.birth - older.sib.birth)
 
 
@@ -300,49 +297,7 @@ dad_comps.HS <- pairwise.df_all.info.HS %>%
 # names(HS.dad.pairwise.list)[[y]] <- paste0("HS.dad.pairwise.year_", est.year)
 
 
-#--------------Rename columns and combine PO and HS dataframes----------
-PO.mom.pairwise.df <- PO.mom.pairwise.list %>% 
-  bind_rows() %>% 
-  dplyr::rename(ref.year = offspring.birth) %>% 
-  dplyr::select(ref.year, all, yes, mort.yrs) %>% 
-  mutate(type = "PO", 
-         parent = "mother")
-
-PO.dad.pairwise.df <- PO.dad.pairwise.list %>% 
-  bind_rows() %>% 
-  dplyr::rename(ref.year = offspring.birth) %>% 
-  dplyr::select(ref.year, all, yes, mort.yrs) %>% 
-  mutate(type = "PO",
-         parent = "father")
-
-HS.mom.pairwise.df <- mom_comps.HS %>%
-  dplyr::rename(ref.year = younger.sib.birth,
-                mort.yrs = year_gap) %>% 
-  dplyr::select(ref.year, all, yes, mort.yrs) %>% 
-  mutate(type = "HS",
-         parent = "mother")
-
-HS.dad.pairwise.df <- dad_comps.HS %>%
-  dplyr::rename(ref.year = younger.sib.birth,
-                mort.yrs = year_gap) %>% 
-  dplyr::select(ref.year, all, yes, mort.yrs) %>% 
-  mutate(type = "HS",
-         parent = "father")
-
-#Combine PO and HS dataframes for each sex
-mom_comps.all <- bind_rows(HS.mom.pairwise.df, PO.mom.pairwise.df) %>% 
-#  filter(yes >= 1) %>% 
-  mutate(pop.growth.yrs = ref.year - estimation.year) %>% 
-  mutate(R0 = ifelse(type == "HS", 2, 1)) %>% 
-  arrange(desc(ref.year), mort.yrs)
-
-dad_comps.all <- bind_rows(HS.dad.pairwise.df, PO.dad.pairwise.df) %>% 
- # filter(yes >= 1) %>% 
-  mutate(pop.growth.yrs = ref.year - estimation.year) %>% 
-  mutate(R0 = ifelse(type == "HS", 2, 1)) %>% 
-  arrange(desc(ref.year), mort.yrs)
-
-return(list(mom_comps.all, dad_comps.all))
+return(list(PO.mom.pairwise.list, PO.dad.pairwise.list, mom_comps.HS, dad_comps.HS))
 }
 
 

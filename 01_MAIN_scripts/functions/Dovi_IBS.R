@@ -45,7 +45,7 @@ for(j in 1:length(mothers)) { # Loop through all of the available mothers
   
   for(h in 1:num.mates.x) { # Loop through each sire that this mother mates with
     
-    num.offspring <- rpois(1, ff) # CHANGED FROM rbinom(n = 1, size = 1, prob = ff); generate the number of offspring born from this mother/sire pairing #### WHY IS THIS BINOMIAL NOT, SAY, POISSON
+    num.offspring <- rpois(1, ff) # CHANGED FROM rbinom(n = 1, size = 1, prob = ff); generate the number of offspring born from this mother/sire pairing
     indv.name <- NA # create a place holder for the random name given to each offspring
     age.x <- 0 # assign a 0 age to each offspring born this year
     mother.x <- init.pop[mothers[j],1] # record the mothers name
@@ -76,15 +76,29 @@ year.end.pop.0 <- NULL
 year.end.pop.0 <- rbind(init.pop, YOY.df) #Combine the YOY data with the other individuals present this year
 
 #Assign a column with whether or not an individual this year will survive to next year. The survival is randomly drawn based on the life stage and the probabilities defined in the parameter section
-year.end.pop.0$Survival <- ifelse(year.end.pop.0$age.x==0, sample(c("S","M"), size=length(which(year.end.pop.0$age.x==0)), prob=c(YOY.survival, 1-YOY.survival), replace=T),
-                                  ifelse(year.end.pop.0$age.x<repro.age, sample(c("S","M"), size=length(which(year.end.pop.0$age.x<repro.age)), prob=c(juvenile.survival, 1-juvenile.survival),replace=T),
-                                         ifelse(year.end.pop.0$age.x<max.age, sample(c("S","M"), size=length(which(year.end.pop.0$age.x<max.age)), prob=c(Adult.survival, 1-Adult.survival),replace=T), "M")))
+year.end.pop.0$Survival <- ifelse(year.end.pop.0$age.x==0, 
+                                  sample(c("S","M"), 
+                                         size=length(which(year.end.pop.0$age.x==0)), 
+                                         prob=c(YOY.survival, 1-YOY.survival), 
+                                         replace=T),
+                                  ifelse(year.end.pop.0$age.x<repro.age, 
+                                         sample(c("S","M"), 
+                                                size=length(which(year.end.pop.0$age.x<repro.age)), 
+                                                prob=c(juvenile.survival, 1-juvenile.survival),
+                                                replace=T),
+                                         ifelse(year.end.pop.0$age.x<max.age, 
+                                                sample(c("S","M"), 
+                                                       size=length(which(year.end.pop.0$age.x<max.age)), 
+                                                       prob=c(Adult.survival, 1-Adult.survival),
+                                                       replace=T), "M")))
 
 
 loopy.pop <- year.end.pop.0
 
 # At end of year 0 ...
 print(paste("year 0", "N_mothers=", length(mothers), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # print the simulation year and the population size in the R console so they can be oberved
+
+
 
 ####-------Loop for all other breeding years--------####
 
@@ -96,7 +110,7 @@ moms.temp = dads.temp <- NULL
 
 for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulation - the burn in and the years that matter
   
-  data1 <- loopy.pop[loopy.pop$Survival =="S", -8] #Bring in the data from the previous iteration, but only include those that survive
+  data1 <- loopy.pop[loopy.pop$Survival =="S", -8] #Bring in the data from the previous iteration, but only include those that survive (and leave the column of survival out)
   data1$age.x <- data1$age.x+1 # increase each individuals age by one for the new year - happy birthday survivors!
   
   mothers <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle == repro.cycle.vec[v+1])  #determine which females are available to breed in this year; this is an index
@@ -142,9 +156,21 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
   
   
   #Assign a column with whether or not an individual this year will survive to next year. The survival is randomly drawn based on the life stage and the probabilities defined in the parameter section
-  loopy.pop$Survival <- ifelse(loopy.pop$age.x==0, sample(c("S","M"), size=length(which(loopy.pop$age.x==0)), prob=c(YOY.survival, 1-YOY.survival), replace=T),
-                               ifelse(loopy.pop$age.x<repro.age, sample(c("S","M"), size=length(which(loopy.pop$age.x<repro.age)), prob=c(juvenile.survival, 1-juvenile.survival),replace=T),
-                                      ifelse(loopy.pop$age.x<max.age, sample(c("S","M"), size=length(which(loopy.pop$age.x<max.age)), prob=c(Adult.survival, 1-Adult.survival),replace=T), "M")))
+  loopy.pop$Survival <- ifelse(loopy.pop$age.x==0, 
+                               sample(c("S","M"), 
+                                      size=length(which(loopy.pop$age.x==0)), 
+                                      prob=c(YOY.survival, 1-YOY.survival), 
+                                      replace=T),
+                               ifelse(loopy.pop$age.x<repro.age, 
+                                      sample(c("S","M"), 
+                                             size=length(which(loopy.pop$age.x<repro.age)), 
+                                             prob=c(juvenile.survival, 1-juvenile.survival),
+                                             replace=T),
+                                      ifelse(loopy.pop$age.x<max.age, 
+                                             sample(c("S","M"), 
+                                                    size=length(which(loopy.pop$age.x<max.age)), 
+                                                    prob=c(Adult.survival, 1-Adult.survival),
+                                                    replace=T), "M")))
   
   #assign(paste("year.end.pop.", v, sep=""),loopy.pop) # save the current year's population data as an object
   
@@ -166,9 +192,10 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
   print(paste("year", v, "N_mothers=", length(mothers), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # CHANGED THIS
   
   ### CHANGED THIS TO ONLY COUNT SURVIVORS - JDS Q
-  pop.size.vec <- cbind.data.frame(year=v, population_size=nrow(loopy.pop[loopy.pop$Survival=="S",]), # 
-                                   Male.adult.pop = nrow(loopy.pop[loopy.pop$sex == "M" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",]), # 
-                                   Female.adult.pop = nrow(loopy.pop[loopy.pop$sex == "F" & loopy.pop$age.x >10 & loopy.pop$Survival=="S",]),
+  pop.size.vec <- cbind.data.frame(year=v, 
+                                   population_size=nrow(data1), # 
+                                   Male.adult.pop = nrow(data1[data1$sex == "M" & data1$age.x >= repro.age,]), # 
+                                   Female.adult.pop = nrow(data1[data1$sex == "F" & data1$age.x >= repro.age,]), #difference between this and number of mothers only if reproductive cycle != 1
                                    Num.mothers = length(mothers),
                                    Num.fathers = length(fathers)) # 
   pop.size <- rbind(pop.size, pop.size.vec)

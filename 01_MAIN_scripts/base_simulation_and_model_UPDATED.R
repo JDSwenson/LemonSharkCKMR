@@ -238,7 +238,7 @@ for(iter in 1:iterations) {
       
       #Fix other potential parameters
       #surv = surv,
-      est.year = est.year, # estimation year i.e. year the estimate will be focused on
+      est.year = estimation.year, # estimation year i.e. year the estimate will be focused on
       #N.tau = 1E-6,
       lam.tau = lam.tau
     )
@@ -256,7 +256,7 @@ for(iter in 1:iterations) {
       mu ~ dunif(1, 10000)
       sd ~ dunif(1, 10000)
       Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
-      Nm ~ dunif(mu, 1/(sd^2)) # Uninformative prior for male abundance
+      Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
       surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
       lam ~ dnorm(1, lam.tau)
       
@@ -349,26 +349,26 @@ for(iter in 1:iterations) {
     ########## Compile and report results #########
     # Combine above to make dataframe with truth and estimates side-by-side
     # store years from youngest sibling in comparisons to end of study
-    yrs <- c(est.year:n_yrs)
+    yrs <- c(estimation.year:n_yrs)
     
-    #Extract true values from year of estimation (ie est.year)
-    Mom_truth <- round(pop.size$Female.adult.pop[est.year],0) # True Nf
-    Dad_truth <- round(pop.size$Male.adult.pop[est.year], 0) # True Nm
-    surv_truth <- round(mean(sVec[est.year:n_yrs]), 4) # True adult survival over estimation period
-    #Adult_truth <- round(pop.size$Total.adult.pop[est.year], 0) # Used for sex-aggregated model
+    #Extract true values from year of estimation (ie estimation.year)
+    Mom_truth <- round(pop.size$Female.adult.pop[estimation.year],0) # True Nf
+    Dad_truth <- round(pop.size$Male.adult.pop[estimation.year], 0) # True Nm
+    surv_truth <- round(mean(sVec[estimation.year:n_yrs]), 4) # True adult survival over estimation period
+    #Adult_truth <- round(pop.size$Total.adult.pop[estimation.year], 0) # Used for sex-aggregated model
     lam_truth <- round(mean.adult.lambda, 4)
-    Mom_min <- min(pop.size$Female.adult.pop[est.year:n_yrs]) #Minimum Nf over estimation period
-    Mom_max <- max(pop.size$Female.adult.pop[est.year:n_yrs]) #Maximum Nf over estimation period
-    Dad_min <- min(pop.size$Male.adult.pop[est.year:n_yrs]) #Minimum Nm over estimation period
-    Dad_max <- max(pop.size$Male.adult.pop[est.year:n_yrs]) #Maximum Nm over estimation period
-    #Adult_min <- min(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
-    #Adult_max <- max(pop.size$Total.adult.pop[est.year:n_yrs]) # Used for sex-aggregated model
-    surv_min <- min(sVec[est.year:n_yrs]) #Minimum survival over estimation period
-    surv_max <- max(sVec[est.year:n_yrs]) #Maximum survival over estimation period
-    lam_min <- min(adult.lambda[est.year:n_yrs]) #Minimum lambda over estimation period
-    lam_max <- max(adult.lambda[est.year:n_yrs]) #Maximum lambda over estimation period
-    mean.num.mothers.total <- round(mean(pop.size$Num.mothers[est.year:n_yrs]), 0) #Mean number of mothers in population over estimation period
-    mean.num.fathers.total <- round(mean(pop.size$Num.fathers[est.year:n_yrs]), 0) #Mean number of fathers in population over estimation period
+    Mom_min <- min(pop.size$Female.adult.pop[estimation.year:n_yrs]) #Minimum Nf over estimation period
+    Mom_max <- max(pop.size$Female.adult.pop[estimation.year:n_yrs]) #Maximum Nf over estimation period
+    Dad_min <- min(pop.size$Male.adult.pop[estimation.year:n_yrs]) #Minimum Nm over estimation period
+    Dad_max <- max(pop.size$Male.adult.pop[estimation.year:n_yrs]) #Maximum Nm over estimation period
+    #Adult_min <- min(pop.size$Total.adult.pop[estimation.year:n_yrs]) # Used for sex-aggregated model
+    #Adult_max <- max(pop.size$Total.adult.pop[estimation.year:n_yrs]) # Used for sex-aggregated model
+    surv_min <- min(sVec[estimation.year:n_yrs]) #Minimum survival over estimation period
+    surv_max <- max(sVec[estimation.year:n_yrs]) #Maximum survival over estimation period
+    lam_min <- min(adult.lambda[estimation.year:n_yrs]) #Minimum lambda over estimation period
+    lam_max <- max(adult.lambda[estimation.year:n_yrs]) #Maximum lambda over estimation period
+    mean.num.mothers.total <- round(mean(pop.size$Num.mothers[estimation.year:n_yrs]), 0) #Mean number of mothers in population over estimation period
+    mean.num.fathers.total <- round(mean(pop.size$Num.fathers[estimation.year:n_yrs]), 0) #Mean number of fathers in population over estimation period
     
     #Create dataframe of estimates and truth
     estimates <- model.summary2 %>% 
@@ -377,7 +377,7 @@ for(iter in 1:iterations) {
     
     #Extract more metrics that can help with troubleshooting and visualization
     total_samples <- sample.size * length(sample.years) # total samples
-    pop_size_mean <- round(mean(pop.size$population_size[est.year:n_yrs]),0) #Mean TOTAL population size over estimation period
+    pop_size_mean <- round(mean(pop.size$population_size[estimation.year:n_yrs]),0) #Mean TOTAL population size over estimation period
     
     #Bind metrics together
     metrics <- cbind(c(sum(mom_comps[,3]), sum(dad_comps[,3]), rep(sum(mom_comps[,3]) + sum(dad_comps[3]), times = n_params-2)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
@@ -390,8 +390,9 @@ for(iter in 1:iterations) {
     colnames(metrics) <- c("parents_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
     
     #-----------------Loop end-----------------------------#
+    (results.temp <- cbind(estimates, metrics))
     #Bind results from previous iterations with current iteration
-    results <- rbind(results, cbind(estimates, metrics))
+    results <- rbind(results, reuslts.temp)
     
     #Save info for samples to examine in more detail
     sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size)

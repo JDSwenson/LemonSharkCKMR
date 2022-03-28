@@ -1,3 +1,10 @@
+v <- NULL
+
+for(i in 1:length(PO.samps.list)){
+  v[i] <- nrow(PO.samps.list[[i]])
+}
+
+
 mc <- mom_comps.gap %>% mutate(all.adj = all * surv_truth) %>% 
   mutate(mom.N = all.adj/yes)
 
