@@ -73,7 +73,7 @@ HS.PO_model = function(){
 }
 
 # Write model
-jags_file = paste0("G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/", purpose, "_iteration_", iter, ".txt")
+jags_file = paste0(jags.model_location, purpose, "_iteration_", iter, ".txt")
 write_model(HS.PO_model, jags_file)
 
 
