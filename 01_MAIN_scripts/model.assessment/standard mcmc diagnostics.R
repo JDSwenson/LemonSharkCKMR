@@ -8,20 +8,20 @@ rm(list=ls())
 
 #----------------Read in files ------------------------------
 #Check results from model diagnostics
-date.of.simulation <- "18Jan2022"
-seeds <- "Seeds12.27"
-purpose <- "testHierarchical_calculatePriorsFirst"
+date.of.simulation <- "28Mar2022"
+seeds <- "Seeds2022.03.23"
+purpose <- "HS.PO_one.indv.per.parent"
 sim.samples.1 <- "200.samples"
-sim.samples.2 <- "300.samples"
-sim.samples.3 <- "400.samples"
-burn.in <- 50000
+sim.samples.2 <- "600.samples"
+sim.samples.3 <- "1000.samples"
+burn.in <- 40000
 post.draws <- 30000
 thinning.rate <- 15
 MCMC.settings <- paste0("thin", thinning.rate, "_draw", post.draws, "_burn", burn.in)
 
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.results/"
-mcmc_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Diagnostic.plots/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/"
+mcmc_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Diagnostic.plots/"
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
 parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
@@ -32,13 +32,16 @@ results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simula
 
 #MCMC samples/output
 s1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+names(s1) <- paste0(sim.samples.1, "_iter_", c(1:100))
 
 head(s1[[1]])
 
 s2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+names(s2) <- paste0(sim.samples.2, "_iter_", c(1:100))
 head(s2[[1]])
 
 s3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+names(s3) <- paste0(sim.samples.3, "_iter_", c(1:100))
 head(s3[[1]])
 
 s.all <- append(s1, c( s2, s3))
@@ -71,8 +74,8 @@ for(i in 1:length(s.all)){
 dev.off()
 
 #Check convergence - should be 0 (1.01 is strict; 1.05 would work as a more liberal threshold)
-results %>% summarize(converged = sum(Rhat >= 1.01))
-
+results %>% summarize(no.convergence = sum(Rhat >= 1.01))
+results %>% dplyr::filter(Rhat >= 1.01) %>% View()
 
 #-----------------------------Gelman & Rubin---------------------------------------------------
 # The Gelman diagnostic calculates the potential scale reduction factor (PSRF) for each variable. The PSRF estimates a factor by which the scale of the distribution might be reduced if the simulations were run for an infinite number of iterations. As the number of iterations approaches infinity, the PSRF should decline to 1.  ... it's kind of like an ANOVA, where it compares the within-chain and between-chain variance. This is essentially the same as the rhat metric.

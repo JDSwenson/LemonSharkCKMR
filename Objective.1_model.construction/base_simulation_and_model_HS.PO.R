@@ -30,7 +30,7 @@ date.of.simulation <- today
 #Save paths and file labels as objects
 load("rseeds_2022.03.23.rda")
 seeds <- "Seeds2022.03.23"
-purpose <- "Test_HS.PO"
+purpose <- "HS.PO_new.compsDF"
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"
@@ -87,9 +87,9 @@ estimation.year <- n_yrs - 5 # Set year of estimation
 #load("rseeds_2022.03.23.rda")
 
 #----------------------- MCMC parameters ----------------------
-ni <- 30000 # number of post-burn-in samples per chain
+ni <- 40000 # number of post-burn-in samples per chain
 nb <- 40000 # number of burn-in samples
-nt <- 15     # thinning rate
+nt <- 20     # thinning rate
 nc <- 2      # number of chains
 
 #--------------------- Sampling parameters ---------------------
@@ -107,6 +107,7 @@ iterations <- 100 #Number of iterations to loop over
 # Initialize arrays for saving results
  results <- NULL
  sample.info <- NULL
+ rents.info <- NULL
  sims.list.1 <- NULL
  sims.list.2 <- NULL
  sims.list.3 <- NULL
@@ -117,22 +118,23 @@ sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
 
 ####Initialize array from previous checkpoint
 #Results
-# results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
+#  results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
+# # 
+# # #Model output for diagnostics
+#  sims.list.1 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+# # 
+#  sims.list.2 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+# # 
+#  sims.list.3 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
 # 
-# #Model output for diagnostics
-# sims.list.1 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
-# 
-# sims.list.2 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-# 
-# sims.list.3 <- readRDS(file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-
-# Detailed info on samples and parents to examine in more detail
-# sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+# # Detailed info on samples and parents to examine in more detail
+#  sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
 
 for(iter in 1:iterations) {
-  set.seed(rseeds[iter])
+#  set.seed(rseeds[iter])
   sim.start <- Sys.time()
+  rseed <- sample(1:1000000,1)
 
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -153,8 +155,8 @@ for(iter in 1:iterations) {
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size <- out[[2]] #population parameters for each year of simulation
   parents.tibble <- out[[3]] %>% #Tibble for each parent for each year to check the distribution later
-    mutate(iteration = iter) 
-
+    mutate(iteration = iter) %>% 
+    dplyr::filter(year > 50)
   
   #organize results and calculate summary statistics from the simulation
   source("./01_MAIN_scripts/functions/query_results.R")
@@ -199,8 +201,20 @@ for(iter in 1:iterations) {
     pairwise.out <- build.pairwise(filtered.samples.PO.list = PO.samps.list, filtered.samples.HS.df = HS.samps.df)
     
     #Save output as different dataframes; includes both HS and PO relationships (but can filter below)
-    mom_comps.all <- pairwise.out[[1]]
-    dad_comps.all <- pairwise.out[[2]]
+    #Can uncomment to include/exclude different comparisons
+    mom_comps.all <- pairwise.out[[1]] #%>% 
+      #dplyr::filter(mort.yrs < repro.age & yes >= 1) %>% 
+      # dplyr::select(ref.year, all, yes, mort.yrs, type) %>% 
+      # group_by(mort.yrs) %>% 
+      # summarize(all = sum(all), yes = sum(yes)) %>% 
+      # mutate(pop.growth.yrs = 0, ref.year = 90, type = "HS|PO")
+    
+    dad_comps.all <- pairwise.out[[2]] #%>% 
+      # dplyr::filter(mort.yrs < repro.age & yes >=1) %>% 
+      # dplyr::select(ref.year, all, yes, mort.yrs, type) %>% 
+      # group_by(mort.yrs) %>% 
+      # summarize(all = sum(all), yes = sum(yes)) %>% 
+      # mutate(pop.growth.yrs = 0, ref.year = 90, type = "HS|PO")
 
     head(mom_comps.all)
     head(dad_comps.all)
@@ -215,7 +229,7 @@ for(iter in 1:iterations) {
     #dad_comps.all <- dad_comps.all %>% filter(type == "PO")
 
     #Define JAGS data and model, and run the MCMC engine   
-    source("01_MAIN_scripts/functions/run.JAGS_HS.PO.R")
+    source("01_MAIN_scripts/functions/run.JAGS_HS.PO_surv.prior.R")
     
     #Compile results and summary statistics from simulation to compare estimates
     source("01_MAIN_scripts/functions/compile.results_HS.PO.R")
@@ -227,9 +241,12 @@ for(iter in 1:iterations) {
     
     
     #Save info for samples to examine in more detail
-    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size)
+    sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size, seed = rseed)
     sample.info <- rbind(sample.info, sample.df_all.info)
-  
+    
+    #Save parents info
+    rents.info <- rbind(rents.info, parents.tibble)
+    
   } # end loop over sample sizes
   
   
@@ -253,9 +270,7 @@ for(iter in 1:iterations) {
 # Detailed info on samples and parents to examine in more detail
    saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
-   saveRDS(parents.tibble, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-   
-   
+   saveRDS(rents.info, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
    
    sim.end <- Sys.time() 
    
@@ -268,8 +283,8 @@ for(iter in 1:iterations) {
 results2 <- results %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(percent_sampled = round((total_samples/pop_size_mean) * 100, 0)) %>% 
-  mutate(percent_parents_sampled = unique_parents_in_sample/mean_unique_parents_in_pop)
+  mutate(percent_sampled = round((as.numeric(total_samples)/as.numeric(pop_size_mean)) * 100, 0)) %>% 
+  mutate(percent_parents_sampled = as.numeric(unique_parents_in_sample)/as.numeric(mean_unique_parents_in_pop))
 #Need to switch HPDI for survival and lambda
 
 #Within HPD interval?
@@ -303,7 +318,7 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
  saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
  #Save detailed info about parents
- saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+ saveRDS(rents.info, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
 
 #To read in RDS file

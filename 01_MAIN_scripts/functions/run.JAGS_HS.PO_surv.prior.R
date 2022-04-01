@@ -57,7 +57,7 @@ HS.PO_model = function(){
   sd ~ dunif(1, 10000)
   Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
   Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
-  surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
+  surv ~ dnorm(0.825, 1/(0.005^2)) # Informative prior for adult survival
   #surv ~ dnorm(Adult.survival, 1/(.02)^2) #Informative prior
   lam ~ dnorm(1, lam.tau)
   

@@ -69,6 +69,5 @@ metrics <- cbind(c(mom.PO.matches,
                  c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
                  c(rep(total_samples, times = n_params)), # total samples
                  c(rep(pop_size_mean, times = n_params)), # mean population size over estimation period
-                 c(rep(iter, times = n_params)),
-                 c(rep("HS|PO", times = n_params))) #iteration
-colnames(metrics) <- c("POPs_detected", "HSPs_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration", "model_type")
+                 c(rep(iter, times = n_params))) #iteration
+colnames(metrics) <- c("POPs_detected", "HSPs_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")

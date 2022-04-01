@@ -30,7 +30,7 @@ date.of.simulation <- today
 #Save paths and file labels as objects
 load("rseeds_2022.03.23.rda")
 seeds <- "Seeds2022.03.23"
-purpose <- "HS.only_new.compsDF"
+purpose <- "HS.PO_surv.prior"
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"
@@ -221,8 +221,8 @@ for(iter in 1:iterations) {
     
     ####------------------------ Fit CKMR model ----------------####
     #Uncomment below to only run the HS model
-    mom_comps.all <- mom_comps.all %>% filter(type == "HS")
-    dad_comps.all <- dad_comps.all %>% filter(type == "HS")
+    #mom_comps.all <- mom_comps.all %>% filter(type == "HS")
+    #dad_comps.all <- dad_comps.all %>% filter(type == "HS")
 
     #Uncomment below to only run the PO model
     #mom_comps.all <- mom_comps.all %>% filter(type == "PO")
