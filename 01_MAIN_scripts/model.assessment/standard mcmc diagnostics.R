@@ -8,15 +8,15 @@ rm(list=ls())
 
 #----------------Read in files ------------------------------
 #Check results from model diagnostics
-date.of.simulation <- "28Mar2022"
-seeds <- "Seeds2022.03.23"
-purpose <- "HS.PO_one.indv.per.parent"
+date.of.simulation <- "01Apr2022"
+seeds <- "randomSeeds"
+purpose <- "HS.PO_surv.prior"
 sim.samples.1 <- "200.samples"
 sim.samples.2 <- "600.samples"
 sim.samples.3 <- "1000.samples"
 burn.in <- 40000
-post.draws <- 30000
-thinning.rate <- 15
+post.draws <- 40000
+thinning.rate <- 20
 MCMC.settings <- paste0("thin", thinning.rate, "_draw", post.draws, "_burn", burn.in)
 
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"

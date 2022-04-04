@@ -60,3 +60,34 @@ allYears <- allYears %>% mutate_all(round, digits=0)
 #Sum mature ages for each year
 adult_truth <- allYears %>% slice(12:30) %>% 
   summarise_all(sum)
+
+
+
+
+#------------Table 2 from Waples and Feutry----------------
+batchSize <- 1
+fb <- batchSize/2 #Batch size for Leslie Matrix - females only
+maxAge <- 10
+YOY.sx <- 0.7
+Juv.sx <- 0.7
+Adult.sx <- 0.7
+repro.age <- 3
+
+Leslie_input <- data.frame(
+  x = c(0:maxAge), #age
+  sx = c(YOY.sx, rep(Juv.sx, times = (repro.age-1)), rep(Adult.sx, times = maxAge - repro.age), 0), #survival
+  mx = c(rep(0, times = repro.age), rep(fb, times = (maxAge+1) - repro.age)) #age-specific birth rates (female proportion of the population only)
+)
+
+A1_pre <- make_Leslie_matrix(Leslie_input)
+#View(A1)
+A1_post <- pre_to_post(Amat = A1_pre, S0 = .7)
+#View(A1_post)
+
+#Calculate dominant eigenvalue (i.e. population growth rate) from transition matrix
+popbio::lambda(A1_pre)
+popbio::stable.stage(A1_pre)
+rv <- popbio::reproductive.value(A1_pre)
+
+rv.stand <- c(rv[repro.age:maxAge]/sum(rv[repro.age:maxAge]))
+
