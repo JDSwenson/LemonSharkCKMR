@@ -1,6 +1,6 @@
 library(tidyverse)
 library(mpmtools)
-
+library(popbio)
 
 batchSize <- 3.5
 fb <- batchSize/2 #Batch size for Leslie Matrix - females only

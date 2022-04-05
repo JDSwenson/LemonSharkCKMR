@@ -36,11 +36,11 @@ nc <- 2      # number of chains
 MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
 
-date.of.simulation <- "04Apr2022"
+date.of.simulation <- "28Mar2022"
 purpose1 <- "HS.PO_new.compsDF"
 purpose2 <- "HS.only_new.compsDF"
-purpose3 <- "HS.PO_surv.prior"
-#purpose4 <- "HS.only_one.indv.per.parent"
+purpose3 <- "Test_HS.PO"
+purpose4 <- "Test_HS.only"
 
 seeds <- "Seeds2022.03.23"
 sim.samples.1 <- "200.samples"
@@ -70,9 +70,9 @@ results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
   mutate(model_type = "HS.PO",
          purpose = purpose3)
 
-# results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose4, ".csv")) %>% 
-#   mutate(model_type = "HS.only",
-#          litter.samples = "one")
+ results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose4, ".csv")) %>% 
+   mutate(model_type = "HS.only",
+          purpose = purpose4)
 
 
 #MCMC samples/output
@@ -107,7 +107,8 @@ s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_",
 #Examine results quickly
 results.all <- results.1 %>% 
   bind_rows(results.2, 
-            results.3) %>% 
+            results.3,
+            results.4) %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
   mutate(percent_sampled = round((as.numeric(total_samples)/as.numeric(pop_size_mean)) * 100, 0)) %>% 
@@ -163,7 +164,8 @@ head(results.all)
  
  #-----------Median Relative bias by sample size-------------------------#
 results.all %>% group_by(model_type, total_samples, parameter, purpose) %>% 
-   dplyr::summarize(median = median(relative_bias), n = n()) %>% 
+  dplyr::filter(model_type == "HS.PO") %>%
+  dplyr::summarize(median = median(relative_bias), n = n()) %>% 
   arrange(desc(median))
 
 # results2 %>% dplyr::filter(parameter == "lam") %>% 
@@ -188,10 +190,15 @@ results.all %>% group_by(model_type, purpose, total_samples, parameter) %>%
 
 #---------------CV------------------------#
 results.all %>% group_by(model_type, purpose, total_samples, parameter) %>% 
-  dplyr::summarize(mean.cv = mean(cv)) %>%
-  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+  dplyr::summarize(mean.cv = mean(cv), 
+                   median.bias = median(relative_bias)) %>%
+#  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
   arrange(mean.cv) %>% 
-  View()
+  write_csv(file = paste0(results_location, "Mean_bias_and_precision_", today, "_oldDF_v_newDF.csv"))
+
+#Try looking at distribution of relative bias to get an idea of how biased they are
+results.all %>% dplyr::filter(parameter == "surv") %>% 
+  dplyr::select(Q50, mean, truth)
 
 
 #Violin plots
