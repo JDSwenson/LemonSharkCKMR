@@ -5,6 +5,16 @@ filter.samples <- function(samples){
   #------------------Filter 1: full siblings----------------------
     NoFullSibs.df <- samples %>% distinct(mother.x, father.x, .keep_all = TRUE) %>%
     as_tibble() #If there is more than one individual with the same mother AND father, then only keep one.
+    total.sibs <- nrow(samples) - nrow(NoFullSibs.df)
+      
+    dif.cohort.sibs <- samples %>% group_by(mother.x, father.x) %>%
+      filter(n() > 1) %>% 
+      distinct(birth.year) %>%
+      ungroup() %>% 
+      group_by(mother.x, father.x) %>% 
+      summarize(distinct.birth.years = n()) %>% 
+      filter(distinct.birth.years > 1) %>% 
+      nrow()
 
     #The vector of years for which we need to split samples into potential parents and offspring i.e. offspring birth years.
   OffBirth.years <- NoFullSibs.df %>% distinct(birth.year) %>% 
@@ -59,6 +69,7 @@ filter.samples <- function(samples){
 #  PO.samps.df <- bind_rows(PO.samps.list) #Confirmed that it's the correct number of rows
   HS.samps.df <- NoFullSibs.df
     
+  print(paste0("There are ", total.sibs, " pairs of full siblings in the dataset, ", dif.cohort.sibs, " of these pairs were born in different years."))
   return(list(PO.samps.list, HS.samps.df)) #Return list of possible parents and offspring for each year, and dataframe of potential half-sibs
 
 }

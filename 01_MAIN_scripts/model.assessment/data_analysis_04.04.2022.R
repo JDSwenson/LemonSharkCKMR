@@ -30,19 +30,19 @@ estimation.year <- n_yrs - 5 # Set year of estimation
 
 ####------------- MCMC parameters ----------------####
 ni <- 40000 # number of post-burn-in samples per chain
-nb <- 40000 # number of burn-in samples
+nb <- 50000 # number of burn-in samples
 nt <- 20     # thinning rate
 nc <- 2      # number of chains
 MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
 
-date.of.simulation <- "01Apr2022"
+date.of.simulation <- "04Apr2022"
 purpose1 <- "HS.PO_new.compsDF"
 purpose2 <- "HS.only_new.compsDF"
 purpose3 <- "HS.PO_surv.prior"
 #purpose4 <- "HS.only_one.indv.per.parent"
 
-seeds <- "randomSeeds"
+seeds <- "Seeds2022.03.23"
 sim.samples.1 <- "200.samples"
 sim.samples.2 <- "600.samples"
 sim.samples.3 <- "1000.samples"
@@ -128,6 +128,8 @@ jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
 
 head(results.all)
 
+
+
 #Temporary fix since results saved funny ... 
 #Lambda and survival were switched, so switching them back ... 
 # HPD2.5_surv.norm <- results.norm %>% filter(parameter == "lam") %>% 
@@ -162,10 +164,22 @@ head(results.all)
  #-----------Median Relative bias by sample size-------------------------#
 results.all %>% group_by(model_type, total_samples, parameter, purpose) %>% 
    dplyr::summarize(median = median(relative_bias), n = n()) %>% 
-  mutate(abs.bias = abs(median)) %>% 
   arrange(desc(median))
- 
- #-----------Within HPDI?-------------------------#
+
+# results2 %>% dplyr::filter(parameter == "lam") %>% 
+#   ggplot(aes(relative_bias, colour = which.dup, fill = which.dup)) +
+#   geom_density(alpha = 0.5)
+# 
+# 
+# results2 %>%  mutate(cv = (sd/mean)*100) %>% 
+#   group_by(parameter, which.dup) %>% 
+#   dplyr::summarize(mean.cv = mean(cv), mean.relative.bias = mean(relative_bias)) %>%
+# #  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+#   arrange(mean.cv) %>% 
+#   write_csv(file = paste0(results_location, "Mean_bias_and_precision_", date.of.simulation, "_", purpose, ".csv"))
+
+
+#-----------Within HPDI?-------------------------#
  #Within HPD interval?
 results.all %>% group_by(model_type, purpose, total_samples, parameter) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% 
@@ -193,7 +207,7 @@ results.all %>% group_by(model_type, purpose, total_samples, parameter) %>%
 
 #---------------------------Box plots----------------------------------
 #Specify save location for pdf of plots
-boxPlots.file <- paste0(results_plots_location, "BoxPlots_newDF.pdf")
+boxPlots.file <- paste0(results_plots_location, "BoxPlots_newDF_", today, ".pdf")
 pdf(file = boxPlots.file, width = 14, height = 4)
 sim.samples.all <- c(200, 600, 1000)
 plot.list <- NULL
@@ -264,9 +278,9 @@ HPD.1000.2 <- NULL
 HPD.200.3 <- NULL
 HPD.600.3 <- NULL
 HPD.1000.3 <- NULL
-# HPD.200.HS.only_one.indv <- NULL
-# HPD.600.HS.only_one.indv <- NULL
-# HPD.1000.HS.only_one.indv <- NULL
+# HPD.200.4 <- NULL
+# HPD.600.4 <- NULL
+# HPD.1000.4 <- NULL
 
 for(i in 1:length(s1.1)){
   for(j in 1:length(intervals)){
@@ -341,15 +355,7 @@ for(i in 1:length(s1.1)){
       rownames_to_column(var = "parameter")
     
     HPD.1000.2 <- rbind(HPD.1000.2, post.HPD.1000.2)
-
-  }
-  print(paste0("Finished with iteration ", i))
-  }
     
-
-
-for(i in 1:length(s3.1)){
-  for(j in 1:length(intervals)){
     #3
     #200 samples
     post.HPD.200.3 <- combine.mcmc(s3.1[[i]]) %>% 
@@ -385,10 +391,12 @@ for(i in 1:length(s3.1)){
       rownames_to_column(var = "parameter")
     
     HPD.1000.3 <- rbind(HPD.1000.3, post.HPD.1000.3)
+
   }
   print(paste0("Finished with iteration ", i))
   }
     
+
 
 #--------------Create dataframes for viz and analysis----------------------
 
@@ -767,63 +775,64 @@ dev.off()
 #----------------Investigate results more closely---------------
 #How many POPs detected per sample size?
 results.all %>% dplyr::filter(model_type == "HS.PO") %>% 
-  group_by(litter.samples, total_samples) %>% 
+  group_by(purpose, total_samples) %>% 
   summarize(mean(POPs_detected))
 
 #How many HSPs detected per sample size?
 results.all %>%
-  group_by(model_type, litter.samples, total_samples) %>% 
+  group_by(purpose, total_samples) %>% 
   summarize(mean(HSPs_detected))
 
 #----------Bring in info for parents and samples----------------#
 # Breakdown of offspring for each parent
-rents.HS.PO_new.compsDF <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose1)) %>% 
-  mutate(model_type = "HS.PO", 
-         litter.samples = "all")
+rents.1 <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose1)) %>% 
+  mutate(model_type = "HS.PO")
 
-rents.HS.only_new.compsDF <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose2)) %>% 
-  mutate(model_type = "HS.only", 
-         litter.samples = "all")
+rents.2 <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose2)) %>% 
+  mutate(model_type = "HS.only")
 
-rents.HS.PO_surv.prior <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose3)) %>% 
-  mutate(model_type = "HS.PO", 
-         litter.samples = "one")
+rents.3 <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose3)) %>% 
+  mutate(model_type = "HS.PO")
 
-rents.HS.only_one.indv <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose4)) %>% 
-  mutate(model_type = "HS.only", 
-         litter.samples = "one")
+rents.4 <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose4)) %>% 
+  mutate(model_type = "HS.only")
 
 #Breakdown of samples drawn from simulation
-samples1 <- sample.info.HS.PO_new.compsDF <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose1)) %>% 
-  mutate(model_type = "HS.PO", 
-         litter.samples = "all")
+samples1 <- sample.info.1 <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose1)) %>% 
+  mutate(model_type = "HS.PO",
+         purpose = purpose1)
 
-samples2 <- sample.info.HS.only_new.compsDF <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose2)) %>% 
-  mutate(model_type = "HS.only", 
-         litter.samples = "all")
+samples2 <- sample.info.2 <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose2)) %>% 
+  mutate(model_type = "HS.only",
+         purpose = purpose2)
 
-samples3 <- sample.info.HS.PO_surv.prior <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose3)) %>% 
-  mutate(model_type = "HS.PO", 
-         litter.samples = "one")
+samples3 <- sample.info.3 <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose3)) %>% 
+  mutate(model_type = "HS.PO",
+         purpose = purpose3)
 
-samples4 <- sample.info.HS.only_one.indv <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose4)) %>% 
-  mutate(model_type = "HS.only", 
-         litter.samples = "one")
+samples4 <- sample.info.4 <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose4)) %>% 
+  mutate(model_type = "HS.only",
+         purpose = purpose4)
 
 head(samples1)
 
 source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO.R")
-
+source("./01_MAIN_scripts/functions/remove_dups.R")
 
 #Make dataframes of pairwise comparisons for each iteration and sample size for further investigation into gap years, pop growth years, and number of detected kin.
 
 mom_comps.samples1 <- dad_comps.samples1 <- NULL
+
+options(dplyr.summarise.inform = FALSE)
+
 for(iter in 1:100){
   print(paste0("working on iteration", iter))
 
     #50 samples per year
   samples1.temp1 <- samples1 %>% filter(sample.size == 50 & iteration == iter)
-  filter1.temp1 <- samples1.temp1 %>% filter.samples()
+  NoDups1.temp1 <- samples1.temp1 %>% split.dups()
+  save.last1 <- NoDups1.temp1[[2]]
+  filter1.temp1 <- save.last1 %>% filter.samples()
   PO.samples1.list1 <- filter1.temp1[[1]]
   HS.samples1.df1 <- filter1.temp1[[2]]
   pairwise.samples1 <- build.pairwise(filtered.samples.PO.list = PO.samples1.list1, filtered.samples.HS.df = HS.samples1.df1)
@@ -835,7 +844,9 @@ for(iter in 1:100){
 
   #150 samples per year
   samples1.temp2 <- samples1 %>% filter(sample.size == 150 & iteration == iter)
-  filter1.temp2 <- samples1.temp2 %>% filter.samples()
+  NoDups1.temp2 <- samples1.temp2 %>% split.dups()
+  save.last2 <- NoDups1.temp2[[2]]
+  filter1.temp2 <- save.last2 %>% filter.samples()
   PO.samples1.list2 <- filter1.temp2[[1]]
   HS.samples1.df2 <- filter1.temp2[[2]]
   pairwise.samples2 <- build.pairwise(filtered.samples.PO.list = PO.samples1.list2, filtered.samples.HS.df = HS.samples1.df2)
@@ -847,7 +858,9 @@ for(iter in 1:100){
   
   #250 samples per year
   samples1.temp3 <- samples1 %>% filter(sample.size == 250 & iteration == iter)
-  filter1.temp3 <- samples1.temp3 %>% filter.samples()
+  NoDups1.temp3 <- samples1.temp3 %>% split.dups()
+  save.last3 <- NoDups1.temp3[[2]]
+  filter1.temp3 <- save.last3 %>% filter.samples()
   PO.samples1.list3 <- filter1.temp3[[1]]
   HS.samples1.df3 <- filter1.temp3[[2]]
   pairwise.samples3 <- build.pairwise(filtered.samples.PO.list = PO.samples1.list3, filtered.samples.HS.df = HS.samples1.df3)
@@ -879,6 +892,7 @@ mom_comps1.250samps <- mom_comps.samples1 %>% dplyr::filter(samples.per.yr == 25
 dad_comps1.50samps <- dad_comps.samples1 %>% dplyr::filter(samples.per.yr == 50)
 dad_comps1.150samps <- dad_comps.samples1 %>% dplyr::filter(samples.per.yr == 150)
 dad_comps1.250samps <- dad_comps.samples1 %>% dplyr::filter(samples.per.yr == 250)
+
 
 #Histograms of mortality years
 ggmort.list <- list()

@@ -30,7 +30,7 @@ date.of.simulation <- today
 #Save paths and file labels as objects
 load("rseeds_2022.03.23.rda")
 seeds <- "Seeds2022.03.23"
-purpose <- "Play_around"
+purpose <- "test.recaptures"
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"
@@ -96,12 +96,12 @@ nc <- 2      # number of chains
 sample.years <- c(n_yrs - c(3:0)) #For two years of sampling
 #sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
-sample.vec <- c(50, 150, 250) #vector to sample over per year
+sample.vec <- c(250) #vector to sample over per year
 
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 100 #Number of iterations to loop over
+iterations <- 50 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -189,17 +189,22 @@ for(iter in 1:iterations) {
     #   as_tibble()
 
     source("./01_MAIN_scripts/functions/remove_dups.R")
-
+for(dup in 1:2){
+  
+  which.dup <- ifelse(dup == 1, "first.capture", "last.capture")
         noDups.list <- split.dups(sample.df_all.info)
         first.capture <- noDups.list[[1]]
         later.capture <- noDups.list[[2]]
     
-    # sampled.mothers <- unique(sample.df_all.info$mother.x)
-    # sampled.fathers <- unique(sample.df_all.info$father.x)
+     sampled.mothers <- unique(sample.df_all.info$mother.x)
+     sampled.fathers <- unique(sample.df_all.info$father.x)
     source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO.R")
     
     #Remove full sibs
-    filter1.out <- filter.samples(later.capture) #Filter for full sibs
+    filter1.out <- if(dup == 1){
+      filter.samples(first.capture) #Filter for full sibs
+    } else filter.samples(later.capture)
+    
     PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
     HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings
     
@@ -240,7 +245,7 @@ for(iter in 1:iterations) {
     source("01_MAIN_scripts/functions/run.JAGS_HS.PO.R")
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("01_MAIN_scripts/functions/compile.results_HS.PO.R")
+    source("01_MAIN_scripts/functions/compile.results_HS.PO.test.recaptures.R")
     
     #-----------------Loop end-----------------------------
     #Bind results from previous iterations with current iteration
@@ -256,7 +261,7 @@ for(iter in 1:iterations) {
     rents.info <- rbind(rents.info, parents.tibble)
     
   } # end loop over sample sizes
-  
+  } # end loop over duplicates  
   
   #-----------------Save output files iteratively--------------------
   #in case R crashes or computer shuts down
@@ -300,7 +305,7 @@ results2 %>% group_by(total_samples, parameter) %>%
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
 #Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter) %>% 
+ results2 %>% group_by(which.dup, parameter) %>% 
    dplyr::summarize(median = median(relative_bias), n = n())
 
  #Mean number of parents detected
@@ -339,7 +344,7 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
 
 #-------------Quick viz of results--------------#
 #Box plot of relative bias
-ggplot(data=results2, aes(x=factor(total_samples))) +
+ggplot(data=results2, aes(x=factor(which.dup))) +
   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
   ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +
