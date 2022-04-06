@@ -323,7 +323,7 @@ HS.mom.pairwise.df <- mom_comps.HS %>%
   dplyr::rename(ref.year = younger.sib.birth,
                 mort.yrs = year_gap) %>% 
   dplyr::select(ref.year, all, yes, mort.yrs) %>% 
-  dplyr::filter(mort.yrs < (2*repro.age)) %>% #Added 04/01/2022 to remove comparisons that could be confused for grand-parents
+  #dplyr::filter(mort.yrs < (2*repro.age)) %>% #Added 04/01/2022 to remove comparisons that could be confused for grand-parents
   mutate(type = "HS",
          parent = "mother")
 
@@ -331,7 +331,7 @@ HS.dad.pairwise.df <- dad_comps.HS %>%
   dplyr::rename(ref.year = younger.sib.birth,
                 mort.yrs = year_gap) %>% 
   dplyr::select(ref.year, all, yes, mort.yrs) %>% 
-  dplyr::filter(mort.yrs < (2*repro.age)) %>% #Added 04/01/2022 to remove comparisons that could be confused for grand-parents
+  #dplyr::filter(mort.yrs < (2*repro.age)) %>% #Added 04/01/2022 to remove comparisons that could be confused for grand-parents
   mutate(type = "HS",
          parent = "father")
 

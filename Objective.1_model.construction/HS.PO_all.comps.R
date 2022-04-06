@@ -30,7 +30,7 @@ date.of.simulation <- today
 #Save paths and file labels as objects
 load("rseeds_2022.03.23.rda")
 seeds <- "Seeds2022.03.23"
-purpose <- "Play_around"
+purpose <- "all.comps"
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"

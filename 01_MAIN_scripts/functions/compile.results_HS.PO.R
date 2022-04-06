@@ -8,8 +8,9 @@ mean.adult.lambda <- mean(adult.lambda[ref.year:n_yrs], na.rm=T) # mean Lambda o
 #Extract true values from year of estimation (ie estimation.year)
 Mom_truth <- round(pop.size$Female.adult.pop[estimation.year],0) # True Nf
 Dad_truth <- round(pop.size$Male.adult.pop[estimation.year], 0) # True Nm
-surv_truth <- round(mean(sVec[estimation.year:n_yrs]), 4) # True adult survival over estimation period
+surv_mean <- round(mean(sVec[ref.year:n_yrs]), 4) # True adult survival over estimation period
 #Adult_truth <- round(pop.size$Total.adult.pop[estimation.year], 0) # Used for sex-aggregated model
+surv_yrs <- round(sVec[(ref.year+1):n_yrs], 4)
 lam_truth <- round(mean.adult.lambda, 4)
 Mom_min <- min(pop.size$Female.adult.pop[estimation.year:n_yrs]) #Minimum Nf over estimation period
 Mom_max <- max(pop.size$Female.adult.pop[estimation.year:n_yrs]) #Maximum Nf over estimation period
@@ -71,3 +72,7 @@ metrics <- cbind(c(mom.PO.matches,
                  c(rep(pop_size_mean, times = n_params)), # mean population size over estimation period
                  c(rep(iter, times = n_params))) #iteration
 colnames(metrics) <- c("POPs_detected", "HSPs_detected", "mean_unique_parents_in_pop", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "pop_size_mean", "iteration")
+
+surv.df.temp <- surv_yrs %>% as_tibble() %>% 
+  dplyr::rename(survival = value) %>% 
+  mutate(iter = iter, year = c((ref.year+1):n_yrs))

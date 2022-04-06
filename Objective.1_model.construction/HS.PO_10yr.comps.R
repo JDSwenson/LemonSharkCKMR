@@ -30,7 +30,7 @@ date.of.simulation <- today
 #Save paths and file labels as objects
 load("rseeds_2022.03.23.rda")
 seeds <- "Seeds2022.03.23"
-purpose <- "Play_around"
+purpose <- "10yr.comps"
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"
@@ -211,15 +211,15 @@ for(iter in 1:iterations) {
     
     #Save output as different dataframes; includes both HS and PO relationships (but can filter below)
     #Can uncomment to include/exclude different comparisons
-    mom_comps.all <- pairwise.out[[1]] #%>% 
-      #dplyr::filter(mort.yrs < repro.age & yes >= 1) %>% 
+    mom_comps.all <- pairwise.out[[1]] %>% 
+      dplyr::filter(mort.yrs <= 10) #%>% 
       # dplyr::select(ref.year, all, yes, mort.yrs, type) %>% 
       # group_by(mort.yrs) %>% 
       # summarize(all = sum(all), yes = sum(yes)) %>% 
       # mutate(pop.growth.yrs = 0, ref.year = 90, type = "HS|PO")
     
-    dad_comps.all <- pairwise.out[[2]] #%>% 
-      # dplyr::filter(mort.yrs < repro.age & yes >=1) %>% 
+    dad_comps.all <- pairwise.out[[2]] %>% 
+       dplyr::filter(mort.yrs <= 10) #%>% 
       # dplyr::select(ref.year, all, yes, mort.yrs, type) %>% 
       # group_by(mort.yrs) %>% 
       # summarize(all = sum(all), yes = sum(yes)) %>% 
