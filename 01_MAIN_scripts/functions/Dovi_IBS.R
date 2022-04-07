@@ -125,7 +125,7 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
     
     for(h in 1:num.mates.x) { # Loop through each sire with whom this mother mates 
       
-      num.offspring <- rpois(1, ff) # CHANGED FROM rbinom(n = 1, size = 1, prob = ff); generate the number of offspring born from this mother/sire pairing ### AGAIN, WHY BINOMIAL???
+      num.offspring <- rpois(1, ff) #generate the number of offspring born from this mother/sire pairing
       indv.name <- NA #create a place holder for the random name given to each offspring
       age.x <- 0 # assign a 0 age to each offspring born this year
       mother.x <- data1[mothers[j],1] # record the mothers name
@@ -189,15 +189,24 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
   parents.tibble <- rbind(parents.tibble, moms.temp, dads.temp)
   
   #  print(paste("year", v, "N= ", nrow(loopy.pop) , sep=" ")) # print the simulation year and the population size in the R console so they can be observed
-  print(paste("year", v, "N_mothers=", length(mothers), "N_pups=", nrow(YOY.df), "N_deaths=", sum(loopy.pop$Survival=="M"), "N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # CHANGED THIS
+  cat(paste("\nyear", v, 
+            "\nN_potential_mothers=", length(mothers), 
+            "N_actual_mothers=", nrow(moms.temp), 
+            "Percent female breeders=", round(nrow(moms.temp)/length(mothers)*100,0),
+            "\nN_potential_fathers=", length(fathers), 
+            "N_actual_fathers=", nrow(dads.temp), 
+            "Percent male breeders=", round(nrow(dads.temp)/length(fathers)*100, 0),
+            "\nN_pups=", nrow(YOY.df), 
+            "\nN_deaths=", sum(loopy.pop$Survival=="M"), 
+            "\nTotal N= ", nrow(loopy.pop[loopy.pop$Survival=="S",]) , sep=" ")) # CHANGED THIS
   
   ### CHANGED THIS TO ONLY COUNT SURVIVORS - JDS Q
   pop.size.vec <- cbind.data.frame(year=v, 
                                    population_size=nrow(data1), # 
                                    Male.adult.pop = nrow(data1[data1$sex == "M" & data1$age.x >= repro.age,]), # 
                                    Female.adult.pop = nrow(data1[data1$sex == "F" & data1$age.x >= repro.age,]), #difference between this and number of mothers only if reproductive cycle != 1
-                                   Num.mothers = length(mothers),
-                                   Num.fathers = length(fathers)) # 
+                                   Num.mothers = nrow(moms.temp), #The actual number that reproduced this year
+                                   Num.fathers = nrow(dads.temp)) #The actual number that reproduced this year
   pop.size <- rbind(pop.size, pop.size.vec)
   
 } # end loop over sim years
