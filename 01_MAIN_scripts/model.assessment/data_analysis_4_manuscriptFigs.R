@@ -18,10 +18,12 @@ nc <- 2      # number of chains
 MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
 #------------- Simulation parameters and labels  ----------------#
-date.of.simulation <- "07Apr2022"
+date.of.simulation1 <- "07Apr2022"
 purpose1 <- "HS.PO_downsample"
-purpose2 <- "HS.only_downsample"
-purpose3 <- "all.comps"
+
+date.of.simulation2 <- "05Apr2022"
+purpose2 <- "all.comps"
+#purpose3 <- "all.comps"
 #purpose4 <- "5yr.comps"
 
 seeds <- "Seeds2022.03.23"
@@ -41,18 +43,17 @@ survival.prefix <- "survival/CKMR_survival"
 pop.size.prefix <- "pop.size/CKMR_pop.size"
 
 #------------------------------- Results -----------------------------------#
-results.1 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose1, ".csv")) %>% 
+results.1 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation1, "_", seeds, "_", purpose1, ".csv")) %>% 
   mutate(model_type = "HS.PO", 
          purpose = purpose1)
 
-results.2 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose2, ".csv")) %>% 
+results.2 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation2, "_", seeds, "_", purpose2, ".csv")) %>% 
   mutate(model_type = "HS.only",
          purpose = purpose2)
 
-date.of.simulation <- "07Apr2022"
-results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose3, ".csv")) %>% 
-  mutate(model_type = "HS.PO",
-         purpose = purpose3)
+# results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose3, ".csv")) %>% 
+#   mutate(model_type = "HS.PO",
+#          purpose = purpose3)
 
  # results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose4, ".csv")) %>% 
  #   mutate(model_type = "HS.PO",
@@ -61,26 +62,26 @@ results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
 
 #------------------------------- MCMC output -----------------------------------#
 #Trial 1
-s1.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose1))
+s1.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose1))
 
-s1.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose1))
+s1.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose1))
 
-s1.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose1))
+s1.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose1))
 
 #Trial 2
-s2.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose2))
+s2.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose2))
 
-s2.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose2))
+s2.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose2))
 
-s2.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose2))
+s2.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose2))
 
 #Trial 3
-date.of.simulation <- "05Apr2022"
-s3.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose3))
-
-s3.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose3))
-
-s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose3))
+# date.of.simulation <- "05Apr2022"
+# s3.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose3))
+# 
+# s3.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose3))
+# 
+# s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose3))
 
 #Trial 4
  # s4.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose4))
@@ -90,7 +91,7 @@ s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_",
  # s4.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose4))
 
 #------------------------------- Population size details -----------------------------------#
-pop.size.1 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose1))
+pop.size.1 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation1, "_", seeds, "_", purpose1))
 
 pop.size.2 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose2))
 
@@ -100,26 +101,26 @@ pop.size.4 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.sim
 ####------------------------------- Quick analysis of results -----------------------------------####
 
 results.all <- results.1 %>% 
-  bind_rows(results.2, results.3) %>% 
+  bind_rows(results.2) %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
   mutate(percent_sampled = round((as.numeric(total_samples)/as.numeric(pop_size_mean)) * 100, 0)) %>% 
   mutate(percent_parents_sampled = as.numeric(unique_parents_in_sample)/as.numeric(mean_unique_parents_in_pop)) %>% 
-  mutate(cv = (sd/mean)*100)
+  mutate(cv = (sd/mean)*100) %>% 
+  mutate(purpose2 = ifelse(purpose == purpose1, "Down sampled", "All samples"))
 
 jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
 
 head(results.all)
 
-results.all$purpose <- factor(results.all$purpose, levels = c(purpose1, purpose2, purpose3))
+results.all$purpose <- factor(results.all$purpose, levels = c(purpose1, purpose2))
 
  
  #-----------Median Relative bias by sample size-------------------------#
 results.all %>% group_by(total_samples, parameter, purpose) %>% 
 #  dplyr::filter(model_type == "HS.PO") %>%
   dplyr::summarize(median = median(relative_bias), n = n()) %>% 
-  arrange(desc(median)) %>% 
-  View()
+  arrange(desc(median))
 
 # results2 %>% dplyr::filter(parameter == "lam") %>% 
 #   ggplot(aes(relative_bias, colour = which.dup, fill = which.dup)) +
@@ -135,7 +136,7 @@ results.all %>% group_by(total_samples, parameter, purpose) %>%
 
 
 #------------------------------- Within HPDI? -----------------------------------#
-results.all %>% group_by(purpose, total_samples, parameter) %>% 
+results.all %>% group_by(purpose2, total_samples, parameter) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% 
   filter(parameter != "lam") %>% 
   arrange(desc(percent_in_interval))
@@ -143,7 +144,7 @@ results.all %>% group_by(purpose, total_samples, parameter) %>%
 #------------------------------- CV -----------------------------------#
 purpose.combo <- "test.downsample"
 
-results.all %>% group_by(model_type, purpose, total_samples, parameter) %>% 
+results.all %>% group_by(model_type, purpose2, total_samples, parameter) %>% 
   dplyr::summarize(mean.cv = mean(cv), 
                    median.bias = median(relative_bias)) %>%
 #  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
@@ -158,125 +159,8 @@ param.plot.2 <- "Nm"
 param.plot.3 <- "survival" #Which parameters are we plotting below?
 param.plot.4 <- "lambda"
 
-DensityPlots.file <- paste0(results_plots_location, "Density_plots_", today, "_", purpose.combo, ".pdf") #Name file
-pdf(file = DensityPlots.file, width = 14, height = 8) #Open pdf
 sim.samples.all <- c(200, 600, 1000) #vector of total sample sizes
 
-#Loop over different sample sizes
-#Different plot for each sample size, color distributions by purpose
-  for(s in 1:length(sim.samples.all)){
-    
-    samps <- sim.samples.all[s]
-
-p1 <- results.all %>% dplyr::filter(parameter == "Nf", total_samples == samps) %>% 
-  dplyr::select(Q50, mean, truth, relative_bias, purpose) %>% 
-  ggplot(aes(x = relative_bias, color = purpose, fill = purpose)) + 
-  geom_density(alpha = 0.6) + 
-  ggtitle(label = paste0("Relative bias: ", param.plot.1, "; ", samps, " samples")) + 
-  xlim(-50, 50)
-  
-p2 <- results.all %>% dplyr::filter(parameter == "Nm", total_samples == samps) %>% 
-  dplyr::select(Q50, mean, truth, relative_bias, purpose) %>% 
-  ggplot(aes(x = relative_bias, color = purpose, fill = purpose)) + 
-  geom_density(alpha = 0.6) + 
-  ggtitle(label = paste0("Relative bias: ", param.plot.2, "; ", samps, " samples")) + 
-  xlim(-50, 50)
-
-p3 <- results.all %>% dplyr::filter(parameter == "surv", total_samples == samps) %>% 
-  dplyr::select(Q50, mean, truth, relative_bias, purpose) %>% 
-  ggplot(aes(x = relative_bias, color = purpose, fill = purpose)) + 
-  geom_density(alpha = 0.6) + 
-  ggtitle(label = paste0("Relative bias: ", param.plot.3, "; ", samps, " samples")) + 
-  xlim(-20, 20)
-  
-p4 <- results.all %>% dplyr::filter(parameter == "lam", total_samples == samps) %>%
-  dplyr::select(Q50, mean, truth, relative_bias, purpose) %>%
-  ggplot(aes(x = relative_bias, color = purpose, fill = purpose)) +
-  geom_density(alpha = 0.6) +
-  ggtitle(label = paste0("Relative bias: ", param.plot.4, "; ", samps, " samples")) +
-  xlim(-20, 20)
-
-print(ggarrange(p1, p2, p3, p4, common.legend = TRUE))
-
-  }
-
-dev.off() #Close pdf
-
-####------------------------------- Relative bias violin plot -----------------------------------####
-  # RB_violin.p1 <- results.all %>% dplyr::filter(total_samples == samps & purpose == purpose1) %>% 
-  #   ggplot(aes(x=factor(parameter), fill = factor(parameter))) +
-  # geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
-  # #ylim(-50, 160) +
-  # geom_hline(yintercept=0, col="black", size=1.25) +
-  # #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  # labs(x="Iteration", y="Relative bias", title="Relative bias by iteration") +
-  # scale_fill_brewer(palette="Set2") +
-  # font("title", size = 10, face = "bold")
-
-####------------------------------- Relative bias box plots -----------------------------------####
-#Specify save location for pdf of plots
-boxPlots.file <- paste0(results_plots_location, "BoxPlots_", today, "_", purpose.combo, ".pdf") #Name output file
-pdf(file = boxPlots.file, width = 12, height = 12) #open pdf
-sim.samples.all <- c(200, 600, 1000)
-
-#Loop over different sample sizes and purposes
-for(i in 1:length(sim.samples.all)){
-  samps <- sim.samples.all[i]
-  
-  #boxplot plot
-  RB_boxplot.s1 <- results.all %>% filter(total_samples == samps, purpose == purpose1) %>% 
-    ggplot(aes(x=factor(parameter), fill = factor(parameter))) +
-    geom_boxplot(aes(y=relative_bias)) +
-    #ylim(-50, 160) +
-    geom_hline(yintercept=0, col="black", size=1.25) +
-    #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-    labs(x="Parameter", y="Relative bias", title=paste0(purpose1, "_", samps, " samples")) +
-    scale_fill_brewer(palette="Set2") +
-    font("title", size = 10, face = "bold") + 
-    theme(legend.title = element_blank()) + 
-    ylim(-50, 100)
-  
-  RB_boxplot.s2 <- results.all %>% filter(total_samples == samps, purpose == purpose2) %>% 
-    ggplot(aes(x=factor(parameter), fill = factor(parameter))) +
-    geom_boxplot(aes(y=relative_bias)) +
-    #ylim(-50, 160) +
-    geom_hline(yintercept=0, col="black", size=1.25) +
-    #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-    labs(x="Parameter", y="Relative bias", title=paste0(purpose2, "_", samps, " samples")) +
-    scale_fill_brewer(palette="Set2") +
-    font("title", size = 10, face = "bold") + 
-    theme(legend.title = element_blank()) + 
-    ylim(-50, 100)
-
-  
-  RB_boxplot.s3 <- results.all %>% filter(total_samples == samps, purpose == purpose3) %>% 
-    ggplot(aes(x=factor(parameter), fill = factor(parameter))) +
-    geom_boxplot(aes(y=relative_bias)) +
-    #ylim(-50, 160) +
-    geom_hline(yintercept=0, col="black", size=1.25) +
-    #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-    labs(x="Parameter", y="Relative bias", title=paste0(purpose3, "_", samps, " samples")) +
-    scale_fill_brewer(palette="Set2") +
-    font("title", size = 10, face = "bold") + 
-    theme(legend.title = element_blank()) + 
-    ylim(-50, 100)
-
-  # RB_boxplot.s4 <- results.all %>% filter(total_samples == samps, purpose == purpose4) %>% 
-  #   ggplot(aes(x=factor(parameter), fill = factor(parameter))) +
-  #   geom_boxplot(aes(y=relative_bias)) +
-  #   #ylim(-50, 160) +
-  #   geom_hline(yintercept=0, col="black", size=1.25) +
-  #   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  #   labs(x="Parameter", y="Relative bias", title=paste0(purpose4, "_", samps, " samples")) +
-  #   scale_fill_brewer(palette="Set2") +
-  #   font("title", size = 10, face = "bold") + 
-  #   theme(legend.title = element_blank()) + 
-  #   ylim(-50, 100)
-  
-print(ggarrange(RB_boxplot.s1, RB_boxplot.s2, RB_boxplot.s3, nrow = 2, ncol = 2, common.legend = TRUE))
-  }
-
-dev.off() #close pdf
 
 ####------------------------------- Calculate different HPDI intervals-------------------------------#### 
 #How many estimates fall in different HPD intervals?
@@ -378,42 +262,42 @@ for(i in 1:length(s1.1)){ #Loop over all the posterior samples from each iterati
     
     HPD.1000.2 <- rbind(HPD.1000.2, post.HPD.1000.2)
     
-    #---------------------------Purpose 3--------------------------------#
-    #200 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.200.3 <- combine.mcmc(s3.1[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.200.3 <- post.HPD.200.3[row.names(post.HPD.200.3) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.200.3 <- rbind(HPD.200.3, post.HPD.200.3)
-    
-    #600 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.600.3 <- combine.mcmc(s3.2[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.600.3 <- post.HPD.600.3[row.names(post.HPD.600.3) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.600.3 <- rbind(HPD.600.3, post.HPD.600.3)
-    
-    #1000 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.1000.3 <- combine.mcmc(s3.3[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.1000.3 <- post.HPD.1000.3[row.names(post.HPD.1000.3) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.1000.3 <- rbind(HPD.1000.3, post.HPD.1000.3)
+    # #---------------------------Purpose 3--------------------------------#
+    # #200 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.200.3 <- combine.mcmc(s3.1[[i]]) %>% 
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>% 
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.200.3 <- post.HPD.200.3[row.names(post.HPD.200.3) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.200.3 <- rbind(HPD.200.3, post.HPD.200.3)
+    # 
+    # #600 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.600.3 <- combine.mcmc(s3.2[[i]]) %>% 
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>% 
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.600.3 <- post.HPD.600.3[row.names(post.HPD.600.3) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.600.3 <- rbind(HPD.600.3, post.HPD.600.3)
+    # 
+    # #1000 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.1000.3 <- combine.mcmc(s3.3[[i]]) %>% 
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>% 
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.1000.3 <- post.HPD.1000.3[row.names(post.HPD.1000.3) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.1000.3 <- rbind(HPD.1000.3, post.HPD.1000.3)
 
     # #---------------------------Purpose 4--------------------------------#    
     # #200 samples
@@ -501,7 +385,7 @@ HPD.1.summary.tidy <- HPD.1.summary_all %>%
          purpose = purpose1)
 
 #Save
-write_csv(HPD.1.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation, "_", purpose1, ".csv"))
+#write_csv(HPD.1.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation, "_", purpose1, ".csv"))
 
 
 #---------------------------Purpose 2 --------------------------------#    
@@ -545,7 +429,7 @@ HPD.2.summary.tidy <- HPD.2.summary_all %>%
                   purpose = purpose2)
 
 #Save
-write_csv(HPD.2.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation, "_", purpose2, ".csv"))
+#write_csv(HPD.2.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation, "_", purpose2, ".csv"))
 
 
 #---------------------------Purpose 3 --------------------------------# 
@@ -656,194 +540,77 @@ HPD.1000.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "1000.samples")
 
 
 #Combine above dataframes, and re-order purpose as factors
-all.200.4viz <- HPD.200.1.4viz %>% bind_rows(HPD.200.2.4viz, HPD.200.3.4viz)
-all.200.4viz$purpose <- factor(all.200.4viz$purpose, levels = c(purpose1, purpose2, purpose3))
+all.200.4viz <- HPD.200.1.4viz %>% bind_rows(HPD.200.2.4viz) %>% 
+  mutate(purpose = ifelse(purpose == purpose1, "Down sampled", "All samples"))
 
-all.600.4viz <- HPD.600.1.4viz %>% bind_rows(HPD.600.2.4viz, HPD.600.3.4viz)
-all.600.4viz$purpose <- factor(all.600.4viz$purpose, levels = c(purpose1, purpose2, purpose3))
+all.200.4viz$purpose <- factor(all.200.4viz$purpose, levels = c("Down sampled", "All samples"))
 
-all.1000.4viz <- HPD.1000.1.4viz %>% bind_rows(HPD.1000.2.4viz, HPD.1000.3.4viz)
-all.1000.4viz$purpose <- factor(all.1000.4viz$purpose, levels = c(purpose1, purpose2, purpose3))
+all.600.4viz <- HPD.600.1.4viz %>% bind_rows(HPD.600.2.4viz) %>% 
+  mutate(purpose = ifelse(purpose == purpose1, "Down sampled", "All samples"))
+
+all.600.4viz$purpose <- factor(all.600.4viz$purpose, levels = c("Down sampled", "All samples"))
+
+all.1000.4viz <- HPD.1000.1.4viz %>% bind_rows(HPD.1000.2.4viz) %>% 
+  mutate(purpose = ifelse(purpose == purpose1, "Down sampled", "All samples"))
+
+all.1000.4viz$purpose <- factor(all.1000.4viz$purpose, levels = c("Down sampled", "All samples"))
 
 
-
-####------------------------------- Make HDPI line graphs ------------------------------#### 
-#---------------------Create and store plots----------------------------------------------#
-#---------------------200 samples----------------------------------------------#
-#Nf
-Nf.200samps.HPDI.plot <- ggplot(data = all.200.4viz %>% filter(parameter == "Nf"), 
+#-----------------------Make figures-----------------------------
+#-----------------HPDI plot--------------------#
+#Nf & surv - 200 samples
+p1 <- ggplot(data = all.200.4viz %>% filter(parameter == "Nf" | parameter == "surv"), 
                  aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
   geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("A) Female abundance") + 
+  ggtitle("A) Percent in HPDI: 200 samples") + 
   labs(x = "HPDI",
        y = "Percent in HPDI") +
   theme(legend.title = element_blank(), 
-        axis.title.x = element_blank())
+        axis.title.x = element_blank()) + 
+  facet_wrap(~parameter)
 
-#Nm
-Nm.200samps.HPDI.plot <- ggplot(data = all.200.4viz %>% filter(parameter == "Nm"), 
-       aes(x = interval.scale)) +
+#Nf & surv - 1000 samples
+p2 <- ggplot(data = all.1000.4viz %>% filter(parameter == "Nf" | parameter == "surv"), 
+                                aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
   geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("B) Male abundance") + 
+  ggtitle("B) Percent in HPDI: 1000 samples") + 
   labs(x = "HPDI",
        y = "Percent in HPDI") +
   theme(legend.title = element_blank(), 
-        axis.title.x = element_blank(), 
-        axis.title.y = element_blank())
+        axis.title.x = element_blank()) + 
+  facet_wrap(~parameter)
 
-#survival
-surv.200samps.HPDI.plot <- ggplot(data = all.200.4viz %>% filter(parameter == "surv"), 
-                         aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("C) Survival") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
+
+#-----------------------relative bias density plots-----------------------------#
+samps <- 200
+
+p3 <- results.all %>% dplyr::filter(parameter == "Nf" | parameter == "surv", total_samples == samps) %>% 
+  ggplot(aes(x = relative_bias, color = purpose2, fill = purpose2)) + 
+  geom_density(alpha = 0.6) + 
+  ggtitle(label = paste0("C) Relative bias: ", samps, " samples")) + 
+  xlim(-50, 50) + 
+  facet_wrap(~parameter) +
   theme(legend.title = element_blank())
 
-#lambda
-lam.200samps.HPDI.plot <- ggplot(data = all.200.4viz %>% filter(parameter == "lam"), 
-                        aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("D) Lambda") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.y = element_blank())
-
-plots.200 <- ggarrange(Nf.200samps.HPDI.plot, Nm.200samps.HPDI.plot, surv.200samps.HPDI.plot, lam.200samps.HPDI.plot, common.legend = TRUE)
-
-annotate_figure(plots.200, fig.lab = "200 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
-
-
-#---------------------600 samples----------------------------------------------#
-#Nf
-Nf.600samps.HPDI.plot <- ggplot(data = all.600.4viz %>% filter(parameter == "Nf"), 
-                                aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("A) Female abundance") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank())
-
-#Nm
-Nm.600samps.HPDI.plot <- ggplot(data = all.600.4viz %>% filter(parameter == "Nm"), 
-                                aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("B) Male abundance") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank(), 
-        axis.title.y = element_blank())
-
-#survival
-surv.600samps.HPDI.plot <- ggplot(data = all.600.4viz %>% filter(parameter == "surv"), 
-                                  aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("C) Survival") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
+samps <- 1000
+p4 <- results.all %>% dplyr::filter(parameter == "Nf" | parameter == "surv", total_samples == samps) %>% 
+  ggplot(aes(x = relative_bias, color = purpose2, fill = purpose2)) + 
+  geom_density(alpha = 0.6) + 
+  ggtitle(label = paste0("D) Relative bias: ", samps, " samples")) + 
+  xlim(-50, 50) + 
+  facet_wrap(~parameter) +
   theme(legend.title = element_blank())
 
-#lambda
-lam.600samps.HPDI.plot <- ggplot(data = all.600.4viz %>% filter(parameter == "lam"), 
-                                 aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("D) Lambda") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.y = element_blank())
-
-plots.600 <- ggarrange(Nf.600samps.HPDI.plot, Nm.600samps.HPDI.plot, surv.600samps.HPDI.plot, lam.600samps.HPDI.plot, common.legend = TRUE)
-
-annotate_figure(plots.600, fig.lab = "600 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
 
 
-#---------------------1000 samples----------------------------------------------#
-#Nf
-Nf.1000samps.HPDI.plot <- ggplot(data = all.1000.4viz %>% filter(parameter == "Nf"), 
-                                aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("A) Female abundance") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank())
-
-#Nm
-Nm.1000samps.HPDI.plot <- ggplot(data = all.1000.4viz %>% filter(parameter == "Nm"), 
-                                aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("B) Male abundance") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank(), 
-        axis.title.y = element_blank())
-
-#survival
-surv.1000samps.HPDI.plot <- ggplot(data = all.1000.4viz %>% filter(parameter == "surv"), 
-                                  aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("C) Survival") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank())
-
-#lambda
-lam.1000samps.HPDI.plot <- ggplot(data = all.1000.4viz %>% filter(parameter == "lam"), 
-                                 aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose, fill = purpose, shape = purpose), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("D) Lambda") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.y = element_blank())
-
-plots.1000 <- ggarrange(Nf.1000samps.HPDI.plot, Nm.1000samps.HPDI.plot, surv.1000samps.HPDI.plot, lam.1000samps.HPDI.plot, common.legend = TRUE)
-
-annotate_figure(plots.1000, fig.lab = "1000 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
+ggarrange(p1, p2, p3, p4, common.legend = TRUE, ncol = 1, nrow = 4)
 
 
-#---------------------Create pdf of all HPDI line graphs----------------------------------------------#
-#Specify file
-HPDI.file <- paste0(results_plots_location, "HPDI_model_comparison_", today, "_", purpose.combo, ".pdf")
-pdf(file = HPDI.file, width = 11, height = 8) #Open pdf
 
-#200 samples
-annotate_figure(plots.200, fig.lab = "200 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
-#300 samples
-annotate_figure(plots.600, fig.lab = "600 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
-#400 samples
-annotate_figure(plots.1000, fig.lab = "1000 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
-
-dev.off() #close pdf
 
 
 
@@ -851,22 +618,24 @@ dev.off() #close pdf
 ####---------------------Density plots of kin detected----------------------------------------------####
 #---------------------Prepare data for plotting----------------------------------------------#
 #How many POPs detected per sample size?
-results.all %>% dplyr::filter(model_type == "HS.PO") %>% 
-  group_by(purpose, total_samples) %>% 
+results.all %>% 
+  group_by(purpose2, total_samples) %>% 
   summarize(mean(POPs_detected), mean(HSPs_detected))
 
 #Format PO dataframe
-results.PO <- results.all %>% dplyr::select(parameter, total_samples, kin.detected = POPs_detected,  unique_parents_in_sample, iteration, cv, purpose) %>% 
+results.PO <- results.all %>% dplyr::select(parameter, total_samples, kin.detected = POPs_detected,  unique_parents_in_sample, iteration, cv, purpose = purpose2) %>% 
   mutate(type = "PO")
 
 #Format HS dataframe
-results.HS <- results.all %>% dplyr::select(parameter, total_samples, kin.detected = HSPs_detected,  unique_parents_in_sample, iteration, cv, purpose) %>% 
+results.HS <- results.all %>% dplyr::select(parameter, total_samples, kin.detected = HSPs_detected,  unique_parents_in_sample, iteration, cv, purpose = purpose2) %>% 
   mutate(type = "HS")
 
 #Combine PO and HS dataframe for plotting
 results.kin <- rbind(results.PO, results.HS) %>% 
   mutate(total_samples = paste0(total_samples, " samples"))
+
 results.kin$total_samples <- factor(results.kin$total_samples, levels = c("200 samples", "600 samples", "1000 samples"))
+results.kin$purpose <- factor(results.kin$purpose, levels = c("Down sampled", "All samples"))
 
 #---------------------Create density plots----------------------------------------------#
 #Maternal
@@ -881,12 +650,15 @@ k1 <- results.kin %>% dplyr::filter(parameter == "Nf", type == "PO") %>%
 k2 <- results.kin %>% dplyr::filter(parameter == "Nf", type == "HS") %>%
   ggplot(aes(x = kin.detected, color = purpose, fill = purpose)) + 
   geom_density(alpha = 0.6) + 
-  ggtitle(label = "MHSPs detected") + 
+  ggtitle(label = "Maternal HSPs detected") + 
   xlim(0, 500) + 
-  facet_wrap(~total_samples, ncol = 1)
+  facet_wrap(~total_samples, ncol = 1) + 
+  theme(legend.title = element_blank())
 
 m.kin <- ggarrange(k1, k2, ncol = 2, common.legend = TRUE)
 annotate_figure(m.kin, fig.lab = "Mother kin pairs", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
+
+
 
 #Paternal
 k3 <- results.kin %>% dplyr::filter(parameter == "Nm", type == "PO") %>%

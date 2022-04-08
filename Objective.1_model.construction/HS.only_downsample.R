@@ -334,10 +334,7 @@ for(iter in 1:iterations) {
 #Calculate relative bias for all estimates
 results2 <- results %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(percent_sampled = round((as.numeric(total_samples)/as.numeric(pop_size_mean)) * 100, 0)) %>% 
-  mutate(percent_parents_sampled = as.numeric(unique_parents_in_sample)/as.numeric(mean_unique_parents_in_pop))
-#Need to switch HPDI for survival and lambda
+  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N"))
 
 #Within HPD interval?
 results2 %>% group_by(total_samples, parameter) %>% 

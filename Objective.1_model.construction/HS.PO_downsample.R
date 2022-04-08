@@ -158,8 +158,7 @@ for(iter in 1:iterations) {
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size.temp <- out[[2]] %>%  #population parameters for each year of simulation
     as_tibble() %>% 
-    mutate(iter = iter) %>% 
-    dplyr::filter(year >= 50)
+    mutate(iter = iter)
 
   parents.tibble <- out[[3]] %>% #Tibble for each parent for each year to check the distribution later
     mutate(iteration = iter) %>% 
@@ -295,14 +294,16 @@ for(iter in 1:iterations) {
     rents.info <- rbind(rents.info, parents.tibble)
     
     #Save survival info
-    pop.size.tibble <- rbind(pop.size.tibble, pop.size.temp)
-    
+    pop.size.temp <- pop.size.temp  %>% 
+      dplyr::filter(year >= 50)
+
   } # end loop over sample sizes
   
   
   #-----------------Save output files iteratively--------------------
   #in case R crashes or computer shuts down
-
+  pop.size.tibble <- rbind(pop.size.tibble, pop.size.temp)
+  
   sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
   sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
   sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
@@ -334,10 +335,7 @@ for(iter in 1:iterations) {
 #Calculate relative bias for all estimates
 results2 <- results %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(percent_sampled = round((as.numeric(total_samples)/as.numeric(pop_size_mean)) * 100, 0)) %>% 
-  mutate(percent_parents_sampled = as.numeric(unique_parents_in_sample)/as.numeric(mean_unique_parents_in_pop))
-#Need to switch HPDI for survival and lambda
+  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N"))
 
 #Within HPD interval?
 results2 %>% group_by(total_samples, parameter) %>% 
