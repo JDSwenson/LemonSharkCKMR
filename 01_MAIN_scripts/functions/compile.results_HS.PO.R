@@ -48,10 +48,18 @@ dad.HS.matches <- dad_comps.all %>% filter(type == "HS") %>%
   pull(matches)
 
 #Bind metrics together
-metrics <- cbind(c(mom.PO.matches, 
+metrics <- cbind(c(mom.Exp.PO,
+                   dad.Exp.PO,
+                   rep(mom.Exp.PO + dad.Exp.PO,
+                       times = n_params-2)),
+                 c(mom.PO.matches, 
                    dad.PO.matches, 
                    rep(mom.PO.matches + dad.PO.matches,
                        times = n_params-2)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
+                 c(mom.Exp.HS,
+                   dad.Exp.HS,
+                   rep(mom.Exp.HS + dad.Exp.HS,
+                       times = n_params-2)),
                  c(mom.HS.matches,
                    dad.HS.matches,
                    rep(mom.HS.matches + dad.HS.matches,
@@ -63,4 +71,4 @@ metrics <- cbind(c(mom.PO.matches,
                  c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
                  c(rep(total_samples, times = n_params)), # total samples
                  c(rep(iter, times = n_params))) #iteration
-colnames(metrics) <- c("POPs_detected", "HSPs_detected", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "iteration")
+colnames(metrics) <- c("Exp_POPs", "POPs_detected", "Exp_HSPs", "HSPs_detected", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "iteration")

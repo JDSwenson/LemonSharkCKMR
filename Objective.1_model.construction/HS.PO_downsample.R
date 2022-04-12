@@ -290,9 +290,6 @@ for(iter in 1:iterations) {
     sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size, seed = rseed)
     sample.info <- rbind(sample.info, sample.df_all.info)
     
-    #Save parents info
-    rents.info <- rbind(rents.info, parents.tibble)
-    
     #Save survival info
     pop.size.temp <- pop.size.temp  %>% 
       dplyr::filter(year >= 50)
@@ -301,6 +298,9 @@ for(iter in 1:iterations) {
   
   
   #-----------------Save output files iteratively--------------------
+  #Save parents info
+  rents.info <- rbind(rents.info, parents.tibble)
+  
   #in case R crashes or computer shuts down
   pop.size.tibble <- rbind(pop.size.tibble, pop.size.temp)
   

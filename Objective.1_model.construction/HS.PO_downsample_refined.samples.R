@@ -30,7 +30,7 @@ date.of.simulation <- today
 #Save paths and file labels as objects
 load("rseeds_2022.03.23.rda")
 seeds <- "Seeds2022.03.23"
-purpose <- "Play_around"
+purpose <- "HS.PO_refined.samples_downsample"
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.output/"
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/models/"
@@ -38,10 +38,10 @@ results_location <- "G://My Drive/Personal_Drive/R/CKMR/Model.validation/Model.r
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
-jags.model.prefix <- "HS.PO_"
+jags.model.prefix <- "CKMR.JAGS_"
 parents_prefix <- "CKMR_parents.breakdown"
 sample.prefix <- "CKMR_sample.info"
-survival.prefix <- "CKMR_survival"
+pop.size.prefix <- "CKMR_pop.size"
 
 #----------------------- DATA-GENERATING MODEL --------------------
 # Note on sequencing: Births happen at beginning of each year, followed by deaths 
@@ -101,7 +101,7 @@ sample.vec <- c(50, 150, 250) #vector to sample over per year
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 100 #Number of iterations to loop over
+iterations <- 100#Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -111,7 +111,7 @@ iterations <- 100 #Number of iterations to loop over
  sims.list.1 <- NULL
  sims.list.2 <- NULL
  sims.list.3 <- NULL
- survival.df <- NULL
+ pop.size.tibble <- NULL
 
 sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
 sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
@@ -156,7 +156,10 @@ for(iter in 1:iterations) {
 
   #Save simulation output as objects
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
-  pop.size <- out[[2]] #population parameters for each year of simulation
+  pop.size.temp <- out[[2]] %>%  #population parameters for each year of simulation
+    as_tibble() %>% 
+    mutate(iter = iter)
+
   parents.tibble <- out[[3]] %>% #Tibble for each parent for each year to check the distribution later
     mutate(iteration = iter) %>% 
     dplyr::filter(year > 50) #Just make the dataframe smaller
@@ -167,38 +170,40 @@ for(iter in 1:iterations) {
   #-----------------------Collect samples-------------------------
   #Loop over sample sizes stored in sample.vec  
   for(samps in 1:length(sample.vec)){
-        sample.size <- sample.vec[samps] #Specify sample size
-    
-    #Initialize sample dataframes
+        sample.size <- sample.vec[samps] #Specify sample size for offspring (YOY)
+        sample.size.rents <- sample.size/5 #Specify sample size for parents - assume they're much rarer than offspring
+
+            #Initialize sample dataframes
     sample.df_all.info <- NULL
-    sample.df_temp <- NULL
+    sample.df_temp.off = sample.df_temp.rents <- NULL
     
     #Sample population each year in sample.years and make dataframe of samples with all metadata
     for(i in sample.years){
-      sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
-        dplyr::slice_sample(n = sample.size) #%>% #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
-      #In case wanting to filter for one offspring per parent per cohort  
-      #dplyr::distinct(mother.x, birth.year, .keep_all = TRUE) %>% 
-      #dplyr::distinct(father.x, birth.year, .keep_all = TRUE)
-      sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
+
+      #Sample YOY only for half-sib analysis
+      sample.df_temp.off <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
+        dplyr::filter(age.x == 0) %>% 
+        dplyr::slice_sample(n = sample.size) # #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
+
+      #Sample reproductively mature adults only for parent-offspring analysis
+      sample.df_temp.rents <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
+        dplyr::filter(age.x >= repro.age) %>% 
+        dplyr::slice_sample(n = sample.size.rents)
+      
+
+      #Combine all
+        sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp.off, sample.df_temp.rents)
     }
     
     
-    #Keep just one instance of each individual (to avoid self-recapture) and sort by birth year so when we make the pairwise comparison matrix, Ind_1 is always older than Ind_2 (bc it comes first)
-    # sample.df_all.info <- sample.df_all.info %>% distinct(indv.name, .keep_all = TRUE) %>% 
-    #   dplyr::arrange(birth.year) %>% 
-    #   as_tibble()
-
     source("./01_MAIN_scripts/functions/remove_dups.R")
 
         noDups.list <- split.dups(sample.df_all.info)
         first.capture <- noDups.list[[1]]
         later.capture <- noDups.list[[2]]
     
-     sampled.mothers <- unique(sample.df_all.info$mother.x)
-     sampled.fathers <- unique(sample.df_all.info$father.x)
+ 
     source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO.R")
-    
     #Remove full sibs
     filter1.out <- filter.samples(later.capture) #Filter for full sibs
     PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
@@ -224,6 +229,7 @@ for(iter in 1:iterations) {
       # group_by(mort.yrs) %>% 
       # summarize(all = sum(all), yes = sum(yes)) %>% 
       # mutate(pop.growth.yrs = 0, ref.year = 90, type = "HS|PO")
+    positives.HS <- pairwise.out[[3]]
 
     head(mom_comps.all)
     head(dad_comps.all)
@@ -234,7 +240,34 @@ for(iter in 1:iterations) {
     dad_comps.all %>% group_by(type) %>% 
       summarize(sum(yes))
     
-    ####------------------------ Fit CKMR model ----------------####
+    # #Downsample if more than max.HSPs
+    max.HSPs <- 150
+    down.samples <- downsample(mom_comps.all, dad_comps.all, HS.samps.df) #calculates approximate number of samples needed to achieve max.HSPs for filtering below
+    (target.samples <- down.samples[[1]])
+    props <- down.samples[[2]]
+    pos.mom.comps <- down.samples[[3]] #Number of positives for m
+    pos.dad.comps <- down.samples[[4]]
+
+    #down-sample to achieve a more reasonable number of kin (if necessary)
+    if(pos.mom.comps + pos.dad.comps > max.HSPs){
+      HS.samps.df.down <- HS.samps.df %>% slice_sample(n = target.samples, weight_by = props)
+        #Make a new pairwise comparison matrix
+    pairwise.out2 <- build.pairwise(filtered.samples.PO.list = PO.samps.list, filtered.samples.HS.df = HS.samps.df.down)
+
+    #Save output as different dataframes; includes both HS and PO relationships (but can filter below)
+    mom_comps.all <- pairwise.out2[[1]]
+    dad_comps.all <- pairwise.out2[[2]]
+
+    head(mom_comps.all)
+    head(dad_comps.all)
+
+    mom_comps.all %>% group_by(type) %>%
+      summarize(sum(yes))
+
+    dad_comps.all %>% group_by(type) %>%
+      summarize(sum(yes))
+    }
+    # ####------------------------ Fit CKMR model ----------------####
     #Uncomment below to only run the HS model
     #mom_comps.all <- mom_comps.all %>% filter(type == "HS")
     #dad_comps.all <- dad_comps.all %>% filter(type == "HS")
@@ -245,6 +278,16 @@ for(iter in 1:iterations) {
 
     #Define JAGS data and model, and run the MCMC engine   
     source("01_MAIN_scripts/functions/run.JAGS_HS.PO.R")
+
+    #Calculate expectations
+    Exp <- calc.Exp(mom_comps.all, dad_comps.all)
+    mom.Exp.HS <- Exp[[1]]
+    mom.Exp.PO <- Exp[[2]]
+    dad.Exp.HS <- Exp[[3]]
+    dad.Exp.PO <- Exp[[4]]
+    
+    sampled.mothers <- unique(sample.df_all.info$mother.x)
+    sampled.fathers <- unique(sample.df_all.info$father.x)
     
     #Compile results and summary statistics from simulation to compare estimates
     source("01_MAIN_scripts/functions/compile.results_HS.PO.R")
@@ -259,18 +302,20 @@ for(iter in 1:iterations) {
     sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, sample.size = sample.size, seed = rseed)
     sample.info <- rbind(sample.info, sample.df_all.info)
     
-    
+    #Save survival info
+    pop.size.temp2 <- pop.size.temp  %>% 
+      dplyr::filter(year >= 50)
+
   } # end loop over sample sizes
   
+  
+  #-----------------Save output files iteratively--------------------
   #Save parents info
   rents.info <- rbind(rents.info, parents.tibble)
   
-  #Save survival info
-  survival.df <- rbind(survival.df, surv.df.temp)
-  
-  #-----------------Save output files iteratively--------------------
   #in case R crashes or computer shuts down
-
+  pop.size.tibble <- rbind(pop.size.tibble, pop.size.temp2)
+  
   sim.samples.1 <- paste0(sample.vec[1]*length(sample.years), ".samples")
   sim.samples.2 <- paste0(sample.vec[2]*length(sample.years), ".samples")
   sim.samples.3 <- paste0(sample.vec[3]*length(sample.years), ".samples")
@@ -291,7 +336,7 @@ for(iter in 1:iterations) {
    saveRDS(rents.info, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
    
    # Detailed info on survival
-   saveRDS(survival.df, file = paste0(temp_location, survival.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+   saveRDS(pop.size.tibble, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
    sim.end <- Sys.time() 
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
@@ -302,10 +347,7 @@ for(iter in 1:iterations) {
 #Calculate relative bias for all estimates
 results2 <- results %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(percent_sampled = round((as.numeric(total_samples)/as.numeric(pop_size_mean)) * 100, 0)) %>% 
-  mutate(percent_parents_sampled = as.numeric(unique_parents_in_sample)/as.numeric(mean_unique_parents_in_pop))
-#Need to switch HPDI for survival and lambda
+  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N"))
 
 #Within HPD interval?
 results2 %>% group_by(total_samples, parameter) %>% 
@@ -317,8 +359,8 @@ results2 %>% group_by(total_samples, parameter) %>%
 
  #Mean number of parents detected
  #Median relative bias by sample size
- results2 %>% group_by(total_samples, parameter) %>% 
-   dplyr::summarize(mean = mean(parents_detected), n = n())
+ # results2 %>% group_by(total_samples, parameter) %>% 
+ #   dplyr::summarize(mean = mean(parents_detected), n = n())
  
  
  #-----------------------------Save major output files---------------------------------------------

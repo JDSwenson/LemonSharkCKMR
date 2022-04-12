@@ -45,11 +45,11 @@ results.1 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
   mutate(model_type = "HS.PO", 
          purpose = purpose1)
 
-results.2 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose2, ".csv")) %>% 
+results.2 <- read_csv(paste0(results_location, "archived.sims/", results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose2, ".csv")) %>% 
   mutate(model_type = "HS.only",
          purpose = purpose2)
 
-date.of.simulation <- "07Apr2022"
+date.of.simulation <- "05Apr2022"
 results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose3, ".csv")) %>% 
   mutate(model_type = "HS.PO",
          purpose = purpose3)
@@ -60,6 +60,7 @@ results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
 
 
 #------------------------------- MCMC output -----------------------------------#
+date.of.simulation <- "07Apr2022"
 #Trial 1
 s1.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose1))
 
@@ -90,6 +91,7 @@ s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_",
  # s4.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose4))
 
 #------------------------------- Population size details -----------------------------------#
+date.of.simulation <- "07Apr2022"
 pop.size.1 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose1))
 
 pop.size.2 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose2))
