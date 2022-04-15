@@ -18,11 +18,18 @@ nc <- 2      # number of chains
 MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
 #------------- Simulation parameters and labels  ----------------#
-date.of.simulation <- "07Apr2022"
-purpose1 <- "HS.PO_downsample"
-purpose2 <- "HS.only_downsample"
-purpose3 <- "all.comps"
-#purpose4 <- "5yr.comps"
+date.of.simulation <- "11Apr2022"
+purpose1 <- "HS.PO_refined.samples_all.comps"
+purpose1.lab <- "HS|PO all comparisons"
+
+purpose2 <- "HS.PO_refined.samples_downsample"
+purpose2.lab <- "HS|PO downsample"
+
+purpose3 <- "HS.only_refined.samples_all.comps"
+purpose3.lab <- "HS only all comparisons"
+
+purpose4 <- "HS.only_refined.samples_downsample"
+purpose4.lab <- "HS only downsample"
 
 seeds <- "Seeds2022.03.23"
 sim.samples.1 <- "200.samples"
@@ -45,22 +52,22 @@ results.1 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
   mutate(model_type = "HS.PO", 
          purpose = purpose1)
 
-results.2 <- read_csv(paste0(results_location, "archived.sims/", results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose2, ".csv")) %>% 
-  mutate(model_type = "HS.only",
+results.2 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose2, ".csv")) %>% 
+  mutate(model_type = "HS.PO",
          purpose = purpose2)
 
-date.of.simulation <- "05Apr2022"
+#date.of.simulation <- "05Apr2022"
 results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose3, ".csv")) %>% 
-  mutate(model_type = "HS.PO",
+  mutate(model_type = "HS.only",
          purpose = purpose3)
 
- # results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose4, ".csv")) %>% 
- #   mutate(model_type = "HS.PO",
- #          purpose = purpose4)
+results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose4, ".csv")) %>% 
+    mutate(model_type = "HS.only",
+           purpose = purpose4)
 
 
 #------------------------------- MCMC output -----------------------------------#
-date.of.simulation <- "07Apr2022"
+#date.of.simulation <- "07Apr2022"
 #Trial 1
 s1.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose1))
 
@@ -76,7 +83,7 @@ s2.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_",
 s2.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose2))
 
 #Trial 3
-date.of.simulation <- "05Apr2022"
+#date.of.simulation <- "05Apr2022"
 s3.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose3))
 
 s3.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose3))
@@ -84,14 +91,14 @@ s3.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_",
 s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose3))
 
 #Trial 4
- # s4.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose4))
- # 
- # s4.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose4))
- # 
- # s4.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose4))
+ s4.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose4))
+
+ s4.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose4))
+
+ s4.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose4))
 
 #------------------------------- Population size details -----------------------------------#
-date.of.simulation <- "07Apr2022"
+#date.of.simulation <- "07Apr2022"
 pop.size.1 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose1))
 
 pop.size.2 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose2))
@@ -102,18 +109,16 @@ pop.size.4 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.sim
 ####------------------------------- Quick analysis of results -----------------------------------####
 
 results.all <- results.1 %>% 
-  bind_rows(results.2, results.3) %>% 
+  bind_rows(results.2, results.3, results.4) %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(percent_sampled = round((as.numeric(total_samples)/as.numeric(pop_size_mean)) * 100, 0)) %>% 
-  mutate(percent_parents_sampled = as.numeric(unique_parents_in_sample)/as.numeric(mean_unique_parents_in_pop)) %>% 
   mutate(cv = (sd/mean)*100)
 
 jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
 
 head(results.all)
 
-results.all$purpose <- factor(results.all$purpose, levels = c(purpose1, purpose2, purpose3))
+results.all$purpose <- factor(results.all$purpose, levels = c(purpose1, purpose2, purpose3, purpose4))
 
  
  #-----------Median Relative bias by sample size-------------------------#
@@ -139,15 +144,17 @@ results.all %>% group_by(total_samples, parameter, purpose) %>%
 #------------------------------- Within HPDI? -----------------------------------#
 results.all %>% group_by(purpose, total_samples, parameter) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% 
-  filter(parameter != "lam") %>% 
-  arrange(desc(percent_in_interval))
+#  filter(parameter != "lam") %>% 
+  arrange(desc(percent_in_interval)) %>% 
+  View()
 
 #------------------------------- CV -----------------------------------#
-purpose.combo <- "test.downsample"
+purpose.combo <- "test_refined.samples_and_downsample"
 
 results.all %>% group_by(model_type, purpose, total_samples, parameter) %>% 
   dplyr::summarize(mean.cv = mean(cv), 
-                   median.bias = median(relative_bias)) %>%
+                   median.bias = median(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
 #  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
   arrange(mean.cv) %>% 
   write_csv(file = paste0(results_location, "Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
@@ -263,19 +270,19 @@ for(i in 1:length(sim.samples.all)){
     theme(legend.title = element_blank()) + 
     ylim(-50, 100)
 
-  # RB_boxplot.s4 <- results.all %>% filter(total_samples == samps, purpose == purpose4) %>% 
-  #   ggplot(aes(x=factor(parameter), fill = factor(parameter))) +
-  #   geom_boxplot(aes(y=relative_bias)) +
-  #   #ylim(-50, 160) +
-  #   geom_hline(yintercept=0, col="black", size=1.25) +
-  #   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  #   labs(x="Parameter", y="Relative bias", title=paste0(purpose4, "_", samps, " samples")) +
-  #   scale_fill_brewer(palette="Set2") +
-  #   font("title", size = 10, face = "bold") + 
-  #   theme(legend.title = element_blank()) + 
-  #   ylim(-50, 100)
+  RB_boxplot.s4 <- results.all %>% filter(total_samples == samps, purpose == purpose4) %>%
+    ggplot(aes(x=factor(parameter), fill = factor(parameter))) +
+    geom_boxplot(aes(y=relative_bias)) +
+    #ylim(-50, 160) +
+    geom_hline(yintercept=0, col="black", size=1.25) +
+    #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+    labs(x="Parameter", y="Relative bias", title=paste0(purpose4, "_", samps, " samples")) +
+    scale_fill_brewer(palette="Set2") +
+    font("title", size = 10, face = "bold") +
+    theme(legend.title = element_blank()) +
+    ylim(-50, 100)
   
-print(ggarrange(RB_boxplot.s1, RB_boxplot.s2, RB_boxplot.s3, nrow = 2, ncol = 2, common.legend = TRUE))
+print(ggarrange(RB_boxplot.s1, RB_boxplot.s2, RB_boxplot.s3, RB_boxplot.s4, nrow = 2, ncol = 2, common.legend = TRUE))
   }
 
 dev.off() #close pdf
@@ -417,42 +424,42 @@ for(i in 1:length(s1.1)){ #Loop over all the posterior samples from each iterati
     
     HPD.1000.3 <- rbind(HPD.1000.3, post.HPD.1000.3)
 
-    # #---------------------------Purpose 4--------------------------------#    
-    # #200 samples
-    # #Calcualte HPD interval for iteration i and interval j
-    # post.HPD.200.4 <- combine.mcmc(s4.1[[i]]) %>% 
-    #   HPDinterval(prob = intervals[j]) %>%
-    #   data.frame() %>% 
-    #   mutate(interval = intervals[j], iteration = i)
-    # 
-    # post.HPD.200.4 <- post.HPD.200.4[row.names(post.HPD.200.4) %in% jags_params,] %>% #Remove deviance
-    #   rownames_to_column(var = "parameter")
-    # 
-    # HPD.200.4 <- rbind(HPD.200.4, post.HPD.200.4)
-    # 
-    # #600 samples
-    # #Calcualte HPD interval for iteration i and interval j
-    # post.HPD.600.4 <- combine.mcmc(s4.2[[i]]) %>% 
-    #   HPDinterval(prob = intervals[j]) %>%
-    #   data.frame() %>% 
-    #   mutate(interval = intervals[j], iteration = i)
-    # 
-    # post.HPD.600.4 <- post.HPD.600.4[row.names(post.HPD.600.4) %in% jags_params,] %>% #Remove deviance
-    #   rownames_to_column(var = "parameter")
-    # 
-    # HPD.600.4 <- rbind(HPD.600.4, post.HPD.600.4)
-    # 
-    # #1000 samples
-    # #Calcualte HPD interval for iteration i and interval j
-    # post.HPD.1000.4 <- combine.mcmc(s4.3[[i]]) %>% 
-    #   HPDinterval(prob = intervals[j]) %>%
-    #   data.frame() %>% 
-    #   mutate(interval = intervals[j], iteration = i)
-    # 
-    # post.HPD.1000.4 <- post.HPD.1000.4[row.names(post.HPD.1000.4) %in% jags_params,] %>% #Remove deviance
-    #   rownames_to_column(var = "parameter")
-    # 
-    # HPD.1000.4 <- rbind(HPD.1000.4, post.HPD.1000.4)
+    #---------------------------Purpose 4--------------------------------#
+    #200 samples
+    #Calcualte HPD interval for iteration i and interval j
+    post.HPD.200.4 <- combine.mcmc(s4.1[[i]]) %>%
+      HPDinterval(prob = intervals[j]) %>%
+      data.frame() %>%
+      mutate(interval = intervals[j], iteration = i)
+
+    post.HPD.200.4 <- post.HPD.200.4[row.names(post.HPD.200.4) %in% jags_params,] %>% #Remove deviance
+      rownames_to_column(var = "parameter")
+
+    HPD.200.4 <- rbind(HPD.200.4, post.HPD.200.4)
+
+    #600 samples
+    #Calcualte HPD interval for iteration i and interval j
+    post.HPD.600.4 <- combine.mcmc(s4.2[[i]]) %>%
+      HPDinterval(prob = intervals[j]) %>%
+      data.frame() %>%
+      mutate(interval = intervals[j], iteration = i)
+
+    post.HPD.600.4 <- post.HPD.600.4[row.names(post.HPD.600.4) %in% jags_params,] %>% #Remove deviance
+      rownames_to_column(var = "parameter")
+
+    HPD.600.4 <- rbind(HPD.600.4, post.HPD.600.4)
+
+    #1000 samples
+    #Calcualte HPD interval for iteration i and interval j
+    post.HPD.1000.4 <- combine.mcmc(s4.3[[i]]) %>%
+      HPDinterval(prob = intervals[j]) %>%
+      data.frame() %>%
+      mutate(interval = intervals[j], iteration = i)
+
+    post.HPD.1000.4 <- post.HPD.1000.4[row.names(post.HPD.1000.4) %in% jags_params,] %>% #Remove deviance
+      rownames_to_column(var = "parameter")
+
+    HPD.1000.4 <- rbind(HPD.1000.4, post.HPD.1000.4)
     
   }
   print(paste0("Finished with iteration ", i))
@@ -658,14 +665,14 @@ HPD.1000.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "1000.samples")
 
 
 #Combine above dataframes, and re-order purpose as factors
-all.200.4viz <- HPD.200.1.4viz %>% bind_rows(HPD.200.2.4viz, HPD.200.3.4viz)
-all.200.4viz$purpose <- factor(all.200.4viz$purpose, levels = c(purpose1, purpose2, purpose3))
+all.200.4viz <- HPD.200.1.4viz %>% bind_rows(HPD.200.2.4viz, HPD.200.3.4viz, HPD.200.4.4viz)
+all.200.4viz$purpose <- factor(all.200.4viz$purpose, levels = c(purpose1, purpose2, purpose3, purpose4))
 
-all.600.4viz <- HPD.600.1.4viz %>% bind_rows(HPD.600.2.4viz, HPD.600.3.4viz)
-all.600.4viz$purpose <- factor(all.600.4viz$purpose, levels = c(purpose1, purpose2, purpose3))
+all.600.4viz <- HPD.600.1.4viz %>% bind_rows(HPD.600.2.4viz, HPD.600.3.4viz, HPD.600.4.4viz)
+all.600.4viz$purpose <- factor(all.600.4viz$purpose, levels = c(purpose1, purpose2, purpose3, purpose4))
 
-all.1000.4viz <- HPD.1000.1.4viz %>% bind_rows(HPD.1000.2.4viz, HPD.1000.3.4viz)
-all.1000.4viz$purpose <- factor(all.1000.4viz$purpose, levels = c(purpose1, purpose2, purpose3))
+all.1000.4viz <- HPD.1000.1.4viz %>% bind_rows(HPD.1000.2.4viz, HPD.1000.3.4viz, HPD.1000.4.4viz)
+all.1000.4viz$purpose <- factor(all.1000.4viz$purpose, levels = c(purpose1, purpose2, purpose3, purpose4))
 
 
 
@@ -840,9 +847,9 @@ pdf(file = HPDI.file, width = 11, height = 8) #Open pdf
 
 #200 samples
 annotate_figure(plots.200, fig.lab = "200 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
-#300 samples
+#600 samples
 annotate_figure(plots.600, fig.lab = "600 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
-#400 samples
+#1000 samples
 annotate_figure(plots.1000, fig.lab = "1000 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
 
 dev.off() #close pdf
@@ -876,7 +883,7 @@ k1 <- results.kin %>% dplyr::filter(parameter == "Nf", type == "PO") %>%
   ggplot(aes(x = kin.detected, color = purpose, fill = purpose)) + 
   geom_density(alpha = 0.6) + 
   ggtitle(label = "MOPs detected") + 
-  xlim(0, 60) + 
+  xlim(0, 150) + 
   facet_wrap(~total_samples, ncol = 1) + 
   theme(legend.title = element_blank())
 
@@ -895,7 +902,7 @@ k3 <- results.kin %>% dplyr::filter(parameter == "Nm", type == "PO") %>%
   ggplot(aes(x = kin.detected, color = purpose, fill = purpose)) + 
   geom_density(alpha = 0.6) + 
   ggtitle(label = "FOPs detected") + 
-  xlim(0, 60) + 
+  xlim(0, 150) + 
   facet_wrap(~total_samples, ncol = 1) + 
   theme(legend.title = element_blank())
 
@@ -921,6 +928,84 @@ dev.off() #close pdf
 
 
 
+#-----------------------Examine expected vs observed kin pairs--------------------
+#Make better labels for plotting
+results.all$sample.label <- factor(paste0(results.all$total_samples, " samples"), levels = c("200 samples", "600 samples", "1000 samples"))
+
+#Calcualte % difference in expected vs observed kin
+results.all2 <- results.all %>% mutate(HS_exp_obs_diff = (Exp_HSPs - HSPs_detected)/Exp_HSPs,
+                                      PO_exp_obs_diff = (Exp_POPs - POPs_detected)/Exp_POPs) %>%
+  mutate(PO_exp_obs_diff = replace_na(PO_exp_obs_diff, 0)) %>% 
+  mutate(all_exp_obs_diff = HS_exp_obs_diff + PO_exp_obs_diff)
+
+
+# results.all %>% mutate(HS_exp_obs_diff = Exp_HSPs - HSPs_detected,
+#                        PO_exp_obs_diff = Exp_POPs - POPs_detected) %>%
+#   mutate(all_exp_obs_diff = HS_exp_obs_diff + PO_exp_obs_diff) %>% 
+#   dplyr::select(purpose,
+#                 parameter, 
+#                 Q50, 
+#                 truth, 
+#                 Exp_POPs, 
+#                 POPs_detected, 
+#                 PO_exp_obs_diff, 
+#                 Exp_HSPs, 
+#                 HSPs_detected, 
+#                 HS_exp_obs_diff, 
+#                 total_samples, 
+#                 relative_bias, 
+#                 in_interval) %>% 
+#   View()
+
+#----------------Make scatter plot of expected vs observed 
+#Purpose 1
+EO1 <- results.all2 %>% dplyr::filter(purpose == purpose1) %>% 
+  ggplot(aes(x = all_exp_obs_diff, y = relative_bias, fill = parameter, color = parameter)) +
+  geom_point() +
+  facet_wrap(~sample.label) + 
+  labs(title = purpose1.lab, x = "Percent difference", y = "Relative bias") + 
+  theme(legend.title = element_blank())
+
+#Purpose 2
+EO2 <- results.all2 %>% dplyr::filter(purpose == purpose2) %>% 
+  ggplot(aes(x = all_exp_obs_diff, y = relative_bias, fill = parameter, color = parameter)) +
+  geom_point() +
+  facet_wrap(~sample.label) + 
+  labs(title = purpose2.lab, x = "Percent difference", y = "Relative bias")
+
+#Purpose 3
+EO3 <- results.all2 %>% dplyr::filter(purpose == purpose3) %>% 
+  ggplot(aes(x = all_exp_obs_diff, y = relative_bias, fill = parameter, color = parameter)) +
+  geom_point() +
+  facet_wrap(~sample.label) + 
+  labs(title = purpose3.lab, x = "Percent difference", y = "Relative bias")
+
+#Purpose 4
+EO4 <- results.all2 %>% dplyr::filter(purpose == purpose4) %>% 
+  ggplot(aes(x = all_exp_obs_diff, y = relative_bias, fill = parameter, color = parameter)) +
+  geom_point() +
+  facet_wrap(~sample.label) + 
+  labs(title = purpose4.lab, x = "Percent difference", y = "Relative bias")
+
+
+EO.all <- ggarrange(EO1, EO2, EO3, EO4, common.legend = TRUE)
+annotate_figure(EO.all, fig.lab = "Relative bias by percent difference in expected vs observed kin pairs", fig.lab.pos = "top.left", fig.lab.size = 14, fig.lab.face = "bold")
+
+
+####------------------Posterior predictive distribution------------------
+head(s1.1[[1]])
+
+#Just adds mcmc chains together
+s.comb <- combine.mcmc(s1.1[[1]]) %>% 
+  as_tibble()
+
+Nf.pre <- s.comb$Nf
+Nm.pre <- s.comb$Nm
+lam.pre <- s.comb$lam
+surv.pre <- s.comb$surv
+n.trials <- nrow(s.comb)
+
+rbinom(n = 1, size = n.comps, (surv^mom.mort.yrs[i])/(Nf*(lam^mom.popGrowth.yrs[i])), mom.n.comps[i])
 
 
 

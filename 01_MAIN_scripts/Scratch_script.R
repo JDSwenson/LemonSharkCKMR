@@ -1,3 +1,5 @@
+library(jagsUI)
+
 pop.size.1.summary <- pop.size.1 %>% dplyr::filter(year == 85) %>% 
   dplyr::distinct(year, iter, .keep_all = TRUE) %>%
   dplyr::select(!Total.adult.pop) %>% 
@@ -36,3 +38,126 @@ pop.size.2.lam <- pop.size.2 %>% dplyr::filter(year >= 85) %>%
   group_by(iter) %>% 
   summarize(true.lam = mean(adult.lambda)) %>% 
   dplyr::rename(iteration = iter)
+
+
+
+
+purpose1 <- "HS.PO_refined.samples_all.comps"
+purpose2 <- "HS.PO_refined.samples_downsample"
+purpose3 <- "HS.only_refined.samples_all.comps"
+purpose4 <- "HS.only_refined.samples_downsample"
+
+
+
+
+#--------------Posterior predictive distribution examples------------------------
+#-----------------------Example 1----------------------
+#Get data
+data(longley)
+gnp <- longley$GNP
+employed <- longley$Employed
+n <- length(employed)
+data <- list(gnp=gnp,employed=employed,n=n)
+
+#Identify filepath of model file
+modfile <- tempfile()
+
+#Write model
+#Note calculation of discrepancy stats fit and fit.new
+#(sums of residuals)
+writeLines("
+model{
+
+  #Likelihood
+  for (i in 1:n){ 
+
+    employed[i] ~ dnorm(mu[i], tau)     
+    mu[i] <- alpha + beta*gnp[i]
+    
+    res[i] <- employed[i] - mu[i]   
+    emp.new[i] ~ dnorm(mu[i], tau)
+    res.new[i] <- emp.new[i] - mu[i]
+
+  }
+    
+  #Priors
+  alpha ~ dnorm(0, 0.00001)
+  beta ~ dnorm(0, 0.00001)
+  sigma ~ dunif(0,1000)
+  tau <- pow(sigma,-2)
+  
+  #Derived parameters
+  fit <- sum(res[])
+  fit.new <- sum(res.new[])
+
+}
+", con=modfile)
+
+#Set parameters to monitor
+params <- c('alpha','beta','sigma','fit','fit.new')
+
+#Run analysis
+
+out <- jags(data = data,
+            inits = NULL,
+            parameters.to.save = params,
+            model.file = modfile,
+            n.chains = 3,
+            n.adapt = 100,
+            n.iter = 1000,
+            n.burnin = 500,
+            n.thin = 2)
+
+#Examine output summary
+out
+
+#Posterior predictive check plot
+pp.check(out, observed = 'fit', simulated = 'fit.new')
+
+#-------------------------Example 2------------------------------------
+set.seed(02162018)
+num.obs <- 50
+true.mu <- 0
+true.sigmasq <- 1
+y <- rnorm(num.obs, mean = true.mu, sd = sqrt(true.sigmasq))
+
+#Specify priors
+M <- 0
+S <- 100
+C <- 100000
+
+dataList = list(y = y, Ntotal = num.obs, M = M, S = S, C = C)
+
+modelString = "model {
+for ( i in 1:Ntotal ) {
+y[i] ~ dnorm(mu, 1/sigma^2) # sampling model
+}
+mu ~ dnorm(M,1/S^2)
+sigma ~ dunif(0,C)
+} "
+writeLines( modelString, con='NORMmodel.txt')
+
+initsList <- function(){
+  # function for initializing starting place of theta
+  # RETURNS: list with random start point for theta
+  return(list(mu = rnorm(1, mean = 0, sd = 100), sigma = runif(1,0,1000)))
+}
+
+library(rjags)
+library(runjags)
+
+jagsModel <- jags.model( file = "NORMmodel.txt", data = dataList,
+                         inits =initsList, n.chains = 2, n.adapt = 100)
+
+update(jagsModel, n.iter = 500)
+
+num.mcmc <- 1000
+codaSamples <- coda.samples( jagsModel, variable.names = c('mu', 'sigma'), n.iter = num.mcmc)
+
+#Calculate posterior predictive distribution
+posterior.mu <- codaSamples[[1]][,'mu']
+posterior.sigma <- codaSamples[[1]][,'sigma']
+posterior.pred <- rnorm(num.mcmc, mean = posterior.mu, sd = posterior.sigma)
+prob.greater <- mean(posterior.pred > -0.2)
+
+#For a posterior predictive interval, I should be able to use a binomial distribution with each set of parameter values from the posterior distribution, and the CKMR equation. This will give the number of predicted kin pairs from the model.
