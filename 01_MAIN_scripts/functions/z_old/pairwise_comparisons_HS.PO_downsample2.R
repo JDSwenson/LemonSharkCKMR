@@ -371,7 +371,7 @@ return(list(mom_comps.all, dad_comps.all, positives.HS))
 
 
 #----------------Calculate number of HSPs for downsampling---------------
-downsample <- function(mom_comps.all, dad_comps.all, HS.samps.df, PO.samps.list){
+downsample <- function(mom_comps.all, dad_comps.all, HS.samps.df, NoFullSibs.df){
 
   #Downsample for HSPs
 #Calculate proportion of samples born in each birth year
@@ -450,26 +450,80 @@ PO.all.yes <- PO_comps.dad.yes + PO_comps.mom.yes
 
 sample.size.rents.reduced <- (max.POPs/PO.all.yes)*sample.size.rents
 sample.size.juvs.reduced <- (max.POPs/PO.all.yes)*sample.size.juvs
-PO.down.prop <- max.POPs/PO.all.yes
 
 PO.samps.list.down <- list()
 if(PO_comps.mom.yes + PO_comps.dad.yes > max.POPs){
+    
+  potential.parents.down.samples <- NoFullSibs.df %>% 
+    mutate(age.in.last.yr = n_yrs-birth.year,
+           relation = "parent") %>% 
+    dplyr::filter(age.in.last.yr >= repro.age) %>% 
+    dplyr::select(!age.in.last.yr)
+  
+  potential.offspring.down.samples <- NoFullSibs.df %>% 
+    mutate(age.in.first.yr = (sample.years[1]-birth.year),
+           relation = "offspring") %>% 
+    dplyr::filter(age.in.first.yr < repro.age) %>% 
+    dplyr::select(!age.in.first.yr)
+  
+  potential.all.down.samples <- rbind(potential.parents.down.samples, potential.offspring.down.samples) %>% 
+    group_by(indv.name) %>% 
+    sample_n(1) %>% #For individuals that are counted as offspring for a bit, then counted as parents later, pick a random instance for weighted sampling
+    arrange(relation) %>% 
+    ungroup()
 
-  #---------Filter 2: potential parents and offspring for each year------
+  rent.prop <- nrow(potential.all.down.samples[which(potential.all.down.samples$relation == "parent"),])/nrow(potential.all.down.samples)
+  
+  off.prop <- nrow(potential.all.down.samples[which(potential.all.down.samples$relation == "offspring"),])/nrow(potential.all.down.samples)
+  
+  PO.props.vec <- potential.all.down.samples %>% mutate(prop = ifelse(relation == "parent", rent.prop, off.prop)) %>% 
+    pull(prop)
+  
+  PO.down.samples <- potential.all.down.samples %>% dplyr::slice_sample(n = PO_target.samples, weight_by = PO.props.vec) %>% 
+    dplyr::select(!relation)
+
+
+OffBirth.years.down <- PO.down.samples %>% 
+  dplyr::filter(age.x == 0) %>% 
+  distinct(birth.year) %>% 
+  arrange(birth.year) %>%
+  pull() 
+
+#Initialize lists to save output
+parents.down <- list()
+offspring.down <- list()
+
+#---------Filter 2: potential parents and offspring for each year------
 #For each offspring birth year, create a dataframe of potential parents i.e. sampled individuals that are old enough to have been a parent in that year.
-for(y in 1:length(PO.samps.list)){
+for(y in 1:length(OffBirth.years.down)){
+  OffBirth.year <- OffBirth.years.down[y] #year of focus for this iteration
   
-  off.down <- PO.samps.list[[y]] %>% dplyr::filter(relation == "offspring") %>% 
-    slice_sample(prop = PO.down.prop)
+  #Dataframe of reproductively mature individuals during offspring birth year
+  parents.down[[y]] <- PO.down.samples %>%
+    mutate(age.in.OffBirth.year = age.x + (OffBirth.year - capture.year)) %>% 
+    filter(age.in.OffBirth.year >= repro.age) %>% 
+    mutate(relation = "parent")
   
-  rents.down <- PO.samps.list[[y]] %>% dplyr::filter(relation == "parent") %>% 
-    slice_sample(prop = PO.down.prop)
+  #Dataframe of offspring born in this year
+  offspring.down[[y]] <- PO.down.samples %>% 
+    mutate(age.in.OffBirth.year = age.x + (OffBirth.year - capture.year)) %>% #unnecessary line, I think
+    filter(birth.year == OffBirth.year) %>%
+    mutate(relation = "offspring")
   
-  PO.samps.list.down[[y]] <- rbind(off.down, rents.down)
-  
-  } #End creation of PO sample list
+  #Add dataframe of all potential offspring and parents to a list where each dataframe corresponds to an offspring birth year
+  PO.samps.list.down[[y]] <- rbind(parents.down[[y]], offspring.down[[y]]) %>% 
+    dplyr::select(indv.name, 
+                  birth.year, 
+                  capture.year,
+                  age.in.OffBirth.year,
+                  mother.x, 
+                  father.x,
+                  sex,
+                  relation)
 
-names(PO.samps.list.down) <- paste0("PO.samples.year_", c(sample.years))
+} #End creation of PO sample list
+
+names(PO.samps.list.down) <- paste0("PO.samples.year_", c(OffBirth.years.down))
 
 } else {PO.samps.list.down <- PO.samps.list} #End PO downsample
 

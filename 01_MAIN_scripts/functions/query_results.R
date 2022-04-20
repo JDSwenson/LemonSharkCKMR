@@ -1,22 +1,22 @@
 ####------------- Examine simulation results ---------------####
-plot(pop.size.temp$population_size, pch=19, ylim=c(0.9*min(pop.size.temp$population_size), 1.1*max(pop.size.temp$population_size))) #Plot population size through time
+plot(pop.size.tibble$population_size, pch=19, ylim=c(0.9*min(pop.size.tibble$population_size), 1.1*max(pop.size.tibble$population_size))) #Plot population size through time
 
 #nrow(YOY.df)/length(mothers) # Average fecundity for last year; remember whether they've skipped breeding
 
 #Make dataframe of abundance for each year
-pop.size.temp <- pop.size.temp %>% mutate(Total.adult.pop = Male.adult.pop + Female.adult.pop)
+pop.size.tibble <- pop.size.tibble %>% mutate(Total.adult.pop = Male.adult.pop + Female.adult.pop)
 
 #Calculate population growth for whole population
 total.lambda <- NULL
-for(l in 2:nrow(pop.size.temp)){ 
-  total.lambda.1 <- pop.size.temp$population_size[l]/pop.size.temp$population_size[l-1]
+for(l in 2:nrow(pop.size.tibble)){ 
+  total.lambda.1 <- pop.size.tibble$population_size[l]/pop.size.tibble$population_size[l-1]
   total.lambda <- c(total.lambda, total.lambda.1)
 }
 
 #Calculate population growth for adults only
 adult.lambda <- NULL
-for(l in 2:nrow(pop.size.temp)){ 
-  adult.lambda.1 <- pop.size.temp$Total.adult.pop[l]/pop.size.temp$Total.adult.pop[l-1]
+for(l in 2:nrow(pop.size.tibble)){ 
+  adult.lambda.1 <- pop.size.tibble$Total.adult.pop[l]/pop.size.tibble$Total.adult.pop[l-1]
   adult.lambda <- c(adult.lambda, adult.lambda.1)
 }
 
@@ -25,14 +25,14 @@ total.lambda <- c(NA, total.lambda)
 adult.lambda <- c(NA, adult.lambda)
 
 #Add population growth per year to pop.size dataframe
-pop.size.temp$total.lambda <- total.lambda
-pop.size.temp$adult.lambda <- adult.lambda
+pop.size.tibble$total.lambda <- total.lambda
+pop.size.tibble$adult.lambda <- adult.lambda
 
 #plot(total.lambda[(burn.in+1):n_yrs], pch=19)
 #abline(h=1, lty=3)
 
-(mean.total.lam <- mean(pop.size.temp$total.lambda[(burn.in+1):n_yrs], na.rm=T)) # mean population growth for whole population
-sd(pop.size.temp$total.lambda[(burn.in+1):n_yrs], na.rm=T) # sd Lambda
+(mean.total.lam <- mean(pop.size.tibble$total.lambda[(burn.in+1):n_yrs], na.rm=T)) # mean population growth for whole population
+sd(pop.size.tibble$total.lambda[(burn.in+1):n_yrs], na.rm=T) # sd Lambda
 
 
 #Calculate SURVIVAL for each year

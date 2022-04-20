@@ -1,5 +1,47 @@
 library(jagsUI)
 
+#Make sure simulation is doing what I think
+head(sims.list.1)
+head(sims.list.2)
+head(sims.list.3)
+head(sims.list.4)
+head(parents.tibble)
+head(results2)
+head(pop.size.tibble)
+head(sample.info)
+head(mom.comps.tibble)
+head(dad.comps.tibble)
+tail(mom.comps.tibble)
+tail(dad.comps.tibble)
+
+
+#Check that downsample, HS, PO are working as expected
+mom_comps.all %>% group_by(type) %>%
+  summarize(sum(yes))
+
+#Should be the same as above
+mom.comps.tibble %>% dplyr::filter(iteration == 2, sample.size.juvs == 800) %>% 
+  group_by(type) %>%
+  summarize(sum(yes))
+
+#Dads
+dad_comps.all %>% group_by(type) %>%
+  summarize(sum(yes))
+
+#Should be the same as above
+dad.comps.tibble %>% dplyr::filter(iteration == 2, sample.size.juvs == 800) %>% 
+  group_by(type) %>%
+  summarize(sum(yes))
+
+#Check that the correct age classes were sampled
+sample.info %>% dplyr::filter(age.x < repro.age) %>% 
+  group_by(age.x) %>% 
+  summarize(n())
+
+
+
+
+
 pop.size.1.summary <- pop.size.1 %>% dplyr::filter(year == 85) %>% 
   dplyr::distinct(year, iter, .keep_all = TRUE) %>%
   dplyr::select(!Total.adult.pop) %>% 

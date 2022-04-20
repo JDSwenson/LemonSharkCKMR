@@ -129,6 +129,8 @@ if(samps == 1){
   sims.list.2[[iter]] <- post
 } else if(samps == 3){
   sims.list.3[[iter]] <- post
+} else if(samps == 4){
+  sims.list.4[[iter]] <- post
 }
 
 #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#

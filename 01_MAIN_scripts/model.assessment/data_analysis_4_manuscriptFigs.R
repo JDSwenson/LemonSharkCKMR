@@ -162,15 +162,14 @@ results.all %>% group_by(model_type, purpose2, total_samples, parameter) %>%
   arrange(mean.cv) #%>% 
   #write_csv(file = paste0(results_location, "Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
 
-
-####------------------------------- Relative bias density plots -----------------------------------####
+#Pointless?
 #Try looking at distribution of relative bias to get an idea of how biased they are
-param.plot.1 <- "Nf"
-param.plot.2 <- "Nm"
-param.plot.3 <- "survival" #Which parameters are we plotting below?
-param.plot.4 <- "lambda"
-
-sim.samples.all <- c(200, 600, 1000) #vector of total sample sizes
+# param.plot.1 <- "Nf"
+# param.plot.2 <- "Nm"
+# param.plot.3 <- "survival" #Which parameters are we plotting below?
+# param.plot.4 <- "lambda"
+# 
+# sim.samples.all <- c(200, 600, 1000) #vector of total sample sizes
 
 
 ####------------------------------- Calculate different HPDI intervals-------------------------------#### 

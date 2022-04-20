@@ -6,17 +6,17 @@ ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
 
 mean.adult.lambda <- mean(adult.lambda[ref.year:n_yrs], na.rm=T) # mean Lambda over years of estimation for adults ### HOW DO WE KNOW THIS?
 #Extract true values from year of estimation (ie estimation.year)
-Mom_truth <- round(pop.size.temp$Female.adult.pop[estimation.year],0) # True Nf
-Dad_truth <- round(pop.size.temp$Male.adult.pop[estimation.year], 0) # True Nm
+Mom_truth <- round(pop.size.tibble$Female.adult.pop[estimation.year],0) # True Nf
+Dad_truth <- round(pop.size.tibble$Male.adult.pop[estimation.year], 0) # True Nm
 surv_mean <- round(mean(sVec[ref.year:n_yrs]), 4) # True adult survival over estimation period
-#Adult_truth <- round(pop.size.temp$Total.adult.pop[estimation.year], 0) # Used for sex-aggregated model
+#Adult_truth <- round(pop.size.tibble$Total.adult.pop[estimation.year], 0) # Used for sex-aggregated model
 lam_truth <- round(mean.adult.lambda, 4)
-Mom_min <- min(pop.size.temp$Female.adult.pop[estimation.year:n_yrs]) #Minimum Nf over estimation period
-Mom_max <- max(pop.size.temp$Female.adult.pop[estimation.year:n_yrs]) #Maximum Nf over estimation period
-Dad_min <- min(pop.size.temp$Male.adult.pop[estimation.year:n_yrs]) #Minimum Nm over estimation period
-Dad_max <- max(pop.size.temp$Male.adult.pop[estimation.year:n_yrs]) #Maximum Nm over estimation period
-#Adult_min <- min(pop.size.temp$Total.adult.pop[estimation.year:n_yrs]) # Used for sex-aggregated model
-#Adult_max <- max(pop.size.temp$Total.adult.pop[estimation.year:n_yrs]) # Used for sex-aggregated model
+Mom_min <- min(pop.size.tibble$Female.adult.pop[estimation.year:n_yrs]) #Minimum Nf over estimation period
+Mom_max <- max(pop.size.tibble$Female.adult.pop[estimation.year:n_yrs]) #Maximum Nf over estimation period
+Dad_min <- min(pop.size.tibble$Male.adult.pop[estimation.year:n_yrs]) #Minimum Nm over estimation period
+Dad_max <- max(pop.size.tibble$Male.adult.pop[estimation.year:n_yrs]) #Maximum Nm over estimation period
+#Adult_min <- min(pop.size.tibble$Total.adult.pop[estimation.year:n_yrs]) # Used for sex-aggregated model
+#Adult_max <- max(pop.size.tibble$Total.adult.pop[estimation.year:n_yrs]) # Used for sex-aggregated model
 surv_min <- min(sVec[estimation.year:n_yrs]) #Minimum survival over estimation period
 surv_max <- max(sVec[estimation.year:n_yrs]) #Maximum survival over estimation period
 lam_min <- min(adult.lambda[ref.year:n_yrs]) #Minimum lambda over estimation period
@@ -28,8 +28,9 @@ estimates <- model.summary2 %>%
   as_tibble()
 
 #Extract more metrics that can help with troubleshooting and visualization
-total_samples <- sample.size * length(sample.years) # total samples
-pop_size_mean <- round(mean(pop.size.temp$population_size[estimation.year:n_yrs]),0) #Mean TOTAL population size over estimation period
+Juv_total_samples <- sample.size.juvs * length(sample.years) # total samples
+Adult_total_samples <- sample.size.rents * length(sample.years)
+pop_size_mean <- round(mean(pop.size.tibble$population_size[estimation.year:n_yrs]),0) #Mean TOTAL population size over estimation period
 
 mom.PO.matches <- mom_comps.all %>% filter(type == "PO") %>%
   summarize(matches = sum(yes)) %>% 
@@ -69,6 +70,8 @@ metrics <- cbind(c(mom.Exp.PO,
                    rep(length(sampled.mothers) + length(sampled.fathers), 
                        times = n_params-2)), #number of unique sampled parents
                  c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
-                 c(rep(total_samples, times = n_params)), # total samples
-                 c(rep(iter, times = n_params))) #iteration
-colnames(metrics) <- c("Exp_POPs", "POPs_detected", "Exp_HSPs", "HSPs_detected", "unique_parents_in_sample", "mean_adult_lambda", "total_samples", "iteration")
+                 c(rep(Juv_total_samples, times = n_params)), # Juv total samples
+                 c(rep(Adult_total_samples, times = n_params)), # Adult total samples
+                 c(rep(iter, times = n_params)), #iteration
+                 c(rep(rseed, times = n_params))) 
+colnames(metrics) <- c("Exp_POPs", "POPs_detected", "Exp_HSPs", "HSPs_detected", "unique_parents_in_sample", "mean_adult_lambda", "Juvenile_samples", "Adult_samples", "iteration", "seed")
