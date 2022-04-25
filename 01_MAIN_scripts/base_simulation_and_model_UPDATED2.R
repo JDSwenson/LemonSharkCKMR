@@ -22,11 +22,13 @@ source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO.R")
 #Check results from model diagnostics
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
-YOY.only <- "no" #For juvenile samples, do we only want to target YOY, or any juvenile age class?
-downsample.HS <- "no" #Do we want to downsample to achieve close to max.HSPs?
+target.age <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
+down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
+max.POPs <- 150
 HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
+purpose <- "HS.PO_target.age_all.samples"
 
 #rseeds <- sample(1:1000000,iterations)
 #save(rseeds, file = "rseeds_2022.04.15.rda")
@@ -34,7 +36,6 @@ PO.only <- "no" #Do we only want to filter PO relationships? These two are mutua
 #Save paths and file labels as objects
 load("rseeds_2022.04.15.rda")
 seeds <- "Seeds2022.04.15"
-purpose <- "test"
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/models/"
@@ -103,11 +104,12 @@ sample.years <- c(n_yrs - c(3:0)) #For two years of sampling
 #sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
 sample.vec.juvs <- c(50, 100, 150, 200) #vector to sample over per year
-
+sample.vec.adults <- c(sample.vec.juvs/5)
+sample.vec.total <- sample.vec.juvs + sample.vec.adults
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 4 #Number of iterations to loop over
+iterations <- 200 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -142,7 +144,9 @@ sim.samples.4 <- paste0(sample.vec.juvs[4]*length(sample.years), ".samples")
 #  sample.info <- readRDS(file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
 
-rseed.pop <- sample(1:100000000, size = 1)
+#rseed.pop <- sample(1:100000000, size = 1)
+rseed.pop <- 87625053 #Want to use the same population for all simulations
+set.seed(rseed.pop)
 
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -171,11 +175,17 @@ rseed.pop <- sample(1:100000000, size = 1)
   saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
   
   # Detailed info on population size
-  saveRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "pop_size_", date.of.simulation, "_", seeds, "_", purpose))
+  saveRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+
   
+  #saveRDS(loopy.list, file = "loopy.list")
+  # loopy.list <- readRDS("loopy.list")
+  # parents.tibble <- readRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  # pop.size.tibble <- readRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "pop_size_", date.of.simulation, "_", seeds, "_", purpose))
+  # 
   #organize results and calculate summary statistics from the simulation
   source("./01_MAIN_scripts/functions/query_results.R")
-
+  
   #-----------------------Collect samples-------------------------
   for(iter in 1:iterations) {
     #  set.seed(rseeds[iter])
@@ -188,6 +198,7 @@ rseed.pop <- sample(1:100000000, size = 1)
   for(samps in 1:length(sample.vec.juvs)){
         sample.size.juvs <- sample.vec.juvs[samps] #Specify sample size for offspring (YOY)
         sample.size.rents <- sample.size.juvs/5 #Specify sample size for parents - assume they're much rarer than offspring
+        sample.size.total <- sample.size.juvs + sample.size.rents
 
             #Initialize sample dataframes
     sample.df_all.info <- NULL
@@ -196,7 +207,7 @@ rseed.pop <- sample(1:100000000, size = 1)
     #Sample population each year in sample.years and make dataframe of samples with all metadata
     for(i in sample.years){
 
-      if(YOY.only == "yes"){ #If targeting YOY for juvenile samples
+      if(target.age == "yes"){ #If targeting YOY for juvenile samples
       #Sample YOY only for half-sib analysis
       sample.df_temp.off <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
         dplyr::filter(age.x == 0) %>% 
@@ -233,7 +244,7 @@ rseed.pop <- sample(1:100000000, size = 1)
     filter1.out <- filter.samples(later.capture) #Filter for full sibs
     PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
     HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings
-    
+    NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample PO samples if needed
     
     #-------------Construct pairwise comparison matrix--------------
     #Input is 1) a list of potential parents and offspring for each offspring birth year, and 2) a dataframe with all samples, filtered to remove full siblings
@@ -265,19 +276,28 @@ rseed.pop <- sample(1:100000000, size = 1)
     dad_comps.all %>% group_by(type) %>% 
       summarize(sum(yes))
     
-     #Downsample if more than max.HSPs
-    if(downsample.HS == "yes"){
-    down.samples <- downsample(mom_comps.all, dad_comps.all, HS.samps.df) #calculates approximate number of samples needed to achieve max.HSPs for filtering below
-    (target.samples <- down.samples[[1]])
-    props <- down.samples[[2]]
-    pos.mom.comps <- down.samples[[3]] #Number of positives for m
-    pos.dad.comps <- down.samples[[4]]
+
+    source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO.R") #Already loaded above; here for troubleshooting
+    ####-----------------------------Downsample if more than max.HSPs------------------------------------####
+    if(down_sample == "yes"){
+   
+    down.samples <- downsample(mom_comps.all, dad_comps.all, HS.samps.df, PO.samps.list) #calculates approximate number of samples needed to achieve max.HSPs for filtering below
+    HS.samps.df.down <- down.samples[[1]]
+    PO.samps.list.down <- down.samples[[2]]
+    
+    # (HS_target.samples <- down.samples[[1]])
+    # HS_props <- down.samples[[2]]
+    # HS_pos.mom.comps <- down.samples[[3]] #Number of positives for m
+    # HS_pos.dad.comps <- down.samples[[4]]
+    # PO_target.samples.per.yr <- down.samples[[5]]
+    # PO_pos.mom.comps <- down.samples[[6]]
+    # PO_pos.dad.comps <- down.samples[[7]]
+    # PO.props.vec <- down.samples[[8]]
 
     #down-sample to achieve a more reasonable number of kin (if necessary)
-    if(pos.mom.comps + pos.dad.comps > max.HSPs){
-      HS.samps.df.down <- HS.samps.df %>% slice_sample(n = target.samples, weight_by = props)
-        #Make a new pairwise comparison matrix
-    pairwise.out2 <- build.pairwise(filtered.samples.PO.list = PO.samps.list, filtered.samples.HS.df = HS.samps.df.down)
+      
+      #Make a new pairwise comparison matrix
+    pairwise.out2 <- build.pairwise(filtered.samples.PO.list = PO.samps.list.down, filtered.samples.HS.df = HS.samps.df.down)
 
     #Save output as different dataframes; includes both HS and PO relationships (but can filter below)
     mom_comps.all <- pairwise.out2[[1]]
@@ -291,8 +311,7 @@ rseed.pop <- sample(1:100000000, size = 1)
 
     dad_comps.all %>% group_by(type) %>%
       summarize(sum(yes))
-    }
-    }
+    } #End down sample
     
 #If we only want to use one type of relationship, we'll filter here
     if(HS.only == "yes"){
@@ -304,6 +323,10 @@ rseed.pop <- sample(1:100000000, size = 1)
     mom_comps.all <- mom_comps.all %>% filter(type == "PO")
     dad_comps.all <- dad_comps.all %>% filter(type == "PO")
     }
+    
+    if(sum(mom_comps.all$yes) == 0 | sum(dad_comps.all$yes) == 0){
+      next
+    } else {
     
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine   
@@ -337,25 +360,26 @@ rseed.pop <- sample(1:100000000, size = 1)
   
     #Save mom and dad pairwise comparison dataframes
     mom_comps.all <- mom_comps.all %>% mutate(iteration = iter,
-                                              sample.size.juvs = sample.size.juvs,
-                                              sample.size.rents = sample.size.rents,
+                                              sample.size.juvs = Juv_total_samples,
+                                              sample.size.rents = Adult_total_samples,
                                               seed = rseed)
     mom.comps.tibble <- rbind(mom.comps.tibble, mom_comps.all)
     
     dad_comps.all <- dad_comps.all %>% mutate(iteration = iter,
-                                              sample.size.juvs = sample.size.juvs,
-                                              sample.size.rents = sample.size.rents,
+                                              sample.size.juvs = Juv_total_samples,
+                                              sample.size.rents = Adult_total_samples,
                                               seed = rseed)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
     
   } # end loop over sample sizes
-  
-  
+  }
+    
   #-----------------Save output files iteratively--------------------
   
-  sim.samples.1 <- paste0(sample.vec.juvs[1]*length(sample.years), ".samples")
-  sim.samples.2 <- paste0(sample.vec.juvs[2]*length(sample.years), ".samples")
-  sim.samples.3 <- paste0(sample.vec.juvs[3]*length(sample.years), ".samples")
+  sim.samples.1 <- paste0(sample.vec.total[1]*length(sample.years), ".samples")
+  sim.samples.2 <- paste0(sample.vec.total[2]*length(sample.years), ".samples")
+  sim.samples.3 <- paste0(sample.vec.total[3]*length(sample.years), ".samples")
+  sim.samples.4 <- paste0(sample.vec.total[4]*length(sample.years), ".samples")
   
 #Results
    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
@@ -366,6 +390,8 @@ rseed.pop <- sample(1:100000000, size = 1)
    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
 
    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+   
+   saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
 
 # Detailed info on samples and parents to examine in more detail
    saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
@@ -379,13 +405,14 @@ rseed.pop <- sample(1:100000000, size = 1)
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("Finished iteration ", iter, ". \n Took ", iter.time, " minutes"))
-} # end loop over iterations
-
+   } # end loop over iterations
+  
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
 results2 <- results %>% 
   mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N"))
+  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
+    mutate(total_samples = Juvenile_samples + Adult_samples)
 
 #Within HPD interval?
 results2 %>% group_by(total_samples, parameter) %>% 

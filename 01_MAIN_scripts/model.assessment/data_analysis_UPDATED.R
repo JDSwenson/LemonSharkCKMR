@@ -894,7 +894,7 @@ dev.off() #close pdf
 #---------------------Prepare data for plotting----------------------------------------------#
 #How many POPs detected per sample size?
 results.all %>% 
-  group_by(purpose.lab, total_samples) %>% 
+  group_by(purpose.lab, samples.lab) %>% 
   summarize(mean(POPs_detected), mean(HSPs_detected))
 
 #Format PO dataframe
@@ -1046,7 +1046,8 @@ rbinom(n = 1, size = mom.n.comps, (surv^mom.mort.yrs[i])/(Nf*(lam^mom.popGrowth.
 
 
 
-
+####-------------------Examine comparisons of funny results----------------####
+HPD.3.summary.tidy %>% dplyr::filter(parameter == "lam") %>% View()
 
 
 

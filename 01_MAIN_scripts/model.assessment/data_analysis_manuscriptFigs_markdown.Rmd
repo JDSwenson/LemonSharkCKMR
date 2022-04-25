@@ -30,6 +30,9 @@ nt <- 20     # thinning rate
 nc <- 2      # number of chains
 MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
+#Initialize values
+purpose1.lab = purpose2.lab = purpose3.lab = purpose4.lab <- NULL
+
 #------------- Simulation parameters and labels  ----------------#
 date.of.simulation1 <- "19Apr2022"
 purpose1 <- "HS.PO_target.age_all.samples"
@@ -171,12 +174,12 @@ results.all <- results.1 %>%
   mutate(cv = (sd/mean)*100) %>% 
   mutate(samples.lab = paste0(total_samples, ".samples"))
 results.all$samples.lab <- factor(results.all$samples.lab, levels = c(samples1.lab, samples2.lab, samples3.lab, samples4.lab))
+results.all$purpose.lab <- factor(results.all$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab))
 
 jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
 
 head(results.all)
 
-results.all$purpose.lab <- factor(results.all$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab))
 
 #View instances where the model failed to converge
 results.all %>% dplyr::filter(Rhat > 1.01) %>% View()
@@ -510,6 +513,9 @@ HPD.1.summary_all <- HPD.240.1.summary %>% inner_join(HPD.480.1.summary, by = c(
   inner_join(HPD960.1.summary, by = c("parameter", "interval")) %>% 
   mutate(interval.scale = interval*100)
 
+#Read in previously saved file
+#HPD.1.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation1, "_", purpose1, ".csv"))
+
 HPD.1.summary.tidy <- HPD.1.summary_all %>% 
   pivot_longer(
     cols = starts_with("percent"),
@@ -561,6 +567,9 @@ HPD.2.summary_all <- HPD.240.2.summary %>% inner_join(HPD.480.2.summary, by = c(
   inner_join(HPD.720.2.summary, by = c("parameter", "interval")) %>% 
   inner_join(HPD960.2.summary, by = c("parameter", "interval")) %>% 
   mutate(interval.scale = interval*100)
+
+#Read in previously saved file
+#HPD.2.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation2, "_", purpose2, ".csv"))
 
 HPD.2.summary.tidy <- HPD.2.summary_all %>% 
   pivot_longer(
@@ -615,6 +624,9 @@ HPD.3.summary_all <- HPD.240.3.summary %>% inner_join(HPD.480.3.summary, by = c(
   inner_join(HPD960.3.summary, by = c("parameter", "interval")) %>% 
   mutate(interval.scale = interval*100)
 
+#Read in previously saved file
+#HPD.3.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation3, "_", purpose3, ".csv"))
+
 HPD.3.summary.tidy <- HPD.3.summary_all %>% 
   pivot_longer(
     cols = starts_with("percent"),
@@ -667,6 +679,9 @@ HPD.4.summary_all <- HPD.240.4.summary %>% inner_join(HPD.480.4.summary, by = c(
   inner_join(HPD960.4.summary, by = c("parameter", "interval")) %>%
   mutate(interval.scale = interval*100)
 
+#Read in previously saved file
+#HPD.4.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation4, "_", purpose4, ".csv"))
+
 HPD.4.summary.tidy <- HPD.4.summary_all %>%
   pivot_longer(
     cols = starts_with("percent"),
@@ -679,7 +694,6 @@ HPD.4.summary.tidy <- HPD.4.summary_all %>%
 
 #Save
 #write_csv(HPD.4.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation, "_", purpose4, ".csv"))
-
 
 
 #---------------Create dataframes to plot by sample size--------#
@@ -718,7 +732,6 @@ all.720.4viz <- HPD.720.1.4viz %>% bind_rows(HPD.720.2.4viz, HPD.720.3.4viz, HPD
 all.720.4viz$purpose.lab <- factor(all.720.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 
 all.960.4viz <- HPD.960.1.4viz %>% bind_rows(HPD.960.2.4viz, HPD.960.3.4viz, HPD.960.4.4viz)
-
 all.960.4viz$purpose.lab <- factor(all.960.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 
 #For when we need everything together
