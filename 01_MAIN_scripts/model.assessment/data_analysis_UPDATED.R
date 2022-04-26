@@ -9,7 +9,7 @@ library(ggmcmc)
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
 
-purpose.combo <- "test_refined.samples_and_downsample" #What am I comparing right now? This will be used to name output files
+purpose.combo <- "skipped_breeding_HS.only_vs_HS.PO" #What am I comparing right now? This will be used to name output files
 
 #----------------Read in files ------------------------------
 #------------- MCMC parameters ----------------#
@@ -20,15 +20,18 @@ nc <- 2      # number of chains
 MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 
 #------------- Simulation parameters and labels  ----------------#
-date.of.simulation1 <- "11Apr2022"
-purpose1 <- "HS.PO_refined.samples_all.comps"
-purpose1.lab <- "HS|PO all comparisons"
+#Initialize values
+date.of.simulation1 = purpose1 = purpose1.lab = model.type1 = date.of.simulation2 = purpose2 = purpose2.lab = model.type2 = date.of.simulation3 = purpose3 = purpose3.lab = model.type3 = date.of.simulation4 = purpose4 = purpose4.lab = model.type4 <- NULL
+
+date.of.simulation1 <- "25Apr2022"
+purpose1 <- "skipped.breeding_trial.2"
+purpose1.lab <- "HS|PO model"
 model.type1 <- "HS.PO"
 
-date.of.simulation2 <- "11Apr2022"
-purpose2 <- "HS.PO_refined.samples_downsample"
-purpose2.lab <- "HS|PO downsample"
-model.type2 <- "HS.PO"
+date.of.simulation2 <- "25Apr2022"
+purpose2 <- "skipped.breeding_trial.1"
+purpose2.lab <- "HS only model"
+model.type2 <- "HS.only"
 
 date.of.simulation3 <- "11Apr2022"
 purpose3 <- "HS.only_refined.samples_all.comps"
@@ -41,11 +44,12 @@ purpose4.lab <- "HS only downsample"
 model.type4 <- "HS.PO"
 
 
-seeds <- "Seeds2022.03.23"
-sim.samples.1 <- "200.samples"
-sim.samples.2 <- "600.samples"
-sim.samples.3 <- "1000.samples"
-sim.samples.all <- c(200, 600, 1000)
+seeds <- "Seeds2022.04.15"
+sim.samples.1 = samples1.lab <- "240.samples"
+sim.samples.2 = samples2.lab <- "480.samples"
+sim.samples.3 = samples3.lab <- "720.samples"
+sim.samples.4 = samples4.lab <- "960.samples"
+sim.samples.all <- c(240, 480, 720, 960)
 
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/"
@@ -61,7 +65,7 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 #------------------------------- Results -----------------------------------#
 #Set results to NULL and the script will run regardless of how many actual results are being compared
-results1 = results2 = results3 = results4 <- NULL
+results.1 = results.2 = results.3 = results.4 <- NULL
 
 results.1 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation1, "_", seeds, "_", purpose1, ".csv")) %>% 
   mutate(model_type = model.type1, 
@@ -83,12 +87,13 @@ results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
 
 #------------------------------- MCMC output -----------------------------------#
 #date.of.simulation <- "07Apr2022"
-#Trial 1
 s1.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose1))
 
 s1.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose1))
 
 s1.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose1))
+
+s1.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose1))
 
 #Trial 2
 s2.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose2))
@@ -96,6 +101,8 @@ s2.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_"
 s2.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose2))
 
 s2.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose2))
+
+s2.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose2))
 
 #Trial 3
 #date.of.simulation <- "05Apr2022"
@@ -105,12 +112,16 @@ s3.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_"
 
 s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose3))
 
+s3.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose3))
+
 #Trial 4
- s4.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose4))
+s4.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose4))
 
- s4.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose4))
+s4.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose4))
 
- s4.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose4))
+s4.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose4))
+
+s4.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose4))
 
 #------------------------------- Population size details -----------------------------------#
 #date.of.simulation <- "07Apr2022"
@@ -145,17 +156,25 @@ dad.comps.4 <- readRDS(paste0(results_location, dad.comps.prefix, "_", date.of.s
 
 results.all <- results.1 %>% 
   bind_rows(results.2, results.3, results.4) %>% 
-  mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-  mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-  mutate(cv = (sd/mean)*100)
+  mutate(cv = (sd/mean)*100) %>% 
+  mutate(samples.lab = paste0(total_samples, ".samples"),
+         parameter = ifelse(parameter == "Nf", "Nfb", parameter))
 
-jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
-
-head(results.all)
-
+results.all$samples.lab <- factor(results.all$samples.lab, levels = c(samples1.lab, samples2.lab, samples3.lab, samples4.lab))
 results.all$purpose.lab <- factor(results.all$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 
- 
+jags_params <- c("Nfa", "Nfb", "Nf", "Nm", "surv", "lam", "psi", "pb") #Specify parameters
+
+head(results.all)
+tail(results.all)
+
+#View instances where the model failed to converge
+results.all %>% dplyr::filter(Rhat > 1.01) %>% View()
+
+#Remove instances that failed to converge
+no.convergence <- results.all %>% dplyr::filter(Rhat > 1.01)
+
+
  #-----------Median Relative bias by sample size-------------------------#
 results.all %>% group_by(total_samples, parameter, purpose.lab) %>% 
 #  dplyr::filter(model_type == "HS.PO") %>%
@@ -324,213 +343,274 @@ dev.off() #close pdf
 #How many estimates fall in different HPD intervals?
 #Calculate HPD interval for each iteration
 intervals <- c(seq(from = 0.95, to = 0.05, by = -0.05)) #Specify HPDI intervals to calculate
-iterations = 100
+iterations = 200
 
 #Assumes four "purposes" are being compared
 #Initialize dataframes for loop below
-HPD.200.1 <- NULL
-HPD.600.1 <- NULL
-HPD.1000.1 <- NULL
-HPD.200.2 <- NULL
-HPD.600.2 <- NULL
-HPD.1000.2 <- NULL
-HPD.200.3 <- NULL
-HPD.600.3 <- NULL
-HPD.1000.3 <- NULL
-HPD.200.4 <- NULL
-HPD.600.4 <- NULL
-HPD.1000.4 <- NULL
+HPD.240.1 <- NULL
+HPD.480.1 <- NULL
+HPD.720.1 <- NULL
+HPD.960.1 <- NULL
+HPD.240.2 <- NULL
+HPD.480.2 <- NULL
+HPD.720.2 <- NULL
+HPD.960.2 <- NULL
+HPD.240.3 <- NULL
+HPD.480.3 <- NULL
+HPD.720.3 <- NULL
+HPD.960.3 <- NULL
+HPD.240.4 <- NULL
+HPD.480.4 <- NULL
+HPD.720.4 <- NULL
+HPD.960.4 <- NULL
 
 for(i in 1:length(s1.1)){ #Loop over all the posterior samples from each iteration; length should be same as number of iterations
   for(j in 1:length(intervals)){ #Loop over the different intervals for calculating HPDI
     
     #---------------------------Purpose 1--------------------------------#
-    #200 samples
+    #240 samples
     #Calcualte HPD interval for iteration i and interval j
-    post.HPD.200.1 <- combine.mcmc(s1.1[[i]]) %>% 
+    post.HPD.240.1 <- combine.mcmc(s1.1[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
     
-    post.HPD.200.1 <- post.HPD.200.1[row.names(post.HPD.200.1) %in% jags_params,] %>% #Remove deviance
+    post.HPD.240.1 <- post.HPD.240.1[row.names(post.HPD.240.1) %in% jags_params,] %>% #Remove deviance
       rownames_to_column(var = "parameter")
-
-    HPD.200.1 <- rbind(HPD.200.1, post.HPD.200.1)
     
-    #600 samples
+    HPD.240.1 <- rbind(HPD.240.1, post.HPD.240.1)
+    
+    #480 samples
     #Calcualte HPD interval for iteration i and interval j
-    post.HPD.600.1 <- combine.mcmc(s1.2[[i]]) %>% 
+    post.HPD.480.1 <- combine.mcmc(s1.2[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
     
-    post.HPD.600.1 <- post.HPD.600.1[row.names(post.HPD.600.1) %in% jags_params,] %>% #Remove deviance
+    post.HPD.480.1 <- post.HPD.480.1[row.names(post.HPD.480.1) %in% jags_params,] %>% #Remove deviance
       rownames_to_column(var = "parameter")
     
-    HPD.600.1 <- rbind(HPD.600.1, post.HPD.600.1)
-
-    #1000 samples
+    HPD.480.1 <- rbind(HPD.480.1, post.HPD.480.1)
+    
+    #720 samples
     #Calcualte HPD interval for iteration i and interval j
-    post.HPD.1000.1 <- combine.mcmc(s1.3[[i]]) %>% 
+    post.HPD.720.1 <- combine.mcmc(s1.2[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
     
-    post.HPD.1000.1 <- post.HPD.1000.1[row.names(post.HPD.1000.1) %in% jags_params,] %>% #Remove deviance
+    post.HPD.720.1 <- post.HPD.720.1[row.names(post.HPD.720.1) %in% jags_params,] %>% #Remove deviance
       rownames_to_column(var = "parameter")
     
-    HPD.1000.1 <- rbind(HPD.1000.1, post.HPD.1000.1)
+    HPD.720.1 <- rbind(HPD.720.1, post.HPD.720.1)
+    
+    #960 samples
+    #Calcualte HPD interval for iteration i and interval j
+    post.HPD.960.1 <- combine.mcmc(s1.3[[i]]) %>% 
+      HPDinterval(prob = intervals[j]) %>%
+      data.frame() %>% 
+      mutate(interval = intervals[j], iteration = i)
+    
+    post.HPD.960.1 <- post.HPD.960.1[row.names(post.HPD.960.1) %in% jags_params,] %>% #Remove deviance
+      rownames_to_column(var = "parameter")
+    
+    HPD.960.1 <- rbind(HPD.960.1, post.HPD.960.1)
     
     
     #---------------------------Purpose 2--------------------------------#    
-    #200 samples
+    #240 samples
     #Calcualte HPD interval for iteration i and interval j
     
-    post.HPD.200.2 <- combine.mcmc(s2.1[[i]]) %>% 
+    post.HPD.240.2 <- combine.mcmc(s2.1[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
     
-    post.HPD.200.2 <- post.HPD.200.2[row.names(post.HPD.200.2) %in% jags_params,] %>% #Remove deviance
+    post.HPD.240.2 <- post.HPD.240.2[row.names(post.HPD.240.2) %in% jags_params,] %>% #Remove deviance
       rownames_to_column(var = "parameter")
     
-    HPD.200.2 <- rbind(HPD.200.2, post.HPD.200.2)
+    HPD.240.2 <- rbind(HPD.240.2, post.HPD.240.2)
     
-    #600 samples
+    #480 samples
     #Calcualte HPD interval for iteration i and interval j
-    post.HPD.600.2 <- combine.mcmc(s2.2[[i]]) %>% 
+    post.HPD.480.2 <- combine.mcmc(s2.2[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
     
-    post.HPD.600.2 <- post.HPD.600.2[row.names(post.HPD.600.2) %in% jags_params,] %>% #Remove deviance
+    post.HPD.480.2 <- post.HPD.480.2[row.names(post.HPD.480.2) %in% jags_params,] %>% #Remove deviance
       rownames_to_column(var = "parameter")
     
-    HPD.600.2 <- rbind(HPD.600.2, post.HPD.600.2)
+    HPD.480.2 <- rbind(HPD.480.2, post.HPD.480.2)
     
-    #1000 samples
+    #720 samples
     #Calcualte HPD interval for iteration i and interval j
-    post.HPD.1000.2 <- combine.mcmc(s2.3[[i]]) %>% 
+    post.HPD.720.2 <- combine.mcmc(s2.2[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
     
-    post.HPD.1000.2 <- post.HPD.1000.2[row.names(post.HPD.1000.2) %in% jags_params,] %>% #Remove deviance
+    post.HPD.720.2 <- post.HPD.720.2[row.names(post.HPD.720.2) %in% jags_params,] %>% #Remove deviance
       rownames_to_column(var = "parameter")
     
-    HPD.1000.2 <- rbind(HPD.1000.2, post.HPD.1000.2)
+    HPD.720.2 <- rbind(HPD.720.2, post.HPD.720.2)
     
-    #---------------------------Purpose 3--------------------------------#
-    #200 samples
+    #960 samples
     #Calcualte HPD interval for iteration i and interval j
-    post.HPD.200.3 <- combine.mcmc(s3.1[[i]]) %>% 
+    post.HPD.960.2 <- combine.mcmc(s2.3[[i]]) %>% 
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>% 
       mutate(interval = intervals[j], iteration = i)
     
-    post.HPD.200.3 <- post.HPD.200.3[row.names(post.HPD.200.3) %in% jags_params,] %>% #Remove deviance
+    post.HPD.960.2 <- post.HPD.960.2[row.names(post.HPD.960.2) %in% jags_params,] %>% #Remove deviance
       rownames_to_column(var = "parameter")
     
-    HPD.200.3 <- rbind(HPD.200.3, post.HPD.200.3)
+    HPD.960.2 <- rbind(HPD.960.2, post.HPD.960.2)
     
-    #600 samples
+
+    # # #---------------------------Purpose 3--------------------------------#
+    # #240 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.240.3 <- combine.mcmc(s3.1[[i]]) %>%
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>%
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.240.3 <- post.HPD.240.3[row.names(post.HPD.240.3) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.240.3 <- rbind(HPD.240.3, post.HPD.240.3)
+    # 
+    # #480 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.480.3 <- combine.mcmc(s3.2[[i]]) %>%
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>%
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.480.3 <- post.HPD.480.3[row.names(post.HPD.480.3) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.480.3 <- rbind(HPD.480.3, post.HPD.480.3)
+    # 
+    # #720 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.720.3 <- combine.mcmc(s3.2[[i]]) %>%
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>%
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.720.3 <- post.HPD.720.3[row.names(post.HPD.720.3) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.720.3 <- rbind(HPD.720.3, post.HPD.720.3)
+    # 
+    # #960 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.960.3 <- combine.mcmc(s3.3[[i]]) %>%
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>%
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.960.3 <- post.HPD.960.3[row.names(post.HPD.960.3) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.960.3 <- rbind(HPD.960.3, post.HPD.960.3)
+    
+    # #---------------------------Purpose 4--------------------------------#
+    #240 samples
     #Calcualte HPD interval for iteration i and interval j
-    post.HPD.600.3 <- combine.mcmc(s3.2[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.600.3 <- post.HPD.600.3[row.names(post.HPD.600.3) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.600.3 <- rbind(HPD.600.3, post.HPD.600.3)
-    
-    #1000 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.1000.3 <- combine.mcmc(s3.3[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.1000.3 <- post.HPD.1000.3[row.names(post.HPD.1000.3) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.1000.3 <- rbind(HPD.1000.3, post.HPD.1000.3)
-
-    #---------------------------Purpose 4--------------------------------#
-    #200 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.200.4 <- combine.mcmc(s4.1[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
-
-    post.HPD.200.4 <- post.HPD.200.4[row.names(post.HPD.200.4) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.200.4 <- rbind(HPD.200.4, post.HPD.200.4)
-
-    #600 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.600.4 <- combine.mcmc(s4.2[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
-
-    post.HPD.600.4 <- post.HPD.600.4[row.names(post.HPD.600.4) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.600.4 <- rbind(HPD.600.4, post.HPD.600.4)
-
-    #1000 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.1000.4 <- combine.mcmc(s4.3[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
-
-    post.HPD.1000.4 <- post.HPD.1000.4[row.names(post.HPD.1000.4) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.1000.4 <- rbind(HPD.1000.4, post.HPD.1000.4)
+    # post.HPD.240.4 <- combine.mcmc(s4.1[[i]]) %>%
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>%
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.240.4 <- post.HPD.240.4[row.names(post.HPD.240.4) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.240.4 <- rbind(HPD.240.4, post.HPD.240.4)
+    # 
+    # #480 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.480.4 <- combine.mcmc(s4.2[[i]]) %>%
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>%
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.480.4 <- post.HPD.480.4[row.names(post.HPD.480.4) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.480.4 <- rbind(HPD.480.4, post.HPD.480.4)
+    # 
+    #     #720 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.720.4 <- combine.mcmc(s4.2[[i]]) %>%
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>%
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.720.4 <- post.HPD.720.4[row.names(post.HPD.720.4) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.720.4 <- rbind(HPD.720.4, post.HPD.720.4)
+    # 
+    # #960 samples
+    # #Calcualte HPD interval for iteration i and interval j
+    # post.HPD.960.4 <- combine.mcmc(s4.3[[i]]) %>%
+    #   HPDinterval(prob = intervals[j]) %>%
+    #   data.frame() %>%
+    #   mutate(interval = intervals[j], iteration = i)
+    # 
+    # post.HPD.960.4 <- post.HPD.960.4[row.names(post.HPD.960.4) %in% jags_params,] %>% #Remove deviance
+    #   rownames_to_column(var = "parameter")
+    # 
+    # HPD.960.4 <- rbind(HPD.960.4, post.HPD.960.4)
     
   }
   print(paste0("Finished with iteration ", i))
-  }
+}
     
 
 
 ####------------------------------- Create dataframes for HPDI plotting------------------------------#### 
-
 #---------------------------Purpose 1 --------------------------------#    
 #Separate out by sample size
-HPD.200.1.4viz <- results.1 %>% filter(total_samples == 200) %>% 
-  right_join(HPD.200.1, by = c("parameter", "iteration"))
+HPD.240.1.4viz <- results.1 %>% filter(total_samples == 240) %>% 
+  right_join(HPD.240.1, by = c("parameter", "iteration"))
 
-HPD.600.1.4viz <- results.1 %>% filter(total_samples == 600) %>% 
-  right_join(HPD.600.1, by = c("parameter", "iteration"))
+HPD.480.1.4viz <- results.1 %>% filter(total_samples == 480) %>% 
+  right_join(HPD.480.1, by = c("parameter", "iteration"))
 
-HPD.1000.1.4viz <- results.1 %>% filter(total_samples == 1000) %>% 
-  right_join(HPD.1000.1, by = c("parameter", "iteration"))
+HPD.720.1.4viz <- results.1 %>% filter(total_samples == 720) %>% 
+  right_join(HPD.720.1, by = c("parameter", "iteration"))
 
+HPD.960.1.4viz <- results.1 %>% filter(total_samples == 960) %>% 
+  right_join(HPD.960.1, by = c("parameter", "iteration"))
 
-#Calculate percent estimates in each interval
-HPD.200.1.summary <- HPD.200.1.4viz %>% group_by(parameter, interval) %>% 
+HPD.240.1.summary <- HPD.240.1.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.200.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.240.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD.600.1.summary <- HPD.600.1.4viz %>% group_by(parameter, interval) %>% 
+HPD.480.1.summary <- HPD.480.1.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.600.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.480.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD1000.1.summary <- HPD.1000.1.4viz %>% group_by(parameter, interval) %>% 
+HPD.720.1.summary <- HPD.720.1.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.1000.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.720.samples = sum(in_HPD_interval == "Y")/n() * 100)
+
+HPD960.1.summary <- HPD.960.1.4viz %>% group_by(parameter, interval) %>% 
+  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  dplyr::summarize(percent_in_interval.960.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes    
-HPD.1.summary_all <- HPD.200.1.summary %>% inner_join(HPD.600.1.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPD1000.1.summary, by = c("parameter", "interval")) %>% 
+HPD.1.summary_all <- HPD.240.1.summary %>% inner_join(HPD.480.1.summary, by = c("parameter", "interval")) %>% 
+  inner_join(HPD.720.1.summary, by = c("parameter", "interval")) %>% 
+  inner_join(HPD960.1.summary, by = c("parameter", "interval")) %>% 
   mutate(interval.scale = interval*100)
+
+#Read in previously saved file
+#HPD.1.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation1, "_", purpose1, ".csv"))
 
 HPD.1.summary.tidy <- HPD.1.summary_all %>% 
   pivot_longer(
@@ -538,43 +618,62 @@ HPD.1.summary.tidy <- HPD.1.summary_all %>%
     names_to = "samples",
     names_prefix = "percent_in_interval.",
     values_to = "percent_in_interval"
-    ) %>% 
+  ) %>% 
   mutate(model_type = model.type1,
          purpose.lab = purpose1.lab)
 
 #Save
-write_csv(HPD.1.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation1, "_", purpose1, ".csv"))
+#write_csv(HPD.1.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation1, "_", purpose1, ".csv"))
 
 
 #---------------------------Purpose 2 --------------------------------#    
 #Separate out by sample size
-HPD.200.2.4viz <- results.2 %>% filter(total_samples == 200) %>% 
-  right_join(HPD.200.2, by = c("parameter", "iteration"))
+HPD.240.2.4viz <- results.2 %>% filter(total_samples == 240) %>% 
+  right_join(HPD.240.2, by = c("parameter", "iteration")) %>% 
+  mutate(parameter = ifelse(parameter == "Nf", "Nfb", parameter),
+         truth = ifelse(parameter == "Nfb", breed.truth, truth))
 
-HPD.600.2.4viz <- results.2 %>% filter(total_samples == 600) %>% 
-  right_join(HPD.600.2, by = c("parameter", "iteration"))
+HPD.480.2.4viz <- results.2 %>% filter(total_samples == 480) %>% 
+  right_join(HPD.480.2, by = c("parameter", "iteration")) %>% 
+  mutate(parameter = ifelse(parameter == "Nf", "Nfb", parameter),
+         truth = ifelse(parameter == "Nfb", breed.truth, truth))
 
-HPD.1000.2.4viz <- results.2 %>% filter(total_samples == 1000) %>% 
-  right_join(HPD.1000.2, by = c("parameter", "iteration"))
+HPD.720.2.4viz <- results.2 %>% filter(total_samples == 720) %>% 
+  right_join(HPD.720.2, by = c("parameter", "iteration")) %>% 
+  mutate(parameter = ifelse(parameter == "Nf", "Nfb", parameter),
+         truth = ifelse(parameter == "Nfb", breed.truth, truth))
+
+HPD.960.2.4viz <- results.2 %>% filter(total_samples == 960) %>% 
+  right_join(HPD.960.2, by = c("parameter", "iteration")) %>% 
+  mutate(parameter = ifelse(parameter == "Nf", "Nfb", parameter),
+         truth = ifelse(parameter == "Nfb", breed.truth, truth))
 
 
 #Calculate percent estimates in each interval
-HPD.200.2.summary <- HPD.200.2.4viz %>% group_by(parameter, interval) %>% 
+HPD.240.2.summary <- HPD.240.2.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.200.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.240.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD.600.2.summary <- HPD.600.2.4viz %>% group_by(parameter, interval) %>% 
+HPD.480.2.summary <- HPD.480.2.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.600.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.480.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD1000.2.summary <- HPD.1000.2.4viz %>% group_by(parameter, interval) %>% 
+HPD.720.2.summary <- HPD.720.2.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.1000.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.720.samples = sum(in_HPD_interval == "Y")/n() * 100)
+
+HPD960.2.summary <- HPD.960.2.4viz %>% group_by(parameter, interval) %>% 
+  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  dplyr::summarize(percent_in_interval.960.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
-HPD.2.summary_all <- HPD.200.2.summary %>% inner_join(HPD.600.2.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPD1000.2.summary, by = c("parameter", "interval")) %>% 
+HPD.2.summary_all <- HPD.240.2.summary %>% inner_join(HPD.480.2.summary, by = c("parameter", "interval")) %>% 
+  inner_join(HPD.720.2.summary, by = c("parameter", "interval")) %>% 
+  inner_join(HPD960.2.summary, by = c("parameter", "interval")) %>% 
   mutate(interval.scale = interval*100)
+
+#Read in previously saved file
+#HPD.2.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation2, "_", purpose2, ".csv"))
 
 HPD.2.summary.tidy <- HPD.2.summary_all %>% 
   pivot_longer(
@@ -584,41 +683,53 @@ HPD.2.summary.tidy <- HPD.2.summary_all %>%
     values_to = "percent_in_interval"
   ) %>% 
   mutate(model_type = model.type2,
-                  purpose.lab = purpose2.lab)
+         purpose.lab = purpose2.lab)
 
 #Save
-write_csv(HPD.2.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation2, "_", purpose2, ".csv"))
+#write_csv(HPD.2.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation2, "_", purpose2, ".csv"))
 
 
 #---------------------------Purpose 3 --------------------------------# 
 #Separate out by sample size
-HPD.200.3.4viz <- results.3 %>% filter(total_samples == 200) %>% 
-  right_join(HPD.200.3, by = c("parameter", "iteration"))
+HPD.240.3.4viz <- results.3 %>% filter(total_samples == 240) %>% 
+  right_join(HPD.240.3, by = c("parameter", "iteration"))
 
-HPD.600.3.4viz <- results.3 %>% filter(total_samples == 600) %>% 
-  right_join(HPD.600.3, by = c("parameter", "iteration"))
+HPD.480.3.4viz <- results.3 %>% filter(total_samples == 480) %>% 
+  right_join(HPD.480.3, by = c("parameter", "iteration"))
 
-HPD.1000.3.4viz <- results.3 %>% filter(total_samples == 1000) %>% 
-  right_join(HPD.1000.3, by = c("parameter", "iteration"))
+HPD.720.3.4viz <- results.3 %>% filter(total_samples == 720) %>% 
+  right_join(HPD.720.3, by = c("parameter", "iteration"))
+
+HPD.960.3.4viz <- results.3 %>% filter(total_samples == 960) %>% 
+  right_join(HPD.960.3, by = c("parameter", "iteration"))
 
 
 #Calculate percent estimates in each interval
-HPD.200.3.summary <- HPD.200.3.4viz %>% group_by(parameter, interval) %>% 
+HPD.240.3.summary <- HPD.240.3.4viz %>% group_by(parameter, interval) %>% 
+  drop_na() %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.200.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.240.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD.600.3.summary <- HPD.600.3.4viz %>% group_by(parameter, interval) %>% 
+HPD.480.3.summary <- HPD.480.3.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.600.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.480.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD1000.3.summary <- HPD.1000.3.4viz %>% group_by(parameter, interval) %>% 
+HPD.720.3.summary <- HPD.720.3.4viz %>% group_by(parameter, interval) %>% 
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
-  dplyr::summarize(percent_in_interval.1000.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.720.samples = sum(in_HPD_interval == "Y")/n() * 100)
+
+HPD960.3.summary <- HPD.960.3.4viz %>% group_by(parameter, interval) %>% 
+  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  dplyr::summarize(percent_in_interval.960.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
-HPD.3.summary_all <- HPD.200.3.summary %>% inner_join(HPD.600.3.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPD1000.3.summary, by = c("parameter", "interval")) %>% 
+HPD.3.summary_all <- HPD.240.3.summary %>% inner_join(HPD.480.3.summary, by = c("parameter", "interval")) %>% 
+  inner_join(HPD.720.3.summary, by = c("parameter", "interval")) %>% 
+  inner_join(HPD960.3.summary, by = c("parameter", "interval")) %>% 
   mutate(interval.scale = interval*100)
+
+#Read in previously saved file
+#HPD.3.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation3, "_", purpose3, ".csv"))
 
 HPD.3.summary.tidy <- HPD.3.summary_all %>% 
   pivot_longer(
@@ -631,38 +742,49 @@ HPD.3.summary.tidy <- HPD.3.summary_all %>%
          purpose.lab = purpose3.lab)
 
 #Save
-write_csv(HPD.3.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation3, "_", purpose3, ".csv"))
+#write_csv(HPD.3.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation3, "_", purpose3, ".csv"))
 
 
 #---------------------------Purpose 4 --------------------------------# 
 #Separate out by sample size
-HPD.200.4.4viz <- results.4 %>% filter(total_samples == 200) %>%
-  right_join(HPD.200.4, by = c("parameter", "iteration"))
+HPD.240.4.4viz <- results.4 %>% filter(total_samples == 240) %>%
+  right_join(HPD.240.4, by = c("parameter", "iteration"))
 
-HPD.600.4.4viz <- results.4 %>% filter(total_samples == 600) %>%
-  right_join(HPD.600.4, by = c("parameter", "iteration"))
+HPD.480.4.4viz <- results.4 %>% filter(total_samples == 480) %>%
+  right_join(HPD.480.4, by = c("parameter", "iteration"))
 
-HPD.1000.4.4viz <- results.4 %>% filter(total_samples == 1000) %>%
-  right_join(HPD.1000.4, by = c("parameter", "iteration"))
+HPD.720.4.4viz <- results.4 %>% filter(total_samples == 720) %>%
+  right_join(HPD.720.4, by = c("parameter", "iteration"))
+
+HPD.960.4.4viz <- results.4 %>% filter(total_samples == 960) %>%
+  right_join(HPD.960.4, by = c("parameter", "iteration"))
 
 
 #Calculate percent estimates in each interval
-HPD.200.4.summary <- HPD.200.4.4viz %>% group_by(parameter, interval) %>%
+HPD.240.4.summary <- HPD.240.4.4viz %>% group_by(parameter, interval) %>%
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>%
-  dplyr::summarize(percent_in_interval.200.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.240.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD.600.4.summary <- HPD.600.4.4viz %>% group_by(parameter, interval) %>%
+HPD.480.4.summary <- HPD.480.4.4viz %>% group_by(parameter, interval) %>%
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>%
-  dplyr::summarize(percent_in_interval.600.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.480.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD1000.4.summary <- HPD.1000.4.4viz %>% group_by(parameter, interval) %>%
+HPD.720.4.summary <- HPD.720.4.4viz %>% group_by(parameter, interval) %>%
   mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>%
-  dplyr::summarize(percent_in_interval.1000.samples = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval.720.samples = sum(in_HPD_interval == "Y")/n() * 100)
+
+HPD960.4.summary <- HPD.960.4.4viz %>% group_by(parameter, interval) %>%
+  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>%
+  dplyr::summarize(percent_in_interval.960.samples = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
-HPD.4.summary_all <- HPD.200.4.summary %>% inner_join(HPD.600.4.summary, by = c("parameter", "interval")) %>%
-  inner_join(HPD1000.4.summary, by = c("parameter", "interval")) %>%
+HPD.4.summary_all <- HPD.240.4.summary %>% inner_join(HPD.480.4.summary, by = c("parameter", "interval")) %>%
+  inner_join(HPD.720.4.summary, by = c("parameter", "interval")) %>% 
+  inner_join(HPD960.4.summary, by = c("parameter", "interval")) %>%
   mutate(interval.scale = interval*100)
+
+#Read in previously saved file
+#HPD.4.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation4, "_", purpose4, ".csv"))
 
 HPD.4.summary.tidy <- HPD.4.summary_all %>%
   pivot_longer(
@@ -674,219 +796,266 @@ HPD.4.summary.tidy <- HPD.4.summary_all %>%
   mutate(model_type = model.type4,
          purpose.lab = purpose4.lab)
 
-#Save
-write_csv(HPD.4.summary_all, file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation4, "_", purpose4, ".csv"))
-
 
 
 #---------------Create dataframes to plot by sample size--------#
-HPD.200.1.4viz <- HPD.1.summary.tidy %>% filter(samples == "200.samples")
-HPD.600.1.4viz <- HPD.1.summary.tidy %>% filter(samples == "600.samples")
-HPD.1000.1.4viz <- HPD.1.summary.tidy %>% filter(samples == "1000.samples")
+#Set eveyrthing to Null so the below scripts will run
+HPD.240.1.4viz = HPD.480.1.4viz = HPD.720.1.4viz = HPD.960.1.4viz = HPD.240.2.4viz = HPD.480.2.4viz = HPD.720.2.4viz = HPD.960.2.4viz = HPD.240.3.4viz = HPD.480.3.4viz = HPD.720.3.4viz = HPD.960.3.4viz = HPD.240.4.4viz = HPD.480.4.4viz = HPD.720.4.4viz = HPD.960.4.4viz <- NULL
 
-HPD.200.2.4viz <- HPD.2.summary.tidy %>% filter(samples == "200.samples")
-HPD.600.2.4viz <- HPD.2.summary.tidy %>% filter(samples == "600.samples")
-HPD.1000.2.4viz <- HPD.2.summary.tidy %>% filter(samples == "1000.samples")
+HPD.240.1.4viz <- HPD.1.summary.tidy %>% filter(samples == "240.samples")
+HPD.480.1.4viz <- HPD.1.summary.tidy %>% filter(samples == "480.samples")
+HPD.720.1.4viz <- HPD.1.summary.tidy %>% filter(samples == "720.samples")
+HPD.960.1.4viz <- HPD.1.summary.tidy %>% filter(samples == "960.samples")
 
-HPD.200.3.4viz <- HPD.3.summary.tidy %>% filter(samples == "200.samples")
-HPD.600.3.4viz <- HPD.3.summary.tidy %>% filter(samples == "600.samples")
-HPD.1000.3.4viz <- HPD.3.summary.tidy %>% filter(samples == "1000.samples")
+HPD.240.2.4viz <- HPD.2.summary.tidy %>% filter(samples == "240.samples")
+HPD.480.2.4viz <- HPD.2.summary.tidy %>% filter(samples == "480.samples")
+HPD.720.2.4viz <- HPD.2.summary.tidy %>% filter(samples == "720.samples")
+HPD.960.2.4viz <- HPD.2.summary.tidy %>% filter(samples == "960.samples")
 
-HPD.200.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "200.samples")
-HPD.600.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "600.samples")
-HPD.1000.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "1000.samples")
+HPD.240.3.4viz <- HPD.3.summary.tidy %>% filter(samples == "240.samples")
+HPD.480.3.4viz <- HPD.3.summary.tidy %>% filter(samples == "480.samples")
+HPD.720.3.4viz <- HPD.3.summary.tidy %>% filter(samples == "720.samples")
+HPD.960.3.4viz <- HPD.3.summary.tidy %>% filter(samples == "960.samples")
+
+HPD.240.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "240.samples")
+HPD.480.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "480.samples")
+HPD.720.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "720.samples")
+HPD.960.4.4viz <- HPD.4.summary.tidy %>% filter(samples == "960.samples")
 
 
 #Combine above dataframes, and re-order purpose as factors
-all.200.4viz <- HPD.200.1.4viz %>% bind_rows(HPD.200.2.4viz, HPD.200.3.4viz, HPD.200.4.4viz)
-all.200.4viz$purpose.lab <- factor(all.200.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
+all.240.4viz <- HPD.240.1.4viz %>% bind_rows(HPD.240.2.4viz, HPD.240.3.4viz, HPD.240.4.4viz) 
+all.240.4viz$purpose.lab <- factor(all.240.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 
-all.600.4viz <- HPD.600.1.4viz %>% bind_rows(HPD.600.2.4viz, HPD.600.3.4viz, HPD.600.4.4viz)
-all.600.4viz$purpose.lab <- factor(all.600.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
+all.480.4viz <- HPD.480.1.4viz %>% bind_rows(HPD.480.2.4viz, HPD.480.3.4viz, HPD.480.4.4viz) 
+all.480.4viz$purpose.lab <- factor(all.480.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 
-all.1000.4viz <- HPD.1000.1.4viz %>% bind_rows(HPD.1000.2.4viz, HPD.1000.3.4viz, HPD.1000.4.4viz)
-all.1000.4viz$purpose.lab <- factor(all.1000.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
+all.720.4viz <- HPD.720.1.4viz %>% bind_rows(HPD.720.2.4viz, HPD.720.3.4viz, HPD.720.4.4viz) 
+all.720.4viz$purpose.lab <- factor(all.720.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
+
+all.960.4viz <- HPD.960.1.4viz %>% bind_rows(HPD.960.2.4viz, HPD.960.3.4viz, HPD.960.4.4viz)
+all.960.4viz$purpose.lab <- factor(all.960.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
+
+#For when we need everything together
+all.4viz <- HPD.1.summary.tidy %>% bind_rows(HPD.2.summary.tidy) %>% 
+  mutate(parameter = ifelse(parameter == "Nf", "Nfb", parameter))
+all.4viz$purpose.lab <- factor(all.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 
 
 
 ####------------------------------- Make HDPI line graphs ------------------------------#### 
 #---------------------Create and store plots----------------------------------------------#
-#---------------------200 samples----------------------------------------------#
-#Nf
-Nf.200samps.HPDI.plot <- ggplot(data = all.200.4viz %>% filter(parameter == "Nf"), 
-                 aes(x = interval.scale)) +
+#-----------------------Make figures-----------------------------
+#-----------------HPDI plot--------------------#
+(p.Nfb <- all.4viz %>% dplyr::filter(parameter == "Nfb") %>% 
+   ggplot(aes(x = interval.scale)) +
+   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+   geom_line(aes(y = interval.scale), size = 1.5) + 
+   ggtitle("Nfb") + 
+   labs(x = "HPDI",
+        y = "Percent in HPDI") +
+   theme_bw() + 
+   theme(legend.title = element_blank()) + 
+   scale_colour_brewer(palette = "Set1") +
+   facet_wrap(~samples))
+
+
+
+(p.Nm <- all.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("A) Female abundance") + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("Nm") + 
   labs(x = "HPDI",
        y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank())
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_colour_brewer(palette = "Set1") +
+  facet_wrap(~samples))
 
-#Nm
-Nm.200samps.HPDI.plot <- ggplot(data = all.200.4viz %>% filter(parameter == "Nm"), 
-       aes(x = interval.scale)) +
+
+(p.surv <- all.4viz %>% dplyr::filter(parameter == "surv") %>% 
+  ggplot(aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("B) Male abundance") + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("Survival") + 
   labs(x = "HPDI",
        y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank(), 
-        axis.title.y = element_blank())
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_colour_brewer(palette = "Set1") +
+  facet_wrap(~samples))
 
-#survival
-surv.200samps.HPDI.plot <- ggplot(data = all.200.4viz %>% filter(parameter == "surv"), 
-                         aes(x = interval.scale)) +
+#May want to add this: purpose.lab != purpose3.lab to the first line to filter out PO from lambda
+(p.lam <- all.4viz %>% dplyr::filter(parameter == "lam") %>% 
+  ggplot(aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("C) Survival") + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("Lambda") + 
   labs(x = "HPDI",
        y = "Percent in HPDI") +
-  theme(legend.title = element_blank())
-
-#lambda
-lam.200samps.HPDI.plot <- ggplot(data = all.200.4viz %>% filter(parameter == "lam"), 
-                        aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("D) Lambda") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.y = element_blank())
-
-plots.200 <- ggarrange(Nf.200samps.HPDI.plot, Nm.200samps.HPDI.plot, surv.200samps.HPDI.plot, lam.200samps.HPDI.plot, common.legend = TRUE)
-
-annotate_figure(plots.200, fig.lab = "200 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_colour_brewer(palette = "Set1") +
+  facet_wrap(~samples))
 
 
-#---------------------600 samples----------------------------------------------#
-#Nf
-Nf.600samps.HPDI.plot <- ggplot(data = all.600.4viz %>% filter(parameter == "Nf"), 
-                                aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("A) Female abundance") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank())
+HPDI.plots <- ggarrange(p.Nfb, p.Nm, p.surv, p.lam, common.legend = TRUE, ncol = 2, nrow = 2, legend = "bottom")
+annotate_figure(p = HPDI.plots, fig.lab = "C)", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
 
-#Nm
-Nm.600samps.HPDI.plot <- ggplot(data = all.600.4viz %>% filter(parameter == "Nm"), 
-                                aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("B) Male abundance") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank(), 
-        axis.title.y = element_blank())
+#Percent breeders
+(p.pb <- all.4viz %>% dplyr::filter(parameter == "pb") %>% 
+    ggplot(aes(x = interval.scale)) +
+    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+    geom_line(aes(y = interval.scale), size = 1.5) + 
+    ggtitle("Percent breeders") + 
+    labs(x = "HPDI",
+         y = "Percent in HPDI") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_colour_brewer(palette = "Set1") +
+    facet_wrap(~samples))
 
-#survival
-surv.600samps.HPDI.plot <- ggplot(data = all.600.4viz %>% filter(parameter == "surv"), 
-                                  aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("C) Survival") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank())
+#Total adult females
+(p.Nfa <- all.4viz %>% dplyr::filter(parameter == "Nfa") %>% 
+    ggplot(aes(x = interval.scale)) +
+    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+    geom_line(aes(y = interval.scale), size = 1.5) + 
+    ggtitle("Total adult females") + 
+    labs(x = "HPDI",
+         y = "Percent in HPDI") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_colour_brewer(palette = "Set1") +
+    facet_wrap(~samples))
 
-#lambda
-lam.600samps.HPDI.plot <- ggplot(data = all.600.4viz %>% filter(parameter == "lam"), 
-                                 aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("D) Lambda") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.y = element_blank())
+ggarrange(p.pb, p.Nfa, common.legend = TRUE, legend = "bottom")
 
-plots.600 <- ggarrange(Nf.600samps.HPDI.plot, Nm.600samps.HPDI.plot, surv.600samps.HPDI.plot, lam.600samps.HPDI.plot, common.legend = TRUE)
-
-annotate_figure(plots.600, fig.lab = "600 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
+#Density plots
+(p2.Nfb <- results.all %>% dplyr::filter(parameter == "Nfb") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("Nfb") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    xlim(-100, 100) + 
+    facet_wrap(~samples.lab))
 
 
-#---------------------1000 samples----------------------------------------------#
-#Nf
-Nf.1000samps.HPDI.plot <- ggplot(data = all.1000.4viz %>% filter(parameter == "Nf"), 
-                                aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("A) Female abundance") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank())
+(p2.Nm <- results.all %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("Nm") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_brewer(palette = "Set1") +
+  xlim(-100, 100) + 
+  facet_wrap(~samples.lab))
 
-#Nm
-Nm.1000samps.HPDI.plot <- ggplot(data = all.1000.4viz %>% filter(parameter == "Nm"), 
-                                aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("B) Male abundance") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank(), 
-        axis.title.y = element_blank())
+(p2.surv <- results.all %>% dplyr::filter(parameter == "surv") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("Survival") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_brewer(palette = "Set1") +
+  xlim(-50, 50) + 
+  facet_wrap(~samples.lab))
 
-#survival
-surv.1000samps.HPDI.plot <- ggplot(data = all.1000.4viz %>% filter(parameter == "surv"), 
-                                  aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("C) Survival") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank())
+(p2.lam <- results.all %>% dplyr::filter(parameter == "lam") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("Lambda") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    xlim(-10, 10) + 
+    facet_wrap(~samples.lab))
 
-#lambda
-lam.1000samps.HPDI.plot <- ggplot(data = all.1000.4viz %>% filter(parameter == "lam"), 
-                                 aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("D) Lambda") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.y = element_blank())
-
-plots.1000 <- ggarrange(Nf.1000samps.HPDI.plot, Nm.1000samps.HPDI.plot, surv.1000samps.HPDI.plot, lam.1000samps.HPDI.plot, common.legend = TRUE)
-
-annotate_figure(plots.1000, fig.lab = "1000 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
+RelBias.Density.Plots <- ggarrange(p2.Nfb, p2.Nm, p2.surv, p2.lam, common.legend = TRUE, ncol = 2, nrow = 2, legend = "bottom")
+annotate_figure(p = RelBias.Density.Plots, fig.lab = "D)", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
 
 
-#---------------------Create pdf of all HPDI line graphs----------------------------------------------#
-#Specify file
-HPDI.file <- paste0(results_plots_location, "HPDI_model_comparison_", today, "_", purpose.combo, ".pdf")
-pdf(file = HPDI.file, width = 11, height = 8) #Open pdf
+(p2.Nfa <- results.all %>% dplyr::filter(parameter == "Nfa") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("Nf - total") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    xlim(-100, 100) + 
+    facet_wrap(~samples.lab))
 
-#200 samples
-annotate_figure(plots.200, fig.lab = "200 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
-#600 samples
-annotate_figure(plots.600, fig.lab = "600 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
-#1000 samples
-annotate_figure(plots.1000, fig.lab = "1000 Samples", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
 
-dev.off() #close pdf
+(p2.pb <- results.all %>% dplyr::filter(parameter == "pb") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("Percent breeders") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    xlim(-100, 100) + 
+    facet_wrap(~samples.lab))
 
+
+(p2.psi <- results.all %>% dplyr::filter(parameter == "psi") %>% 
+    ggplot(aes(x = factor(parameter), fill = purpose.lab)) +
+    geom_boxplot(aes(y = relative_bias)) + 
+    ggtitle("Percent biennial breeders") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_hline(yintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    ylim(-10, 10) +
+    theme(legend.title = element_blank()) + 
+    #scale_fill_brewer(palette = "Set1") +
+    facet_wrap(~samples.lab))
+
+
+ggarrange(p2.psi, p2.Nfa, p2.pb, common.legend = TRUE, legend = "bottom")
+
+
+
+
+
+#Visualize CV
+Bias_and_prec.df <- read_csv(file = paste0(results_location, "Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
+
+(CV.1 <- results.all %>% dplyr::filter(purpose.lab == purpose1.lab, samples.lab == "240.samples" | samples.lab == "480.samples", parameter == "Nfa" | parameter == "Nfb" | parameter == "Nm") %>% 
+  ggplot(aes(x = HSPs_detected, y = cv, fill = parameter, color = parameter)) +
+  geom_point() +
+  theme_bw() +
+  ylim(0, 100) +
+  facet_wrap(~samples.lab) + 
+  labs(title = purpose1.lab, x = "HSPs detected", y = "CV"))
+
+(CV.2 <- results.all %>% dplyr::filter(purpose.lab == purpose2.lab, samples.lab == "240.samples" | samples.lab == "480.samples", parameter == "Nfa" | parameter == "Nfb" | parameter == "Nm") %>% 
+    ggplot(aes(x = HSPs_detected, y = cv, fill = parameter, color = parameter)) +
+    geom_point() +
+    theme_bw() +
+    ylim(0, 100) +
+    facet_wrap(~samples.lab) + 
+    labs(title = purpose2.lab, x = "HSPs detected", y = "CV"))
+
+ggarrange(CV.1, CV.2, common.legend = TRUE, legend = "bottom")
 
 
 

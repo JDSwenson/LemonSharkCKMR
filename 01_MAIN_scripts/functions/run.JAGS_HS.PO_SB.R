@@ -171,7 +171,7 @@ jags_inits = function(nc) {
   }
   return(inits)
 }
-}else if(fixed.parameters != "yes"){ #Closed fixed.parameters if statement
+}else if(fixed.parameters != "yes"){ #Close fixed.parameters if statement
   #------------If estimating more parameters than abundance--------------------
   #Define data
   jags_data = list(

@@ -435,7 +435,7 @@ set.seed(rseed.pop)
    
 #Within HPD interval?
 results2 %>% group_by(total_samples, parameter, purpose) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% View()
 
 #Median relative bias by sample size
  results2 %>% group_by(total_samples, parameter) %>% 
@@ -483,6 +483,8 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
  saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
  
  saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
+ 
+ saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose)) #Sample size 4
  
  #Save detailed info about samples from population
  saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
