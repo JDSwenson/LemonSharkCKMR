@@ -37,12 +37,15 @@ dad.comps.prefix <- "comparisons/dad.comps"
 #-------------------Set up simulation----------------------------
 simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
 
-script_name <- "" #Copy name of script here
-primary_goal <- "" #Why am I running this simulation? Provide details
-purpose <- "skipped.breeding_trial.2" #For naming output files
+script_name <- "HS.PO_all.age_all.samples_SB.R" #Copy name of script here
+primary_goal <- "Want to sample all age classes with the skipped-breeding model to compare to targeted sampling of YOY. No targeted sampling, no downsampling" #Why am I running this simulation? Provide details
+question1 <- "How does sampling of all age classes compare with targeted sampling of YOY?"
+question2 <- "Do we get a different number of HSPs and/or POPs when sampling all age classes, relative to targeted sampling of YOY?"
+question3 <- "NA"
+purpose <- "skipped.breeding_sample.all.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
-target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
@@ -59,40 +62,6 @@ estimated.parameters <- "Nfa, Nfb, Nm, surv, lam, psi, pb"
 load("rseeds_2022.04.15.rda")
 seeds <- "Seeds2022.04.15"
 
-#----------------------- MCMC parameters ----------------------
-ni <- 40000 # number of post-burn-in samples per chain
-nb <- 50000 # number of burn-in samples
-nt <- 20     # thinning rate
-nc <- 2      # number of chains
-
-breeding.interval <- 2 #Duplicative of "breeding.periodicity" below.
-non_conformists <- 0  #percent of population that does not conform to the breeding schedule
-
-simulation.df <- tibble(script_name = script_name,
-                        primary_goal = primary_goal,
-                        purpose = purpose,
-                        date.of.simulation = date.of.simulation,
-                        target.YOY = target.YOY,
-                        down_sample = down_sample,
-                        max.HSPs = max.HSPs,
-                        max.POPs = max.POPs,
-                        HS.only = HS.only,
-                        PO.only = PO.only,
-                        fixed.parameters = fixed.parameters,
-                        estimated.parameters = estimated.parameters,
-                        seeds = seeds,
-                        thinning_rate = nt,
-                        posterior_samples = ni,
-                        burn_in = nb,
-                        years_sampled = length(sample.years),
-                        breeding_periodicity = breeding.interval,
-                        non_conformists = non_conformists
-                        )
-
-simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
-
-#write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
-
 
 #----------------------- DATA-GENERATING MODEL --------------------
 # Note on sequencing: Births happen at beginning of each year, followed by deaths 
@@ -108,7 +77,7 @@ Adult.survival <- 0.825 # CHANGED FROM 0.9; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-prop.off.yr <- .05 #proportion of off-year breeders to randomly include off their breeding cycle
+prop.off.yr <- .05 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 num.mates <- c(1:3) #vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
@@ -145,6 +114,41 @@ sample.vec.juvs <- c(50, 100, 150, 200) #vector to sample over per year
 sample.vec.adults <- c(sample.vec.juvs/5)
 sample.vec.total <- sample.vec.juvs + sample.vec.adults
 
+#----------------------- MCMC parameters ----------------------#
+ni <- 40000 # number of post-burn-in samples per chain
+nb <- 50000 # number of burn-in samples
+nt <- 20     # thinning rate
+nc <- 2      # number of chains
+
+
+####---------------Update and save simulation log-------------------####
+simulation.df <- tibble(script_name = script_name,
+                        primary_goal = primary_goal,
+                        question1 = question1,
+                        question2 = question2,
+                        question3 = question3,
+                        purpose = purpose,
+                        date.of.simulation = date.of.simulation,
+                        target.YOY = target.YOY,
+                        down_sample = down_sample,
+                        max.HSPs = max.HSPs,
+                        max.POPs = max.POPs,
+                        HS.only = HS.only,
+                        PO.only = PO.only,
+                        fixed.parameters = fixed.parameters,
+                        estimated.parameters = estimated.parameters,
+                        seeds = seeds,
+                        thinning_rate = nt,
+                        posterior_samples = ni,
+                        burn_in = nb,
+                        years_sampled = length(sample.years),
+                        breeding_periodicity = breeding.interval,
+                        non_conformists = non_conformists
+)
+
+simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
+
+write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
@@ -218,9 +222,9 @@ set.seed(rseed.pop)
 
   
   #saveRDS(loopy.list, file = "loopy.list")
-   loopy.list <- readRDS("loopy.list")
-   parents.tibble <- readRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-   pop.size.tibble <- readRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  # loopy.list <- readRDS("loopy.list")
+  # parents.tibble <- readRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  #pop.size.tibble <- readRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
   # 
   #organize results and calculate summary statistics from the simulation
   source("./01_MAIN_scripts/functions/query_results_SB.R")

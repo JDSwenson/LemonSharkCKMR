@@ -50,7 +50,7 @@ lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
 
 
 #----------------If estimating abundance only (i.e. fixing other parameters)-------------
-if(fixed.parameters == "yes"){ #Are we fixing parameters?
+if(fixed.parameters != "none"){ #Are we fixing parameters?
 #Define data
 jags_data = list(
   #Mom
