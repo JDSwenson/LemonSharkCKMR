@@ -532,7 +532,12 @@ mom_total.comps <- sum(mom_comps.yr.df$comps.yr)
 #Calculate Exp(R) for MPOPs
 mom_C.PO <- mom_comps.all %>% dplyr::filter(type == "PO")
 
-mom.Exp.PO <- round(sum(mom_C.PO$all)/mom_N.truth, 0)
+#Need to use Na to get the correct number of expected POs 
+Nf.truth <- pop.size.tibble %>% filter(year == 85) %>% 
+  distinct(Female.adult.pop) %>% 
+  pull(Female.adult.pop)
+
+mom.Exp.PO <- round(sum(mom_C.PO$all)/Nf.truth, 0)
 
 #---------------------Dad--------------------------------
 #Calculate Exp(R) for MHSPs

@@ -1,0 +1,16 @@
+script_name,primary_goal,question1,question2,question3,purpose,date.of.simulation,target.YOY,down_sample,max.HSPs,max.POPs,HS.only,PO.only,fixed.parameters,estimated.parameters,seeds,thinning_rate,posterior_samples,burn_in,years_sampled,breeding_periodicity,non_conformists
+HS.PO_all.age_all.samples.R,Determine ideal sampling scheme,NA,NA,NA,HS.PO_all.age_all.samples,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+HS.PO_all.age_downsample.R,Determine ideal sampling scheme,NA,NA,NA,HS.PO_all.age_downsample,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+HS.PO_target.age_all.samples.R,Determine ideal sampling scheme,NA,NA,NA,HS.PO_target.age_all.samples,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+HS.PO_target.age_downsample.R,Determine ideal sampling scheme,NA,NA,NA,HS.PO_target.age_downsample,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+HS.only_all.age_all.samples.R,Determine ideal sampling scheme,NA,NA,NA,HS.only_all.age_all.samples,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+HS.only_all.age_downsample.R,Determine ideal sampling scheme,NA,NA,NA,HS.only_all.age_downsample,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+HS.only_target.age_all.samples.R,Determine ideal sampling scheme,NA,NA,NA,HS.only_target.age_all.samples,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+HS.only_target.age_downsample.R,Determine ideal sampling scheme,NA,NA,NA,HS.only_target.age_downsample,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+PO.only_all.age_all.samples.R,Determine ideal sampling scheme,NA,NA,NA,PO.only_all.age_all.samples,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+PO.only_all.age_downsample.R,Determine ideal sampling scheme,NA,NA,NA,PO.only_all.age_downsample,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+PO.only_target.age_all.samples.R,Determine ideal sampling scheme,NA,NA,NA,PO.only_target.age_all.samples,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+PO.only_target.age_downsample.R,Determine ideal sampling scheme,NA,NA,NA,PO.only_target.age_downsample,4/19/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,1,NA
+HS.only_skipped.breeding.R,Examine model performance when accounting for skipped-breeding,NA,NA,NA,skipped.breeding_trial.1,4/25/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,2,NA
+HS.PO_skipped.breeding.R,Can I add a parameter that relates the breeding population to the total abundance?,NA,NA,NA,skipped.breeding_trial.2,4/25/2022,NA,NA,NA,NA,NA,NA,NA,NA,Seeds2022.04.15,20,40000,50000,4,2,NA
+HS.PO_all.age_all.samples_SB.R,"Want to sample all age classes with the skipped-breeding model to compare to targeted sampling of YOY. No targeted sampling, no downsampling",How does sampling of all age classes compare with targeted sampling of YOY?,"Do we get a different number of HSPs and/or POPs when sampling all age classes, relative to targeted sampling of YOY?","NA",skipped.breeding_sample.all.ages,28Apr2022,no,no,150,150,no,no,none,"Nfa, Nfb, Nm, surv, lam, psi, pb",Seeds2022.04.15,20,40000,50000,4,2,0
