@@ -27,7 +27,8 @@ lam_max <- max(adult.lambda[ref.year:n_yrs]) #Maximum lambda over estimation per
 
 #Create dataframe of estimates and truth
 estimates <- model.summary2 %>%
-  mutate(truth = c(Mom.breed_truth, psi_truth, Dad.all_truth, surv_mean, lam_truth)) %>%
+  mutate(breed.truth = c(Mom.breed_truth, Dad.breed_truth, surv_mean, lam_truth),
+         truth = c(Mom.all_truth, Dad.all_truth, surv_mean, lam_truth)) %>%
   as_tibble()
 
 #Extract more metrics that can help with troubleshooting and visualization

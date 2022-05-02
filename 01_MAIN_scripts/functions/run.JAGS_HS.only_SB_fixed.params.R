@@ -50,7 +50,6 @@ lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
 
 
 #----------------If estimating abundance only (i.e. fixing other parameters)-------------
-if(fixed.parameters == "yes"){ #Are we fixing parameters?
 #Define data
 jags_data = list(
   #Mom
@@ -98,6 +97,16 @@ jags_data = list(
   # #Breeding interval
    psi = psi.truth
 )
+
+#------------ STEP 4: SET NODES TO MONITOR ---------------#
+if(abundance.only == "yes"){ #Should we only monitor abundance nodes?
+  jags_params = c("Nfb", "Nm") #If fixing other parameters
+  
+} else if(abundance.only != "yes"){ #Close abundance.only = "yes" if statement
+  #------------ STEP 4: SET NODES TO MONITOR ---------------#
+  jags_params = c("Nfb", "Nm", "surv", "lam")
+  
+} #Close all if statements and proceed
 
 
 #----------------- STEP 2: SPECIFY JAGS MODEL CODE ---------------#
@@ -160,131 +169,15 @@ jags_inits = function(nc) {
       #psi = runif(1, min=0, max=1)
       
       #If estimating select parameters
-      #surv = 0.8,
+      surv = runif(1, min=0, max=1),
       Nfb = rnorm(1, mean = 500, sd = 100),
-      Nm = rnorm(1, mean = 500, sd = 100)
-#      lam = 1,
+      Nm = rnorm(1, mean = 500, sd = 100),
+      lam = 1
 #      psi = runif(1, min=0, max=1)
     )
   }
   return(inits)
 }
-}else if(fixed.parameters != "yes"){ #Closed fixed.parameters if statement
-  #------------If estimating more parameters than abundance--------------------
-  #Define data
-  jags_data = list(
-    #Mom
-    #HS: even years
-    mom.mort.yrs_HS.even = mom.mort.yrs_HS.even,
-    mom.popGrowth.yrs_HS.even = mom.popGrowth.yrs_HS.even,
-    mom.n.comps_HS.even = mom.n.comps_HS.even,
-    mom.positives_HS.even = mom.positives_HS.even,
-    mom.yrs_HS.even = mom.yrs_HS.even,
-    #mom.R0 = mom.R0,
-    
-    #Mom
-    #HS: odd years
-    mom.mort.yrs_HS.odd = mom.mort.yrs_HS.odd,
-    mom.popGrowth.yrs_HS.odd = mom.popGrowth.yrs_HS.odd,
-    mom.n.comps_HS.odd = mom.n.comps_HS.odd,
-    mom.positives_HS.odd = mom.positives_HS.odd,
-    mom.yrs_HS.odd = mom.yrs_HS.odd,
-    #mom.R0 = mom.R0,
-    
-    
-    #Dad
-    dad.mort.yrs = dad.mort.yrs,
-    dad.popGrowth.yrs = dad.popGrowth.yrs,
-    dad.n.comps = dad.n.comps,
-    dad.positives = dad.positives,
-    dad.yrs = dad.yrs,
-    #dad.R0 = dad.R0,
-    
-
-    #Lambda
-    lam.tau = lam.tau
-  )
-  
-  
-  #----------------- STEP 2: SPECIFY JAGS MODEL CODE ---------------#
-  #Convert tau to SD (for interpretation)
-  #tau <- 1E-6
-  #(sd <- sqrt(1/tau))
-  #tau <- 
-  
-  HS.only_model = function(){
-    
-    #PRIORS - uninformative
-    mu ~ dunif(1, 10000)
-    sd ~ dunif(1, 10000)
-    Nfb ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
-    Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
-    surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
-    lam ~ dnorm(1, lam.tau)
-    psi ~ dunif(0, 1) #Percent of animals breeding bi-ennially
-    
-    
-    #PRIORS - informative
-    #surv ~ dnorm(Adult.survival, 1/(.02)^2) #Informative prior
-    
-    
-    #Likelihood
-    #Moms
-    #HS - even years
-    for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-      mom.positives_HS.even[i] ~ dbin((surv^mom.mort.yrs_HS.even[i])/(Nfb*(lam^mom.popGrowth.yrs_HS.even[i])), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
-    }
-    
-    #Moms
-    #HS - odd years
-    for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-      mom.positives_HS.odd[j] ~ dbin(((surv^mom.mort.yrs_HS.odd[j])*(1-psi))/(Nfb*(lam^mom.popGrowth.yrs_HS.odd[j])), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
-    }
-    
-    #Dads
-    #HS + PO
-    for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-      dad.positives[f] ~ dbin((surv^dad.mort.yrs[f])/(Nm*(lam^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
-    }
-  }
-  
-  # Write model
-  jags_file = paste0(jags.model_location, purpose, "_iteration_", iter, ".txt")
-  write_model(HS.only_model, jags_file)
-  
-  
-  #------------ STEP 3: SPECIFY INITIAL VALUES ---------------#
-  jags_inits = function(nc) {
-    inits = list()
-    for(c in 1:nc){
-      inits[[c]] = list(
-        #If estimating all parameters
-        surv = runif(1, min=0, max=1),
-        Nfb = rnorm(1, mean = 500, sd = 100),
-        Nm = rnorm(1, mean = 500, sd = 100),
-        lam = 1,
-        psi = runif(1, min=0, max=1)
-        
-        #If estimating select parameters
-        #      surv = 0.8,
-        # Nf = rnorm(1, mean = 500, sd = 100),
-        # Nm = rnorm(1, mean = 500, sd = 100)
-        #      lam = 1,
-        #      psi = runif(1, min=0, max=1)
-      )
-    }
-    return(inits)
-  }
-} #Close fixed.parameters != "yes"
-  #------------ STEP 4: SET NODES TO MONITOR ---------------#
-if(abundance.only == "yes"){ #Should we only monitor abundance nodes?
-  jags_params = c("Nfb", "Nm") #If fixing other parameters
-  
-} else if(abundance.only != "yes"){ #Close abundance.only = "yes" if statement
-  #------------ STEP 4: SET NODES TO MONITOR ---------------#
-  jags_params = c("Nfb", "psi", "Nm", "surv", "lam")
-  
-} #Close all if statements and proceed
 
 n_params = length(jags_params) #used to autofill dataframe later
 

@@ -233,6 +233,15 @@ results.all %>% group_by(model_type, purpose.lab, total_samples, parameter) %>%
 #  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
   arrange(mean.cv) %>% 
   write_csv(file = paste0(results_location, "Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
+
+
+#-----------------------------Numbers of Kin pairs---------------------#
+results.all %>% dplyr::filter(parameter == "Nfa" | parameter == "Nm") %>% 
+  group_by(purpose.lab, parameter, total_samples) %>% 
+  summarize(mean.HSPs = mean(HSPs_detected),
+            mean.POPs = mean(POPs_detected))
+
+
 ```
 
 ```{r Calcualte HPDI intervals}
@@ -770,19 +779,41 @@ all.4viz <- HPD.1.summary.tidy %>% bind_rows(HPD.2.summary.tidy)
 all.4viz$purpose.lab <- factor(all.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 ```
 
-```{r Figure 1}
-#myColors <- brewer.pal(3, "Dark2")
-#names(myColors) <- levels(results.all$purpose.lab)
-#custom_colors <- scale_colour_viridis(values = myColors, discrete = TRUE)
+```{r HPDI line graphs}
+(p.Nfb <- all.4viz %>% dplyr::filter(parameter == "Nfb") %>% 
+   ggplot(aes(x = interval.scale)) +
+   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+   geom_line(aes(y = interval.scale), size = 1.5) + 
+   ggtitle("Nf - breeders") + 
+   labs(x = "HPDI",
+        y = "Percent in HPDI") +
+   theme_bw() + 
+   theme(legend.title = element_blank()) + 
+   scale_colour_brewer(palette = "Set1") +
+   facet_wrap(~samples))
 
-#-----------------------Make figures-----------------------------
-#-----------------HPDI plot--------------------#
-(p.Nf <- all.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+#Total adult females
+(p.Nfa <- all.4viz %>% dplyr::filter(parameter == "Nfa") %>% 
+    ggplot(aes(x = interval.scale)) +
+    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+    geom_line(aes(y = interval.scale), size = 1.5) + 
+    ggtitle("Nf - total") + 
+    labs(x = "HPDI",
+         y = "Percent in HPDI") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_colour_brewer(palette = "Set1") +
+    facet_wrap(~samples))
+
+
+(p.Nm <- all.4viz %>% dplyr::filter(parameter == "Nm") %>% 
   ggplot(aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
   geom_line(aes(y = interval.scale), size = 1.5) + 
-  ggtitle("Nf") + 
+  ggtitle("Nm - total") + 
   labs(x = "HPDI",
        y = "Percent in HPDI") +
   theme_bw() + 
@@ -791,22 +822,7 @@ all.4viz$purpose.lab <- factor(all.4viz$purpose.lab, levels = c(purpose1.lab, pu
   facet_wrap(~samples))
 
 
-
-p.Nm <- all.4viz %>% dplyr::filter(parameter == "Nm") %>% 
-  ggplot(aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 1.5) + 
-  ggtitle("Nm") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme_bw() + 
-  theme(legend.title = element_blank()) + 
-  scale_colour_brewer(palette = "Set1") +
-  facet_wrap(~samples)
-
-
-p.surv <- all.4viz %>% dplyr::filter(parameter == "surv") %>% 
+(p.surv <- all.4viz %>% dplyr::filter(parameter == "surv") %>% 
   ggplot(aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
@@ -817,10 +833,10 @@ p.surv <- all.4viz %>% dplyr::filter(parameter == "surv") %>%
   theme_bw() + 
   theme(legend.title = element_blank()) + 
   scale_colour_brewer(palette = "Set1") +
-  facet_wrap(~samples)
+  facet_wrap(~samples))
 
 #May want to add this: purpose.lab != purpose3.lab to the first line to filter out PO from lambda
-p.lam <- all.4viz %>% dplyr::filter(parameter == "lam") %>% 
+(p.lam <- all.4viz %>% dplyr::filter(parameter == "lam") %>% 
   ggplot(aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
@@ -831,172 +847,165 @@ p.lam <- all.4viz %>% dplyr::filter(parameter == "lam") %>%
   theme_bw() + 
   theme(legend.title = element_blank()) + 
   scale_colour_brewer(palette = "Set1") +
-  facet_wrap(~samples)
+  facet_wrap(~samples))
 
 
-HPDI.plots <- ggarrange(p.Nf, p.Nm, p.surv, p.lam, common.legend = TRUE, ncol = 2, nrow = 2, legend = "bottom")
+#Percent breeders
+(p.pb <- all.4viz %>% dplyr::filter(parameter == "pb") %>% 
+    ggplot(aes(x = interval.scale)) +
+    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+    geom_line(aes(y = interval.scale), size = 1.5) + 
+    ggtitle("Percent breeders") + 
+    labs(x = "HPDI",
+         y = "Percent in HPDI") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_colour_brewer(palette = "Set1") +
+    facet_wrap(~samples))
+
+#Save plots so I can load them quickly later
+HPDI.plot.list <- list(p.Nfb, p.Nfa, p.pb, p.Nm, p.surv, p.lam)
+#Save the plots as a list, so I can load them later and plot with ggarrange/annotate_figure
+saveRDS(HPDI.plot.list, file = paste0(results_plots_location, "plot_lists/", purpose.combo, "_HPDI_line_plots"))
+
+HPDI.plots <- ggarrange(p.Nfb, p.Nfa, p.pb, p.Nm, p.surv, p.lam, common.legend = TRUE, ncol = 2, nrow = 3, legend = "bottom")
 annotate_figure(p = HPDI.plots, fig.lab = "C)", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
 
+
+```
+
+```{r Density plots}
 #Density plots
-(p2.Nf <- results.all %>% dplyr::filter(parameter == "Nf") %>% 
-  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+(p2.Nfb <- results.all %>% dplyr::filter(parameter == "Nfb") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
     geom_density(alpha = 0.6) + 
-  ggtitle("Nf") + 
-  labs(x = "Relative bias of posterior median") +
-  geom_vline(xintercept=c(0), linetype="dotted") +
+    ggtitle("Nf - breeders") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
     theme_bw() + 
-  theme(legend.title = element_blank()) + 
-  scale_fill_brewer(palette = "Set1") +
-  xlim(-50, 50) + 
-  facet_wrap(~samples.lab))
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    xlim(-100, 100) + 
+    facet_wrap(~samples.lab))
 
-
-p2.Nm <- results.all %>% dplyr::filter(parameter == "Nm") %>% 
-  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+(p2.Nfa <- results.all %>% dplyr::filter(parameter == "Nfa") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
     geom_density(alpha = 0.6) + 
+    ggtitle("Nf - total") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    xlim(-100, 100) + 
+    facet_wrap(~samples.lab))
+
+
+(p2.pb <- results.all %>% dplyr::filter(parameter == "pb") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("Percent breeders") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    xlim(-100, 100) + 
+    facet_wrap(~samples.lab))
+
+(p2.Nm <- results.all %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
   ggtitle("Nm") + 
   labs(x = "Relative bias of posterior median") +
   geom_vline(xintercept=c(0), linetype="dotted") +
-    theme_bw() + 
+  theme_bw() + 
   theme(legend.title = element_blank()) + 
   scale_fill_brewer(palette = "Set1") +
-  xlim(-50, 50) + 
-  facet_wrap(~samples.lab)
+  xlim(-100, 100) + 
+  facet_wrap(~samples.lab))
 
-p2.surv <- results.all %>% dplyr::filter(parameter == "surv") %>% 
+(p2.surv <- results.all %>% dplyr::filter(parameter == "surv") %>% 
   ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
-    geom_density(alpha = 0.6) + 
+  geom_density(alpha = 0.6) + 
   ggtitle("Survival") + 
   labs(x = "Relative bias of posterior median") +
   geom_vline(xintercept=c(0), linetype="dotted") +
-    theme_bw() + 
+  theme_bw() + 
   theme(legend.title = element_blank()) + 
   scale_fill_brewer(palette = "Set1") +
   xlim(-50, 50) + 
-  facet_wrap(~samples.lab)
-
-(p2.lam <- results.all %>% dplyr::filter(parameter == "lam", purpose.lab != purpose3.lab) %>% 
-  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
-    geom_density(alpha = 0.6) + 
-  ggtitle("Lambda") + 
-  labs(x = "Relative bias of posterior median") +
-  geom_vline(xintercept=c(0), linetype="dotted") +
-    theme_bw() + 
-  theme(legend.title = element_blank()) + 
-  scale_fill_brewer(palette = "Set1") +
-  xlim(-10, 10) + 
   facet_wrap(~samples.lab))
 
-RelBias.Density.Plots <- ggarrange(p2.Nf, p2.Nm, p2.surv, p2.lam, common.legend = TRUE, ncol = 2, nrow = 2, legend = "bottom")
+(p2.lam <- results.all %>% dplyr::filter(parameter == "lam") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("Lambda") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    xlim(-10, 10) + 
+    facet_wrap(~samples.lab))
+
+(p2.psi <- results.all %>% dplyr::filter(parameter == "psi") %>% 
+    ggplot(aes(x = factor(parameter), fill = purpose.lab)) +
+    geom_boxplot(aes(y = relative_bias)) + 
+    ggtitle("Percent biennial breeders") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_hline(yintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    ylim(-10, 10) +
+    theme(legend.title = element_blank()) + 
+    #scale_fill_brewer(palette = "Set1") +
+    facet_wrap(~samples.lab))
+
+
+#Save plots so I can load them quickly later
+Density.plot.list <- list(p2.Nfb, p2.Nfa, p2.pb, p2.Nm, p2.surv, p2.lam)
+#Save the plots as a list, so I can load them later and plot with ggarrange/annotate_figure
+saveRDS(Density.plot.list, file = paste0(results_plots_location, "plot_lists/", purpose.combo, "_Relative_bias_density_plots"))
+
+
+
+RelBias.Density.Plots <- ggarrange(p2.Nfb, p2.Nfa, p2.pb, p2.Nm, p2.surv, p2.lam, common.legend = TRUE, ncol = 2, nrow = 3, legend = "bottom")
+
 annotate_figure(p = RelBias.Density.Plots, fig.lab = "D)", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
 
-#To look at colors to make them match
-#library(scales)
-#show_col(hue_pal()(4))
+
+
 ```
 
 
-PIck up here on 4/21/2022
-```{r Figure 2}
-#-----------------------Make figures-----------------------------
-#-----------------HPDI plot--------------------#
-#Nm & surv - 240 samples
-#Random (non-targeted) sampling: all comparisons and downsample
-p1.240.df <- all.240.4viz %>% filter(parameter == "Nm" | parameter == "surv" | parameter == "Nf") %>% 
-  dplyr::filter(purpose == purpose1.lab | purpose == purpose3.lab) %>% 
-  mutate(sampling = ifelse(purpose == purpose1.lab, "Indiscriminate sampling", "Targeted sampling"))
 
-p1 <- ggplot(data = p1.240.df, 
-             aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = sampling, fill = sampling, shape = sampling), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = sampling, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 1.5) + 
-  ggtitle("A) Percent in HPDI") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank()) + 
-  facet_wrap(~parameter)
-
-samps <- 240
-p2.240.df <- results.all %>% dplyr::filter(parameter == "Nm" | parameter == "surv" | parameter == "Nf", total_samples == samps, purpose == purpose1.lab | purpose == purpose3.lab) %>% 
-  mutate(sampling = ifelse(purpose == purpose1.lab, "Indiscriminate sampling", "Targeted sampling"))
-
-p2 <- p2.240.df %>% ggplot(aes(x = relative_bias, color = sampling, fill = sampling)) + 
-  geom_density(alpha = 0.6) + 
-  ggtitle(label = paste0("B) Relative bias of posterior median")) + 
-  xlim(-75, 75) + 
-  facet_wrap(~parameter) +
-  theme(legend.title = element_blank())
-
-
-
-#Nm & surv - 960 samples
-#random (non-targeted) sampling: all comps and downsample
-p3.960.df <- all.960.4viz %>% filter(parameter == "Nm" | parameter == "surv" | parameter == "Nf") %>% 
-  dplyr::filter(purpose == purpose1.lab | purpose == purpose2.lab) %>% 
-  mutate(comparisons = ifelse(purpose == purpose1.lab, "All comparisons", "Downsample"))
-
-p3 <- ggplot(data =  p3.960.df,
-             aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = comparisons, fill = comparisons, shape = comparisons), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = comparisons, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("A) Indiscriminate sampling") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank()) + 
-  facet_wrap(~parameter)
-
-#Targeted sampling: all comps and downsample
-p4.960.df <- all.960.4viz %>% filter(parameter == "Nm" | parameter == "surv" | parameter == "Nf") %>% 
-  dplyr::filter(purpose == purpose3.lab | purpose == purpose4.lab) %>% 
-  mutate(comparisons = ifelse(purpose == purpose3.lab, "All comparisons", "Downsample"))
-
-p4 <- ggplot(data = p4.960.df, 
-                  aes(x = interval.scale)) +
-  geom_point(aes(y = percent_in_interval, color = comparisons, fill = comparisons, shape = comparisons), size = 2.5, alpha = .7) + 
-  geom_smooth(aes(y = percent_in_interval, color = comparisons, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
-  geom_line(aes(y = interval.scale), size = 2) + 
-  ggtitle("B) Targeted sampling") + 
-  labs(x = "HPDI",
-       y = "Percent in HPDI") +
-  theme(legend.title = element_blank(), 
-        axis.title.x = element_blank()) + 
-  facet_wrap(~parameter)
-
-
-#960 samples, indiscriminate sampling
-samps <- 960
-p5.960.df <- results.all %>% dplyr::filter(parameter == "Nm" | parameter == "surv" | parameter == "Nf", total_samples == samps, purpose == purpose1.lab | purpose == purpose2.lab) %>% 
-  mutate(comparisons = ifelse(purpose == purpose1.lab, "All comparisons", "Downsample"))
-
-p5 <- p5.960.df %>% ggplot(aes(x = relative_bias, color = comparisons, fill = comparisons)) + 
-  geom_density(alpha = 0.6) + 
-  ggtitle(label = paste0("C) Indiscriminate sampling")) + 
-  xlim(-50, 50) + 
-  facet_wrap(~parameter) +
-  theme(legend.title = element_blank())
-
-#960 samples, targeted sampling
-p6.960.df <- results.all %>% dplyr::filter(parameter == "Nm" | parameter == "surv" | parameter == "Nf", total_samples == samps, purpose == purpose3.lab | purpose == purpose4.lab) %>% 
-  mutate(comparisons = ifelse(purpose == purpose3.lab, "All comparisons", "Downsample"))
-
-p6 <- p6.960.df %>% ggplot(aes(x = relative_bias, color = comparisons, fill = comparisons)) + 
-  geom_density(alpha = 0.6) + 
-  ggtitle(label = paste0("D) Targeted sampling")) + 
-  xlim(-50, 50) + 
-  facet_wrap(~parameter) +
-  theme(legend.title = element_blank())
-
-
-ggarrange(p1, p2, common.legend = TRUE, ncol = 1, nrow = 2) #Random sampling across age classes does better when few samples are taken
-ggarrange(p3, p4, common.legend = TRUE, ncol = 1, nrow = 2) #Targeted sampling of specific age classes performs better when sampling heavily.
-ggarrange(p5, p6, common.legend = TRUE, ncol = 1, nrow = 2, legend = "bottom")
-```
-
-```{r Figure 3}
+```{r Kin pairs}
 ####---------------------Density plots of kin detected----------------------------------------------####
+
+###ADD POPs to each graph
+(Nf_HSPs <- results.all %>% dplyr::filter(parameter == "Nfa") %>% 
+  ggplot(aes(x = HSPs_detected, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("Maternal HSPs detected") + 
+    labs(x = "HSPs") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    facet_wrap(~samples.lab))
+
+
+(Nm_HSPs <- results.all %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = HSPs_detected, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("Paternal HSPs detected") + 
+    labs(x = "HSPs") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_brewer(palette = "Set1") +
+    facet_wrap(~samples.lab))
+
+
 #---------------------Prepare data for plotting----------------------------------------------#
 #How many POPs detected per sample size?
 results.all %>% 

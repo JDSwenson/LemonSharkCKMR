@@ -298,7 +298,7 @@ if(abundance.only == "yes"){ #Should we only monitor abundance nodes?
   
 } else if(abundance.only != "yes"){ #Close abundance.only = "yes" if statement
   #------------ STEP 4: SET NODES TO MONITOR ---------------#
-  jags_params = c("Nfa", "Nfb", "Nm", "surv", "lam", "psi", "pb")
+  jags_params = c("Nfa", "Nfb", "psi", "pb", "Nm", "surv", "lam")
   
 } #Close all if statements and proceed
 

@@ -35,16 +35,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set up simulation----------------------------
-simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
-tail(simulation.log)
+script_name <- "HS.only_target.YOY_AB_est.psi.R" #Copy name of script here
+primary_goal <- "Examine whether the model can estimate psi with annual breeding" #Why am I running this simulation? Provide details
 
-script_name <- "HS.PO_target.YOY_SB.R" #Copy name of script here
-primary_goal <- "Compare results from the HS|PO model when sampling YOY specifically vs when sampling all age classes." #Why am I running this simulation? Provide details
-
-question1 <- "How does sampling of all age classes compare with targeted sampling of YOY with the HS|PO model?"
-question2 <- "Do we get a different number of HSPs and/or POPs when sampling all age classes, relative to targeted sampling of YOY?"
+question1 <- "Can the model estimate psi with annual breeding?"
+question2 <- "NA"
 question3 <- "NA"
-purpose <- "HS.PO_skipped.breeding_target.YOY" #For naming output files
+purpose <- "HS.only_target.YOY_AB_est.psi" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -52,11 +49,11 @@ target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for eac
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
-HS.only <- "no" #Do we only want to filter HS relationships?
+HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 abundance.only <- "no" #Which parameters do we want to monitor?
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-estimated.parameters <- "Nfa, Nfb, Nm, surv, lam, psi, pb"
+estimated.parameters <- "Nfb, Nm, surv, lam, psi"
 
 #rseeds <- sample(1:1000000,iterations)
 #save(rseeds, file = "rseeds_2022.04.15.rda")
@@ -79,8 +76,8 @@ juvenile.survival <- 0.8 # CHANGED FROM 0.9; juvenile survival
 Adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
-mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-non.conformists <- .05 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+non.conformists <- 0 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 num.mates <- c(1:3) #vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
@@ -152,13 +149,15 @@ simulation.df <- tibble(script_name = script_name,
                         non_conformists = non.conformists
 )
 
-simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
-
-write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
+#Save simulation settings in Simulation_log
+# simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
+# tail(simulation.log)
+# simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
+# write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 10 #Number of iterations to loop over
+iterations <- 200 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -397,7 +396,7 @@ set.seed(rseed.pop)
       
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
-    source("01_MAIN_scripts/functions/run.JAGS_HS.PO_SB.R")
+    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB.R")
 
     #Calculate expectations
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
@@ -410,7 +409,7 @@ set.seed(rseed.pop)
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("01_MAIN_scripts/functions/compile.results_HS.PO_SB.R")
+    source("01_MAIN_scripts/functions/compile.results_HS.only_SB.R")
     
     #-----------------Loop end-----------------------------
     #Bind results from previous iterations with current iteration

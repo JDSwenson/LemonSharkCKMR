@@ -36,13 +36,14 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 #-------------------Set up simulation----------------------------
 simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
+tail(simulation.log)
 
 script_name <- "HS.PO_all.age_all.samples_SB.R" #Copy name of script here
-primary_goal <- "Want to sample all age classes with the skipped-breeding model to compare to targeted sampling of YOY. No targeted sampling, no downsampling" #Why am I running this simulation? Provide details
-question1 <- "How does sampling of all age classes compare with targeted sampling of YOY?"
+primary_goal <- "Want to sample all age classes with the HS|PO skipped-breeding model to compare to targeted sampling of YOY. No targeted sampling, no downsampling" #Why am I running this simulation? Provide details
+question1 <- "How does sampling of all age classes compare with targeted sampling of YOY with the HS|PO model?"
 question2 <- "Do we get a different number of HSPs and/or POPs when sampling all age classes, relative to targeted sampling of YOY?"
 question3 <- "NA"
-purpose <- "skipped.breeding_sample.all.ages" #For naming output files
+purpose <- "HS.PO_skipped.breeding_sample.all.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
@@ -73,17 +74,18 @@ init.prop.female <- 0.5 # proportion of the initial population size that is fema
 birth.sex.ratio <- c(0.5,0.5) # The probability that each baby is F:M - has to add up to 1
 YOY.survival <- 0.7 # CHANGED FROM 0.8; young of year survival
 juvenile.survival <- 0.8 # CHANGED FROM 0.9; juvenile survival
-Adult.survival <- 0.825 # CHANGED FROM 0.9; Adult survival
+Adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-prop.off.yr <- .05 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+non.conformists <- .05 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 num.mates <- c(1:3) #vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
 ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
 ff
+ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
 
 #Stable age distribution
 props <- rep(NA, max.age+1)
@@ -142,8 +144,8 @@ simulation.df <- tibble(script_name = script_name,
                         posterior_samples = ni,
                         burn_in = nb,
                         years_sampled = length(sample.years),
-                        breeding_periodicity = breeding.interval,
-                        non_conformists = non_conformists
+                        breeding_periodicity = mating.periodicity,
+                        non_conformists = non.conformists
 )
 
 simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
@@ -454,6 +456,8 @@ set.seed(rseed.pop)
    cat(paste0("Finished iteration ", iter, ". \n Took ", iter.time, " minutes"))
    } # end loop over iterations
   
+  
+  
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
 #If using breeding individuals for Nf truth
@@ -466,7 +470,7 @@ set.seed(rseed.pop)
      mutate(total_samples = Juvenile_samples + Adult_samples) %>% 
      as_tibble()
 
-   #If using all individuals for Nf truth
+   #If using all individuals for Nf truth, instead of breeders
    # results2 <- results %>% 
    #   mutate(relative_bias = round(((Q50 - truth)/truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
    #   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
@@ -479,7 +483,8 @@ results2 %>% group_by(total_samples, parameter, purpose) %>%
 
 #Median relative bias by sample size
  results2 %>% group_by(total_samples, parameter) %>% 
-   dplyr::summarize(median = median(relative_bias), n = n())
+   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
+   dplyr::arrange(desc(median.bias))
 
  #View results
  results2 %>% dplyr::select(parameter, 
@@ -493,7 +498,6 @@ results2 %>% group_by(total_samples, parameter, purpose) %>%
                             HPD2.5,
                             HPD97.5,
                             truth,
-                            breed.truth,
                             relative_bias,
                             in_interval,
                             Exp_POPs,
@@ -501,7 +505,8 @@ results2 %>% group_by(total_samples, parameter, purpose) %>%
                             Exp_HSPs,
                             HSPs_detected,
                             iteration) %>% 
-   dplyr::arrange(parameter, iteration, total_samples) %>% 
+   #dplyr::arrange(parameter, iteration, total_samples) %>% 
+   dplyr::arrange(desc(relative_bias)) %>% 
    View()
    
  

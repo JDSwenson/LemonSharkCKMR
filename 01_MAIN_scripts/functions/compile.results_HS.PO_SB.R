@@ -27,12 +27,39 @@ lam_max <- max(adult.lambda[ref.year:n_yrs]) #Maximum lambda over estimation per
 
 #Create dataframe of estimates and truth
 estimates <- model.summary2 %>%
-  mutate(truth = c(Mom.all_truth, Mom.breed_truth, Dad.all_truth, surv_mean, lam_truth, psi_truth, pb_truth)) %>%
+  mutate(truth = c(Mom.all_truth, Mom.breed_truth, psi_truth, pb_truth, Dad.all_truth, surv_mean, lam_truth)) %>%
   as_tibble()
 
 #Extract more metrics that can help with troubleshooting and visualization
-Juv_total_samples <- sample.size.juvs * length(sample.years) # total samples
-Adult_total_samples <- sample.size.rents * length(sample.years)
+Juv_sample_prop <- juv.sample.prop #Proportion of total population sampled as juveniles
+Adult_sample_prop <- if(HS.only == "yes") 0 else rent.sample.prop #Proportion of total population sampled as adults
+
+#---------------Calculate sample sizes of juveniles and adults--------------------
+Juv.samples <- NULL
+Adult.samples <- NULL
+
+for(i in sample.years){
+  pop.size.yr <- pop.size.tibble %>% dplyr::filter(year == i)
+  
+  #Set number of juvenile samples to a specific proportion of the population  
+  sample.size.juvs <- pop.size.yr %>% 
+    mutate(sample.size = round(population_size*(juv.sample.prop/100)), 0) %>% 
+    pull(sample.size)
+  
+  #Supplement with parents
+  sample.size.rents <- pop.size.yr %>% 
+    mutate(sample.size = round(population_size*(rent.sample.prop/100)), 0) %>% 
+    pull(sample.size)
+  
+Juv.samples <- c(Juv.samples, sample.size.juvs)
+Adult.samples <- c(Adult.samples, sample.size.rents)
+  }
+
+Total.juv.samples <- sum(Juv.samples)
+Total.adult.samples <- if(HS.only == "yes") 0 else sum(Adult.samples)
+
+#Juv_total_samples <- sample.size.juvs * length(sample.years) # total samples
+#Adult_total_samples <- sample.size.rents * length(sample.years)
 pop_size_mean <- round(mean(pop.size.tibble$population_size[estimation.year:n_yrs]),0) #Mean TOTAL population size over estimation period
 
 mom.PO.matches <- mom_comps.all %>% filter(type == "PO") %>%
@@ -52,32 +79,34 @@ dad.HS.matches <- dad_comps.all %>% filter(type == "HS") %>%
   pull(matches)
 
 #Bind metrics together
-metrics <- cbind(c(rep(mom.Exp.PO, times = 2), #for Nfa, Nfb
+metrics <- cbind(c(rep(mom.Exp.PO, times = 4), #for Nfa, Nfb
                    dad.Exp.PO, #For Nm
                    rep(mom.Exp.PO + dad.Exp.PO, #For surv, lam, psi, and pb
-                       times = n_params-3)),
-                 c(rep(mom.PO.matches, times = 2),
+                       times = n_params-5)),
+                 c(rep(mom.PO.matches, times = 4),
                    dad.PO.matches,
                    rep(mom.PO.matches + dad.PO.matches,
-                       times = n_params-3)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
-                 c(rep(mom.Exp.HS, times = 2),
+                       times = n_params-5)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
+                 c(rep(mom.Exp.HS, times = 4),
                    dad.Exp.HS,
                    rep(mom.Exp.HS + dad.Exp.HS,
-                       times = n_params-3)),
-                 c(rep(mom.HS.matches, times = 2),
+                       times = n_params-5)),
+                 c(rep(mom.HS.matches, times = 4),
                    dad.HS.matches,
                    rep(mom.HS.matches + dad.HS.matches,
-                       times = n_params-3)),
-                 c(rep(length(sampled.mothers), times = 2),
+                       times = n_params-5)),
+                 c(rep(length(sampled.mothers), times = 4),
                    length(sampled.fathers),
                    rep(length(sampled.mothers) + length(sampled.fathers),
-                       times = n_params-3)), #number of unique sampled parents
+                       times = n_params-5)), #number of unique sampled parents
                  c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
-                 c(rep(Juv_total_samples, times = n_params)), # Juv total samples
-                 c(rep(Adult_total_samples, times = n_params)), # Adult total samples
+                 c(rep(Juv_sample_prop, times = n_params)), # prop population sampled-juvs
+                 c(rep(Adult_sample_prop, times = n_params)), # prop population sampled-rents
+                 c(rep(Total.juv.samples, times = n_params)), # Juv total samples
+                 c(rep(Total.adult.samples, times = n_params)), # Adult total samples
                  c(rep(iter, times = n_params)), #iteration
                  c(rep(rseed, times = n_params)))
-colnames(metrics) <- c("Exp_POPs", "POPs_detected", "Exp_HSPs", "HSPs_detected", "unique_parents_in_sample", "mean_adult_lambda", "Juvenile_samples", "Adult_samples", "iteration", "seed")
+colnames(metrics) <- c("Exp_POPs", "POPs_detected", "Exp_HSPs", "HSPs_detected", "unique_parents_in_sample", "mean_adult_lambda", "prop_sampled_juvs", "prop_sampled_adults", "total_juvenile_samples", "total_adult_samples", "iteration", "seed")
 }
 
 ####---------------------Compile results when fixing parameters------------------

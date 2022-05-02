@@ -38,18 +38,17 @@ dad.comps.prefix <- "comparisons/dad.comps"
 simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
 tail(simulation.log)
 
-script_name <- "HS.PO_target.YOY_SB.R" #Copy name of script here
-primary_goal <- "Compare results from the HS|PO model when sampling YOY specifically vs when sampling all age classes." #Why am I running this simulation? Provide details
+script_name <- "HS.PO_all.age_downsample_SB.R" #Copy name of script here
+primary_goal <- "Want to sample all age classes with the HS|PO skipped-breeding model but downsample when sample sizes are too dense to compare to results when there is no downsampling." #Why am I running this simulation? Provide details
 
-question1 <- "How does sampling of all age classes compare with targeted sampling of YOY with the HS|PO model?"
-question2 <- "Do we get a different number of HSPs and/or POPs when sampling all age classes, relative to targeted sampling of YOY?"
+question1 <- "Does downsampling improve parameter estimates when sampling all age classes in the population?"
+question2 <- "NA"
 question3 <- "NA"
-purpose <- "HS.PO_skipped.breeding_target.YOY" #For naming output files
+purpose <- "HS.PO_skipped.breeding_sample.all.ages_downsample" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
-
-target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
-down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
+target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
+down_sample <- "yes" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
 HS.only <- "no" #Do we only want to filter HS relationships?
@@ -114,11 +113,9 @@ estimation.year <- n_yrs - 5 # Set year of estimation
 sample.years <- c(n_yrs - c(3:0)) #For two years of sampling
 #sample.years <- n_yrs #One year of sampling
 #sample.size <- 300 #sample size per year
-#sample.vec.juvs <- c(50, 100, 150, 200) #vector to sample over per year
-#sample.vec.adults <- c(sample.vec.juvs/5)
-#sample.vec.total <- sample.vec.juvs + sample.vec.adults
-
-sample.vec.prop <- c(.5, 1, 1.5, 2)
+sample.vec.juvs <- c(50, 100, 150, 200) #vector to sample over per year
+sample.vec.adults <- c(sample.vec.juvs/5)
+sample.vec.total <- sample.vec.juvs + sample.vec.adults
 
 #----------------------- MCMC parameters ----------------------#
 ni <- 40000 # number of post-burn-in samples per chain
@@ -158,7 +155,7 @@ write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 10 #Number of iterations to loop over
+iterations <- 200 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -173,12 +170,12 @@ iterations <- 10 #Number of iterations to loop over
  mom.comps.tibble <- NULL
  dad.comps.tibble <- NULL
 
- sim.samples.1 <- paste0(sample.vec.prop[1], "prop.sampled")
- sim.samples.2 <- paste0(sample.vec.prop[2], "prop.sampled")
- sim.samples.3 <- paste0(sample.vec.prop[3], "prop.sampled")
- sim.samples.4 <- paste0(sample.vec.prop[4], "prop.sampled")
+sim.samples.1 <- paste0(sample.vec.juvs[1]*length(sample.years), ".samples")
+sim.samples.2 <- paste0(sample.vec.juvs[2]*length(sample.years), ".samples")
+sim.samples.3 <- paste0(sample.vec.juvs[3]*length(sample.years), ".samples")
+sim.samples.4 <- paste0(sample.vec.juvs[4]*length(sample.years), ".samples")
 
- ####Initialize array from previous checkpoint
+####Initialize array from previous checkpoint
 #Results
 #  results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
 # # 
@@ -244,33 +241,18 @@ set.seed(rseed.pop)
     rseed <- rseeds[iter]
     
   #Loop over sample sizes stored in sample.vec  
-  for(samps in 1:length(sample.vec.prop)){
-    
-    juv.sample.prop <- sample.vec.prop[samps]
-    rent.sample.prop <- juv.sample.prop/5
-    
-    #Initialize sample dataframes
+  for(samps in 1:length(sample.vec.juvs)){
+        sample.size.juvs <- sample.vec.juvs[samps] #Specify sample size for offspring (YOY)
+        sample.size.rents <- sample.size.juvs/5 #Specify sample size for parents - assume they're much rarer than offspring
+        sample.size.total <- sample.size.juvs + sample.size.rents
+
+            #Initialize sample dataframes
     sample.df_all.info <- NULL
     sample.df_temp.off = sample.df_temp.rents <- NULL
     
     #Sample population each year in sample.years and make dataframe of samples with all metadata
     for(i in sample.years){
       set.seed(rseed)
-      
-      pop.size.yr <- pop.size.tibble %>% dplyr::filter(year == i) %>% 
-        mutate(Total.juvenile.pop = population_size - Total.adult.pop)
-      
-      #Set number of juvenile samples to a specific proportion of the population  
-      sample.size.juvs <- pop.size.yr %>% 
-        mutate(sample.size = round(Total.juvenile.pop*(juv.sample.prop/100)), 0) %>% 
-        pull(sample.size)
-      
-      #Supplement with parents
-      sample.size.rents <- pop.size.yr %>% 
-        mutate(sample.size = round(Total.adult.pop*(rent.sample.prop/100)), 0) %>% 
-        pull(sample.size)
-      
-      total.prop.sampled <- round((sample.size.juvs + sample.size.rents)/(pop.size.yr$population_size), 2)
       
       if(target.YOY == "yes"){ #If targeting YOY for juvenile samples
       #Sample YOY only for half-sib analysis
@@ -421,25 +403,21 @@ set.seed(rseed.pop)
     
     #Save info for samples to examine in more detail
     sample.df_all.info <- sample.df_all.info %>% mutate(iteration = iter, 
-                                                        sample.size.juvs = Total.juv.samples, 
-                                                        sample.size.rents = Total.adult.samples,
+                                                        sample.size.juvs = sample.size.juvs, 
+                                                        sample.size.rents = sample.size.rents, 
                                                         seed = rseed)
     sample.info <- rbind(sample.info, sample.df_all.info)
   
     #Save mom and dad pairwise comparison dataframes
     mom_comps.all <- mom_comps.all %>% mutate(iteration = iter,
-                                              sample.prop.juvs = Juv_sample_prop,
-                                              sample.prop.rents = Adult_sample_prop,
-                                              sample.size.juvs = Total.juv.samples, 
-                                              sample.size.rents = Total.adult.samples,
+                                              sample.size.juvs = Juv_total_samples,
+                                              sample.size.rents = Adult_total_samples,
                                               seed = rseed)
     mom.comps.tibble <- rbind(mom.comps.tibble, mom_comps.all)
     
     dad_comps.all <- dad_comps.all %>% mutate(iteration = iter,
-                                              sample.prop.juvs = Juv_sample_prop,
-                                              sample.prop.rents = Adult_sample_prop,
-                                              sample.size.juvs = Total.juv.samples, 
-                                              sample.size.rents = Total.adult.samples,
+                                              sample.size.juvs = Juv_total_samples,
+                                              sample.size.rents = Adult_total_samples,
                                               seed = rseed)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
     
@@ -448,10 +426,10 @@ set.seed(rseed.pop)
     
   #-----------------Save output files iteratively--------------------
   
-  sim.samples.1 <- paste0(sample.vec.prop[1], "prop.sampled")
-  sim.samples.2 <- paste0(sample.vec.prop[2], "prop.sampled")
-  sim.samples.3 <- paste0(sample.vec.prop[3], "prop.sampled")
-  sim.samples.4 <- paste0(sample.vec.prop[4], "prop.sampled")
+  sim.samples.1 <- paste0(sample.vec.total[1]*length(sample.years), ".samples")
+  sim.samples.2 <- paste0(sample.vec.total[2]*length(sample.years), ".samples")
+  sim.samples.3 <- paste0(sample.vec.total[3]*length(sample.years), ".samples")
+  sim.samples.4 <- paste0(sample.vec.total[4]*length(sample.years), ".samples")
   
 #Results
    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
@@ -485,9 +463,12 @@ set.seed(rseed.pop)
 #Calculate relative bias for all estimates
 #If using breeding individuals for Nf truth
    results2 <- results %>%
-     mutate(relative_bias = round(((Q50 - truth)/truth)*100, 1)) %>% 
-     mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>%
-     mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
+     mutate(relative_bias = ifelse(parameter == "Nf", round(((Q50 - breed.truth)/breed.truth)*100,1),
+                                   round(((Q50 - truth)/truth)*100, 1))) %>% #Can change truth to breed.truth if looking for number of active breeders
+     mutate(in_interval = ifelse(parameter == "Nf",
+                                 ifelse(HPD2.5 < breed.truth & breed.truth < HPD97.5, "Y", "N"),
+                                 ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N"))) %>%
+     mutate(total_samples = Juvenile_samples + Adult_samples) %>% 
      as_tibble()
 
    #If using all individuals for Nf truth, instead of breeders
@@ -498,11 +479,11 @@ set.seed(rseed.pop)
    #   as_tibble()
    
 #Within HPD interval?
-results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>% 
+results2 %>% group_by(total_samples, parameter, purpose) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% View()
 
 #Median relative bias by sample size
- results2 %>% group_by(prop_sampled_juvs, parameter) %>% 
+ results2 %>% group_by(total_samples, parameter) %>% 
    dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
    dplyr::arrange(desc(median.bias))
 
@@ -513,8 +494,6 @@ results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>%
                             Q97.5,
                             mean,
                             sd,
-                            prop_sampled_juvs,
-                            prop_sampled_adults,
                             total_samples,
                             purpose,
                             HPD2.5,
@@ -571,7 +550,7 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
 
 #-------------Quick viz of results--------------#
 #Box plot of relative bias
-ggplot(data=results2, aes(x=factor(prop_sampled_juvs))) +
+ggplot(data=results2, aes(x=factor(total_samples))) +
   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
   ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +

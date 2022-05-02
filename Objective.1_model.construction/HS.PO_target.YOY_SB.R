@@ -34,7 +34,7 @@ mom.comps.prefix <- "comparisons/mom.comps"
 dad.comps.prefix <- "comparisons/dad.comps"
 
 
-#-------------------Set up simulation----------------------------
+-------------------Set up simulation----------------------------
 simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
 tail(simulation.log)
 
