@@ -1,5 +1,28 @@
 library(jagsUI)
 
+
+
+
+
+BI.df.87 <- BI.df %>% dplyr::filter(birth.year == 87)
+BI.df.88 <- BI.df %>% dplyr::filter(birth.year == 88)
+BI.df.89 <- BI.df %>% dplyr::filter(birth.year == 89)
+BI.df.90 <- BI.df %>% dplyr::filter(birth.year == 90)
+
+#How many mothers gave birth in both years?
+BI.df.87 %>% dplyr::filter(mother.x %in% BI.df.89$mother.x) %>% 
+  nrow()
+
+BI.df.89 %>% dplyr::filter(mother.x %in% BI.df.90$mother.x) %>% 
+  nrow()
+
+#How many mothers from 87 were alive in 89?
+BI.df.87 %>% dplyr::filter(mother.x %in% loopy.list[[89]]$indv.name) %>% 
+  nrow()
+
+BI.df.88 %>% dplyr::filter(mother.x %in% BI.df.90$mother.x) %>% 
+  nrow()
+
 #Make sure simulation is doing what I think
 head(sims.list.1)
 head(sims.list.2)

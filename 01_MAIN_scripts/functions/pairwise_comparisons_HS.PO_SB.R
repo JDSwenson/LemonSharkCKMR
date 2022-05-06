@@ -480,7 +480,90 @@ return(list(HS.samps.df.down,
 
 
 
-
+calc.psi <- function(loopy.list, mom_comps.all){
+  #Calculate breeding interval
+  #Initialize sample dataframes
+  BI.df <- NULL
+  BI.df_temp <- NULL
+  
+  ref.years <- c(min(mom_comps.all$ref.year):n_yrs)
+  
+  for(i in ref.years){ #Extract all YOY for each year sampled
+    BI.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
+      dplyr::filter(age.x == 0)
+    
+    #Combine all
+    BI.df <- bind_rows(BI.df, BI.df_temp)
+  }
+  
+  #Extract unique mothers for each birth year
+  BI.df <- BI.df %>% as_tibble() %>% 
+    arrange(birth.year) %>% 
+    distinct(mother.x, birth.year, .keep_all = TRUE)
+  
+  #-----------------Identify all relatives in population since estimation year and find breeding interval--------------------#
+  pairwise.BI.df <- data.frame(t(combn(BI.df$indv.name, m=2)))  # generate all combinations of the elements of x, taken m at a time.
+  colnames(pairwise.BI.df) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
+  
+  #Create dataframe of pairwise comparisons with just individual IDs
+  head(BI.df)
+  #head(pairwise.df)
+  
+  #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
+  OlderSib_birthyears.BI <- BI.df %>%
+    select(older.sib = indv.name, 
+           older.sib.birth = birth.year, 
+           older.sib.age = age.x, 
+           older.sib.mom = mother.x,
+           older.sib.dad = father.x)
+  
+  #Combine the two dataframes above to extract birth year and parents for each individual in the pairwise comparison matrix. 
+  #This is the main pairwise comparison matrix with all (relevant) comparisons and individual data.###
+  pairwise.BI.all.info <- pairwise.BI.df %>% left_join(OlderSib_birthyears.BI, by = "older.sib") %>% 
+    as_tibble() %>%  
+    left_join(BI.df, by = "indv.name") %>% 
+    dplyr::rename("younger.sib" = indv.name, 
+                  "younger.sib.birth" = birth.year, 
+                  "younger.sib.age" = age.x, 
+                  "younger.sib.mom" = mother.x, 
+                  "younger.sib.dad" = father.x) %>%
+    dplyr::select(older.sib, 
+                  older.sib.birth, 
+                  older.sib.age, 
+                  younger.sib, 
+                  younger.sib.birth, 
+                  younger.sib.age, 
+                  older.sib.mom, 
+                  younger.sib.mom, 
+                  older.sib.dad, 
+                  younger.sib.dad) %>% 
+    dplyr::filter(older.sib.birth != younger.sib.birth)
+  
+  
+  #Extract all positive maternal half-sib comparisons from sampled years
+  positives.mom.BI <- pairwise.BI.all.info %>% filter(older.sib.mom == younger.sib.mom) %>% 
+    mutate(yr.gap = younger.sib.birth - older.sib.birth) %>% 
+    mutate(BI = ifelse(yr.gap %% 2 == 0, "even", "odd")) %>% #If the year gap between ha;f-sibs is divisible by 2, then call the breeding interval (BI) "even"
+    dplyr::distinct(older.sib.birth, younger.sib.birth, younger.sib.mom, .keep_all = TRUE) #Duplicative of earlier; making sure cohort size isn't biasing things here
+  
+  #Everything matches up re: positives and 
+  positives.mom.BI %>% group_by(BI) %>% summarize(n()) #How many positive comparisons for 
+  
+  skipped.moms <- positives.mom.BI %>% dplyr::filter(BI == "even") %>% 
+    dplyr::distinct(younger.sib.mom) %>% 
+    pull(younger.sib.mom) #Should be the same as the older sib mom
+  annual.moms <- positives.mom.BI %>% dplyr::filter(BI == "odd") %>% 
+    dplyr::distinct(younger.sib.mom) %>% 
+    pull(younger.sib.mom) #Should be the same as the older sib mom
+  
+  #Which moms ONLY reproduced in even years?
+  skipped.only.moms <- skipped.moms[which(!skipped.moms %in% annual.moms)]
+  all.moms <- unique(positives.mom.BI$younger.sib.mom)
+  
+  #Percent of individuals that only breed when years are evenly spaced
+  (psi.truth <- length(skipped.only.moms)/length(all.moms))
+  
+}
 
 
 
@@ -500,7 +583,7 @@ mom_age.gap.denom <- mom_C.HS %>% distinct(mort.yrs) %>%
   pull(s)
 
 #What's the true abundance?
-mom_N.truth <- pop.size.tibble %>% filter(year == 85) %>% 
+mom_N.truth <- pop.size.tibble %>% filter(year == estimation.year) %>% 
   distinct(Num.mothers) %>% 
   pull(Num.mothers)
 
@@ -514,20 +597,20 @@ mom_C.HS.Exp <- mom_C.HS %>%
   summarize(cross.cohort.instances = n()) %>% 
   mutate(BI = ifelse(mort.yrs %% 2 == 0, "even", "odd")) %>% 
   mutate(cum.surv = Adult.survival ^ mort.yrs) %>%
-     mutate(Ct_y = ifelse(BI == "even", #Uncomment if wanting to account for psi
-                          cross.cohort.instances * cum.surv * psi.truth,
-                          cross.cohort.instances * cum.surv * (1-psi.truth))) %>% 
+     mutate(Ct = ifelse(BI == "even", #Uncomment if wanting to account for psi
+                          cum.surv * psi.truth,
+                          cum.surv * (1-psi.truth))) %>% 
   #mutate(Ct_y = cross.cohort.instances * cum.surv) %>%  #Assume no skipped-breeding
-  mutate(C_yr = Ct_y/mom_age.gap.denom) %>% 
+  mutate(C_yr = (Ct*cross.cohort.instances)/mom_age.gap.denom) %>% 
   left_join(mom_comps.yr.df, by = "mort.yrs") %>% 
-  mutate(Exp.R = (cum.surv*comps.yr)/mom_N.truth)
-
-#mom_C.HS.Exp.R <- sum(mom_C.HS.Exp$Exp.R)
+  mutate(Exp.R = (Ct*comps.yr)/mom_N.truth)
 
 mom_weighted.mean.C <- sum(mom_C.HS.Exp$C_yr)
 mom_total.comps <- sum(mom_comps.yr.df$comps.yr)
 
-(mom.Exp.HS <- round((mom_weighted.mean.C * mom_total.comps)/mom_N.truth, 0))
+#(mom.Exp.HS <- round((mom_weighted.mean.C * mom_total.comps)/mom_N.truth, 0))
+mom.Exp.HS <- round(sum(mom_C.HS.Exp$Exp.R), 0)
+
 
 #Calculate Exp(R) for MPOPs
 mom_C.PO <- mom_comps.all %>% dplyr::filter(type == "PO")
@@ -557,7 +640,7 @@ dad_N.truth <- pop.size.tibble %>% filter(year == 85) %>%
 dad_comps.yr.df <- dad_C.HS %>% group_by(mort.yrs) %>% 
   summarize(comps.yr = sum(all))
 
-#Calculate expected MHSPs 
+#Calculate expected FHSPs 
 dad_C.HS.Exp <- dad_C.HS %>% 
   group_by(mort.yrs) %>% 
   summarize(cross.cohort.instances = n()) %>% 
@@ -567,12 +650,12 @@ dad_C.HS.Exp <- dad_C.HS %>%
   left_join(dad_comps.yr.df, by = "mort.yrs") %>% 
   mutate(Exp.R = (cum.surv*comps.yr)/dad_N.truth)
 
-dad_C.HS.Exp.R <- sum(dad_C.HS.Exp$Exp.R)
-
 dad_weighted.mean.C <- sum(dad_C.HS.Exp$C_yr)
 dad_total.comps <- sum(dad_comps.yr.df$comps.yr)
 
-(dad.Exp.HS <- round((dad_weighted.mean.C * dad_total.comps)/dad_N.truth, 0))
+#(dad.Exp.HS <- round((dad_weighted.mean.C * dad_total.comps)/dad_N.truth, 0))
+dad.Exp.HS <- round(sum(dad_C.HS.Exp$Exp.R), 0) #Sum expected HAPs per year
+
 
 #Calculate Exp(R) for MPOPs
 dad_C.PO <- dad_comps.all %>% dplyr::filter(type == "PO")

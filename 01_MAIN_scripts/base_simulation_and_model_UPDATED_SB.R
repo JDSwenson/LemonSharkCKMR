@@ -341,6 +341,8 @@ set.seed(rseed.pop)
     dad_comps.all %>% group_by(type) %>% 
       summarize(sum(yes))
     
+    #Calculate psi truth
+    psi.truth <- calc.psi(loopy.list, mom_comps.all)
 
     #source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO_SB.R") #Already loaded above; here for troubleshooting
     ####-----------------------------Downsample if more than max.HSPs------------------------------------####
@@ -507,29 +509,29 @@ results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>%
    dplyr::arrange(desc(median.bias))
 
  #View results
- results2 %>% dplyr::select(parameter, 
-                            Q2.5,
-                            Q50,
-                            Q97.5,
-                            mean,
-                            sd,
-                            prop_sampled_juvs,
-                            prop_sampled_adults,
-                            total_samples,
-                            purpose,
-                            HPD2.5,
-                            HPD97.5,
-                            truth,
-                            relative_bias,
-                            in_interval,
-                            Exp_POPs,
-                            POPs_detected,
-                            Exp_HSPs,
-                            HSPs_detected,
-                            iteration) %>% 
-   #dplyr::arrange(parameter, iteration, total_samples) %>% 
-   dplyr::arrange(desc(relative_bias)) %>% 
-   View()
+ # results2 %>% dplyr::select(parameter, 
+ #                            Q2.5,
+ #                            Q50,
+ #                            Q97.5,
+ #                            mean,
+ #                            sd,
+ #                            prop_sampled_juvs,
+ #                            prop_sampled_adults,
+ #                            total_samples,
+ #                            purpose,
+ #                            HPD2.5,
+ #                            HPD97.5,
+ #                            truth,
+ #                            relative_bias,
+ #                            in_interval,
+ #                            Exp_POPs,
+ #                            POPs_detected,
+ #                            Exp_HSPs,
+ #                            HSPs_detected,
+ #                            iteration) %>% 
+ #   #dplyr::arrange(parameter, iteration, total_samples) %>% 
+ #   dplyr::arrange(desc(relative_bias)) %>% 
+ #   View()
    
  
  #Mean number of parents detected

@@ -98,7 +98,6 @@ lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
       inits[[c]] = list(
         #If estimating all parameters
         surv = runif(1, min=.5, max=.95),
-        #surv = .8,
         Nfb = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
         lam = 1
@@ -124,7 +123,7 @@ lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
     #surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
     lam ~ dnorm(1, lam.tau)
-    #psi ~ dunif(0, 1) #Percent of animals breeding bi-ennially
+    psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     
     #PRIORS - informative

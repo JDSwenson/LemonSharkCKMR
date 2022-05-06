@@ -35,13 +35,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set up simulation----------------------------
-script_name <- "HS.only_target.YOY_SB.R" #Copy name of script here
-primary_goal <- "Determine best sampling scheme for the HS model." #Why am I running this simulation? Provide details
+script_name <- "HS.only_target.YOY_SB.troubleshoot.R" #Copy name of script here
+primary_goal <- "Troubleshoot: inform survival" #Why am I running this simulation? Provide details
 
-question1 <- "How does sampling of all age classes compare with targeted sampling of YOY with the HS only model?"
-question2 <- "Do we get a different number of HSPs and/or POPs when sampling all age classes, relative to targeted sampling of YOY?"
+question1 <- "Troubleshoot"
+question2 <- "What if I give survival an informative prior?"
 question3 <- "NA"
-purpose <- "HS.only_target.YOY_SB" #For naming output files
+purpose <- "Troubleshoot" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -53,7 +53,8 @@ HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 abundance.only <- "no" #Which parameters do we want to monitor?
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-estimated.parameters <- "Nfb, Nm, surv, lam, psi"
+jags_params = c("Nfb", "psi", "Nm", "surv", "lam")
+estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
 #save(rseeds, file = "rseeds_2022.04.15.rda")
@@ -77,7 +78,7 @@ Adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-non.conformists <- .05 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+non.conformists <- 0.0 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 num.mates <- c(1:3) #vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
@@ -193,9 +194,16 @@ iterations <- 200 #Number of iterations to loop over
 
 
 #rseed.pop <- sample(1:100000000, size = 1)
-rseed.pop <- 87625053 #Want to use the same population for all simulations
-set.seed(rseed.pop)
+#rseed.pop <- 87625053 #Want to use the same population for all simulations
+#set.seed(rseed.pop)
 
+ for(iter in 1:iterations) {
+   #  set.seed(rseeds[iter])
+   sim.start <- Sys.time()
+   #rseed <- sample(1:1000000,1)
+   set.seed(rseeds[iter])
+   rseed <- rseeds[iter]
+   
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
                init.prop.female = init.prop.female,
@@ -215,15 +223,15 @@ set.seed(rseed.pop)
   loopy.list <- out[[1]] #List of dataframes for each year of simulation
   pop.size.tibble <- out[[2]] %>%  #population parameters for each year of simulation
     as_tibble() %>% 
-    mutate(seed = rseed.pop)
+    mutate(seed = rseed)
 
   parents.tibble <- out[[3]] #Tibble for each parent for each year to check the distribution later
   
   #Save parents tibble
-  saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
   
   # Detailed info on population size
-  saveRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  saveRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
 
   
   # saveRDS(loopy.list, file = "../loopy.list")
@@ -237,13 +245,6 @@ set.seed(rseed.pop)
   source("./01_MAIN_scripts/functions/query_results_SB.R")
   
   #-----------------------Collect samples-------------------------
-  for(iter in 1:iterations) {
-    #  set.seed(rseeds[iter])
-    sim.start <- Sys.time()
-    #rseed <- sample(1:1000000,1)
-    set.seed(rseeds[iter])
-    rseed <- rseeds[iter]
-    
   #Loop over sample sizes stored in sample.vec  
   for(samps in 1:length(sample.vec.prop)){
     
@@ -255,8 +256,9 @@ set.seed(rseed.pop)
     sample.df_temp.off = sample.df_temp.rents <- NULL
     
     #Sample population each year in sample.years and make dataframe of samples with all metadata
-    for(i in sample.years){
-      set.seed(rseed)
+    set.seed(rseed)
+    
+        for(i in sample.years){
       
       pop.size.yr <- pop.size.tibble %>% dplyr::filter(year == i) %>% 
         mutate(Total.juvenile.pop = population_size - Total.adult.pop)
@@ -401,6 +403,7 @@ set.seed(rseed.pop)
       
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
+      set.seed(rseed)
     source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB.R")
 
     #Calculate expectations
@@ -420,8 +423,7 @@ set.seed(rseed.pop)
     #Bind results from previous iterations with current iteration
     (results.temp <- cbind(estimates, metrics) %>% 
        mutate(purpose = purpose))
-    results <- rbind(results, results.temp) %>% 
-      mutate(purpose = purpose)
+    results <- rbind(results, results.temp)
     
     
     #Save info for samples to examine in more detail
@@ -495,6 +497,8 @@ set.seed(rseed.pop)
      mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
      as_tibble()
 
+ 
+ results2 <- rbind(results2, results)
    #If using all individuals for Nf truth, instead of breeders
    # results2 <- results %>% 
    #   mutate(relative_bias = round(((Q50 - truth)/truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
@@ -504,37 +508,37 @@ set.seed(rseed.pop)
    
 #Within HPD interval?
 results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% View()
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
 #Median relative bias by sample size
  results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>% 
    dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
    dplyr::arrange(desc(median.bias))
 
- #View results
- results2 %>% dplyr::select(parameter, 
-                            Q2.5,
-                            Q50,
-                            Q97.5,
-                            mean,
-                            sd,
-                            prop_sampled_juvs,
-                            prop_sampled_adults,
-                            total_samples,
-                            purpose,
-                            HPD2.5,
-                            HPD97.5,
-                            truth,
-                            relative_bias,
-                            in_interval,
-                            Exp_POPs,
-                            POPs_detected,
-                            Exp_HSPs,
-                            HSPs_detected,
-                            iteration) %>% 
-   #dplyr::arrange(parameter, iteration, total_samples) %>% 
-   dplyr::arrange(desc(relative_bias)) %>% 
-   View()
+ # #View results
+ # results2 %>% dplyr::select(parameter, 
+ #                            Q2.5,
+ #                            Q50,
+ #                            Q97.5,
+ #                            mean,
+ #                            sd,
+ #                            prop_sampled_juvs,
+ #                            prop_sampled_adults,
+ #                            total_samples,
+ #                            purpose,
+ #                            HPD2.5,
+ #                            HPD97.5,
+ #                            truth,
+ #                            relative_bias,
+ #                            in_interval,
+ #                            Exp_POPs,
+ #                            POPs_detected,
+ #                            Exp_HSPs,
+ #                            HSPs_detected,
+ #                            iteration) %>% 
+ #   #dplyr::arrange(parameter, iteration, total_samples) %>% 
+ #   dplyr::arrange(desc(relative_bias)) %>% 
+ #   View()
    
  
  #Mean number of parents detected

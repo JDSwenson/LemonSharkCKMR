@@ -78,7 +78,7 @@ Adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-non.conformists <- 0 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+non.conformists <- 0.05 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 num.mates <- c(1:3) #vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
@@ -341,7 +341,9 @@ set.seed(rseed.pop)
     
     dad_comps.all %>% group_by(type) %>% 
       summarize(sum(yes))
-    
+
+    #Calculate psi truth
+    psi.truth <- calc.psi(loopy.list, mom_comps.all)    
 
     #source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO_SB.R") #Already loaded above; here for troubleshooting
     ####-----------------------------Downsample if more than max.HSPs------------------------------------####
@@ -502,37 +504,36 @@ set.seed(rseed.pop)
    
 #Within HPD interval?
 results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% View()
-
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 #Median relative bias by sample size
  results2 %>% group_by(prop_sampled_juvs, parameter) %>% 
    dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
    dplyr::arrange(desc(median.bias))
 
  #View results
- results2 %>% dplyr::select(parameter, 
-                            Q2.5,
-                            Q50,
-                            Q97.5,
-                            mean,
-                            sd,
-                            prop_sampled_juvs,
-                            prop_sampled_adults,
-                            total_samples,
-                            purpose,
-                            HPD2.5,
-                            HPD97.5,
-                            truth,
-                            relative_bias,
-                            in_interval,
-                            Exp_POPs,
-                            POPs_detected,
-                            Exp_HSPs,
-                            HSPs_detected,
-                            iteration) %>% 
-   #dplyr::arrange(parameter, iteration, total_samples) %>% 
-   dplyr::arrange(desc(relative_bias)) %>% 
-   View()
+ # results2 %>% dplyr::select(parameter, 
+ #                            Q2.5,
+ #                            Q50,
+ #                            Q97.5,
+ #                            mean,
+ #                            sd,
+ #                            prop_sampled_juvs,
+ #                            prop_sampled_adults,
+ #                            total_samples,
+ #                            purpose,
+ #                            HPD2.5,
+ #                            HPD97.5,
+ #                            truth,
+ #                            relative_bias,
+ #                            in_interval,
+ #                            Exp_POPs,
+ #                            POPs_detected,
+ #                            Exp_HSPs,
+ #                            HSPs_detected,
+ #                            iteration) %>% 
+ #   #dplyr::arrange(parameter, iteration, total_samples) %>% 
+ #   dplyr::arrange(desc(relative_bias)) %>% 
+ #   View()
    
  
  #Mean number of parents detected

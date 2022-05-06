@@ -120,9 +120,10 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
   
   #Add all mothers that are meant to breed in the year, plus a small proportion that are not
   mothers <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle == repro.cycle.vec[v+1]) #determine which females are available to breed in this year; this is an index
-  mothers.off.yr <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle != repro.cycle.vec[v+1])
-  mom.off.add <- sample(mothers.off.yr, 
-                        size = length(mothers.off.yr)*non.conformists)
+
+    mothers.off.yr <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle != repro.cycle.vec[v+1])
+    mom.off.add <- sample(mothers.off.yr, 
+                          size = length(mothers.off.yr)*non.conformists)
   
   mothers <- c(mothers, mom.off.add) #If commented out, assume everyone breeds at the expected breeding interval
   

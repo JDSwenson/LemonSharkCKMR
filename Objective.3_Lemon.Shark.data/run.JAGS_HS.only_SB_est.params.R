@@ -2,7 +2,7 @@
 yrs <- c(estimation.year:n_yrs)
 ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
 
-mean.adult.lambda <- mean(adult.lambda[ref.year:n_yrs], na.rm=T)
+#mean.adult.lambda <- mean(adult.lambda[ref.year:n_yrs], na.rm=T)
 
 #Create vectors of data for JAGS
 #Mom
