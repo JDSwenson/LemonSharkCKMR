@@ -1,0 +1,8 @@
+HS.only_target.YOY_SimPsi0_0.0NonConform_informative.priors.R
+HS.only_target.YOY_SimPsi1_0.05NonConform_informative.priors.R
+HS.only_sample.all.ages_SimPsi0_0.0NonConform_informative.priors.R
+HS.only_sample.all.ages_SimPsi1_0.05NonConform_informative.priors.R
+HS.only_target.YOY_SimPsi0_0.0NonConform_uninf.priors.R
+HS.only_target.YOY_SimPsi1_0.5NonConform_uninf.priors.R
+HS.only_sample.all.ages_SimPsi1_0.05NonConform_uninf.priors.R
+HS.only_sample.all.ages_SimPsi0_0.0NonConform_uninf.priors.R

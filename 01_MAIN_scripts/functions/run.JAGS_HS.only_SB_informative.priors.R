@@ -123,7 +123,7 @@ lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
     #surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
     lam ~ dnorm(1, lam.tau)
-    psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
+    #psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     
     #PRIORS - informative

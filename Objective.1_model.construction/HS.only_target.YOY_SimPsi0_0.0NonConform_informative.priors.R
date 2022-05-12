@@ -35,13 +35,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set up simulation----------------------------
-script_name <- "HS.only_target.YOY_SB_new.pops_informative.priors_psi.surv.R" #Copy name of script here
+script_name <- "HS.only_target.YOY_SimPsi0_informative.priors.R" #Copy name of script here
 primary_goal <- "Figure out how the model performs with prior information regarding psi and survival when psi is set to 0 (i.e. no systemic skipped-breeding)." #Why am I running this simulation? Provide details
 
 question1 <- "How does prior information for survival and psi affect model performance?"
 question2 <- "How does the model perform when I simulate a new population with each iteration?"
 question3 <- "I changed the way the expected HSPs is calculated: does this make the expected and observed match up better?"
-purpose <- "HS.only_target.YOY_SB_psi0_new.pops_informative.priors_psi.surv" #For naming output files
+purpose <- "HS.only_target.YOY_SimPsi0_0.0NonConform_informative.priors" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -150,10 +150,10 @@ simulation.df <- tibble(script_name = script_name,
 )
 
 #Save simulation settings in Simulation_log
-   # simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
-   #  tail(simulation.log)
-   #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
-   #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
+     # simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
+     #  tail(simulation.log)
+     #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
+     #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
@@ -236,9 +236,9 @@ iterations <- 100 #Number of iterations to loop over
   # saveRDS(loopy.list, file = "../loopy.list")
   # saveRDS(parents.tibble, file = "../parents.tibble")
   # saveRDS(pop.size.tibble, file = "../pop.size.tibble")
-  # loopy.list <- readRDS("loopy.list")
-  # parents.tibble <- readRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-  #pop.size.tibble <- readRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+  # loopy.list <- readRDS("../loopy.list_no.nonconformists")
+   parents.tibble <- readRDS(file = "../parents.tibble_no.nonconformists")
+  pop.size.tibble <- readRDS(file = "../pop.size.tibble_no.nonconformists")
   # 
   #organize results and calculate summary statistics from the simulation
   source("./01_MAIN_scripts/functions/query_results_SB.R")
@@ -403,7 +403,7 @@ iterations <- 100 #Number of iterations to loop over
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB_informative.priors_psi0.R")
+    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB_informative.priors.R")
 
     #Calculate expectations
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)

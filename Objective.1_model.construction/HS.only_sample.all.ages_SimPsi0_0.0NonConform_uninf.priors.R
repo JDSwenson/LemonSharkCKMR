@@ -35,24 +35,24 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set up simulation----------------------------
-script_name <- "HS.only_target.YOY_SB_new.pops_informative.priors_psi.surv.R" #Copy name of script here
-primary_goal <- "Figure out how the model performs with prior information regarding psi and survival when psi is set to 0 (i.e. no systemic skipped-breeding)." #Why am I running this simulation? Provide details
+script_name <- "HS.only_sample.all.ages_SimPsi0_0.0NonConform_uninf.priors.R" #Copy name of script here
+primary_goal <- "Figure out how the model performs with prior information regarding psi and survival." #Why am I running this simulation? Provide details
 
 question1 <- "How does prior information for survival and psi affect model performance?"
 question2 <- "How does the model perform when I simulate a new population with each iteration?"
 question3 <- "I changed the way the expected HSPs is calculated: does this make the expected and observed match up better?"
-purpose <- "HS.only_target.YOY_SB_psi0_new.pops_informative.priors_psi.surv" #For naming output files
+purpose <- "HS.only_sample.all.ages_SimPsi0_0.0NonConform_uninf.priors" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "psi" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nfb", "Nm", "surv", "lam")
+fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+jags_params = c("Nfb", "psi", "Nm", "surv", "lam")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -150,10 +150,10 @@ simulation.df <- tibble(script_name = script_name,
 )
 
 #Save simulation settings in Simulation_log
-   # simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
-   #  tail(simulation.log)
-   #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
-   #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
+ # simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
+ #  tail(simulation.log)
+ #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
+ #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
@@ -403,7 +403,7 @@ iterations <- 100 #Number of iterations to loop over
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB_informative.priors_psi0.R")
+    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB_uninformative.priors.R")
 
     #Calculate expectations
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
@@ -416,7 +416,7 @@ iterations <- 100 #Number of iterations to loop over
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("01_MAIN_scripts/functions/compile.results_HS.only_SB_fixed.params.R")
+    source("01_MAIN_scripts/functions/compile.results_HS.only_SB.R")
     
     #-----------------Loop end-----------------------------
     #Bind results from previous iterations with current iteration

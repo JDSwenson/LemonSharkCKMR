@@ -20,7 +20,7 @@ library(viridis)
 
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
-purpose.combo <- "Determine_optimal_sampling_scheme_and_performance_w_psi_and_surv_psi0_0perc_nonConform" #What am I comparing right now? This will be used to name output files
+purpose.combo <- "Determine_optimal_sampling_scheme_and_performance_w_psi_and_surv" #What am I comparing right now? This will be used to name output files
 
 
 #----------------Read in files ------------------------------
@@ -35,23 +35,23 @@ MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 purpose1.lab = purpose2.lab = purpose3.lab = purpose4.lab <- NULL
 
 #------------- Simulation parameters and labels  ----------------#
-date.of.simulation1 <- "09May2022"
-purpose1 <- "HS.only_target.YOY_SimPsi0_0.0NonConform_uninf.priors"
+date.of.simulation1 <- "04May2022"
+purpose1 <- "HS.only_target.YOY_SB_new.pops_uninf.priors"
 purpose1.lab <- "Targeted sampling - uninformative priors on survival and psi"
 model.type1 <- "HS.only"
 
-date.of.simulation2 <- "09May2022"
-purpose2 <- "HS.only_target.YOY_SimPsi0_0.0NonConform_informative.priors"
+date.of.simulation2 <- "04May2022"
+purpose2 <- "HS.only_target.YOY_SB_new.pops_informative.priors_psi.surv"
 purpose2.lab <- "Targeted sampling - informed prior on survival; psi fixed"
 model.type2 <- "HS.only"
 
-date.of.simulation3 <- "09May2022"
-purpose3 <- "HS.only_sample.all.ages_SimPsi0_0.0NonConform_uninf.priors"
+date.of.simulation3 <- "04May2022"
+purpose3 <- "HS.only_sample.all.ages_SB_new.pops_uninf.priors"
 purpose3.lab <- "All ages sampled - uninformative priors on survival and psi"
 model.type3 <- "HS.only"
 
-date.of.simulation4 <- "09May2022"
-purpose4 <- "HS.only_sample.all.ages_SimPsi0_0.0NonConform_informative.priors"
+date.of.simulation4 <- "04May2022"
+purpose4 <- "HS.only_sample.all.ages_SB_new.pops_informative.priors_psi.surv"
 purpose4.lab <- "All ages sampled - informed prior on survival; psi fixed"
 model.type4 <- "HS.only"
 
@@ -253,7 +253,7 @@ results.all %>% group_by(model_type, purpose.lab, total_samples, parameter) %>%
                    percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
 #  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
   arrange(mean.cv) %>% 
-  write_csv(file = paste0(results_location, "bias_and_precision/Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
+  write_csv(file = paste0(results_location, "Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
 
 
 #-----------------------------Numbers of Kin pairs---------------------#
@@ -860,8 +860,7 @@ all.4viz$purpose.lab <- factor(all.4viz$purpose.lab, levels = c(purpose1.lab, pu
   theme_bw() + 
   theme(legend.title = element_blank()) + 
   scale_colour_brewer(palette = "Set1") +
-  facet_wrap(~proportion_sampled) +
-  guides(color = guide_legend(nrow = 2)))
+  facet_wrap(~proportion_sampled))
 
 
 (p.lam <- all.4viz %>% dplyr::filter(parameter == "lam") %>% 
@@ -923,9 +922,9 @@ all.4viz$purpose.lab <- factor(all.4viz$purpose.lab, levels = c(purpose1.lab, pu
 #     facet_wrap(~samples))
 
 
-#HPDI.plots.N <- ggarrange(p.Nfb, p.Nm, common.legend = TRUE, legend = "right")
+
 #Save plots so I can load them quickly later
-HPDI.plot.list <- list(p.Nfb, p.psi, p.Nm, p.surv, p.lam)
+HPDI.plot.list <- list(p.Nfb, p.psi, p.Nm, p.surv)
 #Save the plots as a list, so I can load them later and plot with ggarrange/annotate_figure
 saveRDS(HPDI.plot.list, file = paste0(results_plots_location, "plot_lists/", purpose.combo, "_HPDI_line_plots"))
 ```
@@ -959,7 +958,7 @@ saveRDS(HPDI.plot.list, file = paste0(results_plots_location, "plot_lists/", pur
 (p2.surv <- results.all %>% dplyr::filter(parameter == "surv") %>% 
   ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
   geom_density(alpha = 0.6) + 
-  ggtitle("B) Survival") + 
+  ggtitle("B)") + 
   labs(x = "Relative bias of posterior median") +
   geom_vline(xintercept=c(0), linetype="dotted") +
   theme_bw() + 
@@ -1021,7 +1020,6 @@ saveRDS(HPDI.plot.list, file = paste0(results_plots_location, "plot_lists/", pur
 #     xlim(-100, 100) + 
 #     facet_wrap(~samples.lab))
 
-RelBias.Density.Plots.N <- ggarrange(p2.Nfb, p2.Nm, common.legend = TRUE, legend = "none")
 #Save plots so I can load them quickly later
 Density.plot.list <- list(p2.Nfb, p2.psi, p2.Nm, p2.surv, p2.lam)
 #Save the plots as a list, so I can load them later and plot with ggarrange/annotate_figure
@@ -1030,10 +1028,10 @@ saveRDS(Density.plot.list, file = paste0(results_plots_location, "plot_lists/", 
 
 ```{r print figures}
 #Male and female HPDI and relative bias for low and high sample sizes
-ggarrange(p.Nfb, p.Nm, p2.Nfb, p2.Nm, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom")
+ggarrange(HPDI.plots.N, RelBias.Density.Plots.N, common.legend = TRUE, ncol = 2)
 
 #Survival HPDI and relative bias for all four sample sizes
-ggarrange(p.surv, p2.surv, common.legend = TRUE, nrow = 2, legend = "bottom")
+Surv.plots <- ggarrange(p.surv, p2.surv, common.legend = TRUE, nrow = 2, legend = "bottom")
 
 #annotate_figure(p = HPDI.plots.N, fig.lab = "A)", fig.lab.pos = "top.left", fig.lab.size = 18, fig.lab.face = "bold")
 ```
