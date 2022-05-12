@@ -552,6 +552,7 @@ calc.psi <- function(loopy.list, mom_comps.all){
   skipped.moms <- positives.mom.BI %>% dplyr::filter(BI == "even") %>% 
     dplyr::distinct(younger.sib.mom) %>% 
     pull(younger.sib.mom) #Should be the same as the older sib mom
+  
   annual.moms <- positives.mom.BI %>% dplyr::filter(BI == "odd") %>% 
     dplyr::distinct(younger.sib.mom) %>% 
     pull(younger.sib.mom) #Should be the same as the older sib mom

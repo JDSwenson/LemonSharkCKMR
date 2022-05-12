@@ -125,7 +125,7 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
     mom.off.add <- sample(mothers.off.yr, 
                           size = length(mothers.off.yr)*non.conformists)
   
-  mothers <- c(mothers, mom.off.add) #If commented out, assume everyone breeds at the expected breeding interval
+  mothers <- c(mothers, mom.off.add)
   
   
   

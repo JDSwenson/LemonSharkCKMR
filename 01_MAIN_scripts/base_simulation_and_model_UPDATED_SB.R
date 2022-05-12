@@ -52,11 +52,11 @@ target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for eac
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
-HS.only <- "no" #Do we only want to filter HS relationships?
+HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 abundance.only <- "no" #Which parameters do we want to monitor?
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-estimated.parameters <- "Nfa, Nfb, Nm, surv, lam, psi, pb"
+estimated.parameters <- "Nfb, Nm, surv, lam, psi"
 
 #rseeds <- sample(1:1000000,iterations)
 #save(rseeds, file = "rseeds_2022.04.15.rda")
