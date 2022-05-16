@@ -8,13 +8,14 @@ rm(list=ls())
 
 #----------------Read in files ------------------------------
 #Check results from model diagnostics
-date.of.simulation <- "01Apr2022"
-seeds <- "randomSeeds"
-purpose <- "HS.PO_surv.prior"
-sim.samples.1 <- "200.samples"
-sim.samples.2 <- "600.samples"
-sim.samples.3 <- "1000.samples"
-burn.in <- 40000
+date.of.simulation <- "13May2022"
+seeds <- "Seeds2022.04.15"
+purpose <- "psi1_0.05non.conform_all.ages.sampled_no.downsample"
+sim.samples.1 <- "0.5prop.sampled"
+sim.samples.2 <- "1prop.sampled"
+sim.samples.3 <- "1.5prop.sampled"
+sim.samples.4 <- "2prop.sampled"
+burn.in <- 50000
 post.draws <- 40000
 thinning.rate <- 20
 MCMC.settings <- paste0("thin", thinning.rate, "_draw", post.draws, "_burn", burn.in)
@@ -44,7 +45,11 @@ s3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", s
 names(s3) <- paste0(sim.samples.3, "_iter_", c(1:100))
 head(s3[[1]])
 
-s.all <- append(s1, c( s2, s3))
+s4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
+names(s3) <- paste0(sim.samples.4, "_iter_", c(1:100))
+head(s3[[1]])
+
+s.all <- append(s1, c( s2, s3, s4))
 
 # Breakdown of offspring for each parent
 rents <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
@@ -52,14 +57,14 @@ rents <- readRDS(paste0(results_location, parents_prefix, "_", date.of.simulatio
 #Breakdown of samples drawn from simulation
 sample.info <- readRDS(paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
-jags_params <- c("Nf", "Nm", "surv", "lam") #Specify parameters
+jags_params <- c("Nfb", "psi", "Nm", "surv", "lam") #Specify parameters
 
 
 head(results)
 
 #-----------------------------Trace plots/convergence---------------------------------------------------
 #Specify parameters to plot
-jags_params_4plot <- c("Nf", "Nm", "surv", "lam") #Specify parameters
+jags_params_4plot <- c("Nfb", "psi", "Nm", "surv", "lam") #Specify parameters
 
 #Specify save location for pdf of plots
 tracePlot.file <- paste0(mcmc_plots_location, "TracePlots_", date.of.simulation, "_", seeds, "_", purpose, "_",  "_allSampleSizes.pdf")
@@ -136,7 +141,7 @@ for(c in 1:length(s.all)){
 dev.off()
 
 #Visual check for one iteration
-crosscorr(s3[[5]])
+crosscorr(s4[[10]])
 
 #-----------------------------Effective chain length---------------------------------------------------
 #Initialize dataframes
