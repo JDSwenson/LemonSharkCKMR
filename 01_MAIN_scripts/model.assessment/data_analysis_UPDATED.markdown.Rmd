@@ -20,7 +20,7 @@ library(viridis)
 
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
-purpose.combo <- "Examine_mode_performance_when_psi_is_set_at_birth" #What am I comparing right now? This will be used to name output files
+purpose.combo <- "Examine_model_performance_when_psi_is_set_at_birth_plus_downsample" #What am I comparing right now? This will be used to name output files
 
 
 #----------------Read in files ------------------------------
@@ -35,24 +35,24 @@ MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 purpose1.lab = purpose2.lab = purpose3.lab = purpose4.lab <- NULL
 
 #------------- Simulation parameters and labels  ----------------#
-date.of.simulation1 <- "13May2022"
-purpose1 <- "psi1_0.05non.conform_target.YOY_no.downsample"
+date.of.simulation1 <- "16May2022"
+purpose1 <- "psi1_0.05non.conform_target.YOY_yes.downsample"
 purpose1.lab <- "Target YOY | diffuse priors"
 model.type1 <- "HS.only"
 
-date.of.simulation2 <- "13May2022"
-purpose2 <- "psi1_0.05non.conform_target.YOY_no.downsample_informative.priors"
+date.of.simulation2 <- "16May2022"
+purpose2 <- "psi1_0.05non.conform_target.YOY_yes.downsample_informative.priors"
 purpose2.lab <- "Target YOY | informed priors"
 model.type2 <- "HS.only"
 
-date.of.simulation3 <- "13May2022"
-purpose3 <- "psi1_0.05non.conform_all.ages.sampled_no.downsample"
+date.of.simulation3 <- "16May2022"
+purpose3 <- "psi1_0.05non.conform_all.ages.sampled_yes.downsample"
 purpose3.lab <- "All ages sampled | diffuse priors"
 model.type3 <- "HS.only"
 
-date.of.simulation4 <- "13May2022"
-purpose4 <- "psi1_0.05non.conform_all.ages.sampled_no.downsample_informative.priors"
-purpose4.lab <- "All ages sampled -| informed priors"
+date.of.simulation4 <- "16May2022"
+purpose4 <- "psi1_0.05non.conform_all.ages.sampled_yes.downsample_informative.priors"
+purpose4.lab <- "All ages sampled | informed priors"
 model.type4 <- "HS.only"
 
 seeds <- "Seeds2022.04.15"
@@ -252,8 +252,8 @@ results.all %>% group_by(model_type, purpose.lab, total_samples, parameter) %>%
                    median.bias = median(relative_bias),
                    percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
 #  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
-  arrange(mean.cv) #%>% 
-  #write_csv(file = paste0(results_location, "bias_and_precision/Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
+  arrange(mean.cv) %>% 
+#  write_csv(file = paste0(results_location, "bias_and_precision/Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
 
 
 #-----------------------------Numbers of Kin pairs---------------------#
@@ -540,19 +540,19 @@ HPD.samples4.1.4viz <- results.1 %>% filter(prop_sampled_juvs == sim.samples.all
 
 #Calculate percent estimates in each interval
 HPD.samples1.1.summary <- HPD.samples1.1.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples2.1.summary <- HPD.samples2.1.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%
   dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples3.1.summary <- HPD.samples3.1.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPDsamples4.1.summary <- HPD.samples4.1.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+HPDsamples4.1.summary <- HPD.samples4.1.4viz %>% group_by(parameter, interval) %>%
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes    
@@ -604,19 +604,19 @@ HPD.samples4.2.4viz <- results.2 %>% filter(prop_sampled_juvs == sim.samples.all
 
 #Calculate percent estimates in each interval
 HPD.samples1.2.summary <- HPD.samples1.2.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples2.2.summary <- HPD.samples2.2.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples3.2.summary <- HPD.samples3.2.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPDsamples4.2.summary <- HPD.samples4.2.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+HPDsamples4.2.summary <- HPD.samples4.2.4viz %>% group_by(parameter, interval) %>%
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
@@ -671,19 +671,19 @@ HPD.samples4.3.4viz <- results.3 %>% filter(prop_sampled_juvs == sim.samples.all
 #Calculate percent estimates in each interval
 HPD.samples1.3.summary <- HPD.samples1.3.4viz %>% group_by(parameter, interval) %>% 
   drop_na() %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples2.3.summary <- HPD.samples2.3.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples3.3.summary <- HPD.samples3.3.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%
   dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPDsamples4.3.summary <- HPD.samples4.3.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>% 
+HPDsamples4.3.summary <- HPD.samples4.3.4viz %>% group_by(parameter, interval) %>%
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%  
   dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
@@ -738,19 +738,19 @@ HPD.samples4.4.4viz <- results.4 %>% filter(prop_sampled_juvs == sim.samples.all
 
 #Calculate percent estimates in each interval
 HPD.samples1.4.summary <- HPD.samples1.4.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>%
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples2.4.summary <- HPD.samples2.4.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>%
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples3.4.summary <- HPD.samples3.4.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>%
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPDsamples4.4.summary <- HPD.samples4.4.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(lower < truth & truth < upper, "Y", "N")) %>%
+  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
   dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
@@ -815,12 +815,12 @@ all.samples4.4viz <- HPD.samples4.1.4viz %>% bind_rows(HPD.samples4.2.4viz, HPD.
 all.samples4.4viz$purpose.lab <- factor(all.samples4.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 
 #For when we need everything together
-all.4viz <- HPD.1.summary.tidy %>% bind_rows(HPD.2.summary.tidy)
+all.4viz <- HPD.1.summary.tidy %>% bind_rows(HPD.2.summary.tidy, HPD.3.summary.tidy, HPD.4.summary.tidy)
 all.4viz$purpose.lab <- factor(all.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 ```
 
 ```{r HPDI line graphs}
-(p.Nfb <- all.4viz %>% dplyr::filter(parameter == "Nfb", proportion_sampled == "1_percent_sampled") %>% 
+(p.Nfb <- all.4viz %>% dplyr::filter(parameter == "Nfb") %>% 
    ggplot(aes(x = interval.scale)) +
    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
@@ -831,11 +831,11 @@ all.4viz$purpose.lab <- factor(all.4viz$purpose.lab, levels = c(purpose1.lab, pu
    theme_bw() + 
    theme(legend.title = element_blank()) + 
    scale_colour_brewer(palette = "Set1") +
-#   facet_wrap(~proportion_sampled) + 
+   facet_wrap(~proportion_sampled) + 
   guides(color = guide_legend(nrow = 2)))
 
 
-p.Nm <- all.4viz %>% dplyr::filter(parameter == "Nm", proportion_sampled == "1_percent_sampled") %>% 
+(p.Nm <- all.4viz %>% dplyr::filter(parameter == "Nm") %>% 
   ggplot(aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
@@ -845,8 +845,8 @@ p.Nm <- all.4viz %>% dplyr::filter(parameter == "Nm", proportion_sampled == "1_p
        y = "Percent in HPDI") +
   theme_bw() + 
   theme(legend.title = element_blank()) + 
-  scale_colour_brewer(palette = "Set1") #+
-#  facet_wrap(~proportion_sampled))
+  scale_colour_brewer(palette = "Set1") +
+  facet_wrap(~proportion_sampled))
 
 
 (p.surv <- all.4viz %>% dplyr::filter(parameter == "surv") %>% 
@@ -932,7 +932,7 @@ saveRDS(HPDI.plot.list, file = paste0(results_plots_location, "plot_lists/", pur
 
 ```{r Density plots}
 #Density plots
-p2.Nfb <- results.all %>% dplyr::filter(parameter == "Nfb", samples.lab == samples2.lab) %>% 
+(p2.Nfb <- results.all %>% dplyr::filter(parameter == "Nfb") %>% 
     ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
     geom_density(alpha = 0.6) + 
     ggtitle("C) Nf") + 
@@ -941,10 +941,10 @@ p2.Nfb <- results.all %>% dplyr::filter(parameter == "Nfb", samples.lab == sampl
     theme_bw() + 
     theme(legend.title = element_blank()) + 
     scale_fill_brewer(palette = "Set1") +
-    xlim(-100, 100) #+ 
-#    facet_wrap(~samples.lab))
+    xlim(-100, 100) + 
+    facet_wrap(~samples.lab))
 
-p2.Nm <- results.all %>% dplyr::filter(parameter == "Nm", samples.lab == samples2.lab) %>% 
+(p2.Nm <- results.all %>% dplyr::filter(parameter == "Nm") %>% 
   ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
   geom_density(alpha = 0.6) + 
   ggtitle("D) Nm") + 
@@ -953,8 +953,8 @@ p2.Nm <- results.all %>% dplyr::filter(parameter == "Nm", samples.lab == samples
   theme_bw() + 
   theme(legend.title = element_blank()) + 
   scale_fill_brewer(palette = "Set1") +
-  xlim(-100, 100) #+ 
-  # facet_wrap(~samples.lab))
+  xlim(-100, 100) + 
+  facet_wrap(~samples.lab))
 
 (p2.surv <- results.all %>% dplyr::filter(parameter == "surv") %>% 
   ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
@@ -1172,7 +1172,8 @@ results.all2 <- results.all %>% mutate(HS_exp_obs_diff = (Exp_HSPs - HSPs_detect
 
 #----------------Make scatter plot of expected vs observed 
 #Purpose 1
-(EO1 <- results.all2 %>% dplyr::filter(parameter == "Nfb" | parameter == "Nm") %>% 
+(EO1 <- results.all2 %>% dplyr::filter(purpose.lab == purpose1.lab,
+                                       parameter == "Nfb" | parameter == "Nm") %>% 
   ggplot(aes(x = HS_exp_obs_diff, y = relative_bias, fill = parameter, color = parameter)) +
   geom_point() +
   facet_wrap(~samples.lab) + 
