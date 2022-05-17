@@ -20,9 +20,9 @@ source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO_SB.R")
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/"
+MCMC_location <- "./output/Model.output/"
+jags.model_location <- "./output/models/"
+results_location <- "./output/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -579,10 +579,10 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
  saveRDS(dad.comps.tibble, file = paste0(results_location, dad.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
  #Save parents tibble
- saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+ saveRDS(parents.tibble_all, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
  # Detailed info on population size
- saveRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+ saveRDS(pop.size.tibble_all, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
 #To read in RDS file
 #pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")
