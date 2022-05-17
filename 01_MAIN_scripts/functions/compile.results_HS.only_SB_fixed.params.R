@@ -32,7 +32,9 @@ lam_max <- max(adult.lambda[ref.year:n_yrs]) #Maximum lambda over estimation per
 
 #Create dataframe of estimates and truth
 estimates <- model.summary2 %>%
-  mutate(truth = c(Mom.breed_truth, Dad.all_truth, surv_mean, lam_truth)) %>%
+  mutate(all.truth = c(Mom.all_truth, Dad.all_truth, surv_mean, lam_truth),
+         breed.truth = c(Mom.breed_truth, Dad.breed_truth, surv_mean, lam_truth),
+         psi.truth = c(rep(psi_truth, times = n_params))) %>%
   as_tibble()
 
 
@@ -93,23 +95,23 @@ dad.HS.matches <- dad_comps.all %>% filter(type == "HS") %>%
 metrics <- cbind(c(rep(mom.Exp.PO, times = 1), #for Nfa, Nfb
                    dad.Exp.PO, #For Nm
                    rep(mom.Exp.PO + dad.Exp.PO, #For surv, lam, psi, and pb
-                       times = n_params-3)),
+                       times = n_params-2)),
                  c(rep(mom.PO.matches, times = 1),
                    dad.PO.matches,
                    rep(mom.PO.matches + dad.PO.matches,
-                       times = n_params-3)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
+                       times = n_params-2)), # number of positive IDs i.e. half-sibs; subtract 2 for sex-specific abundance parameters
                  c(rep(mom.Exp.HS, times = 1),
                    dad.Exp.HS,
                    rep(mom.Exp.HS + dad.Exp.HS,
-                       times = n_params-3)),
+                       times = n_params-2)),
                  c(rep(mom.HS.matches, times = 1),
                    dad.HS.matches,
                    rep(mom.HS.matches + dad.HS.matches,
-                       times = n_params-3)),
+                       times = n_params-2)),
                  c(rep(length(sampled.mothers), times = 1),
                    length(sampled.fathers),
                    rep(length(sampled.mothers) + length(sampled.fathers),
-                       times = n_params-3)), #number of unique sampled parents
+                       times = n_params-2)), #number of unique sampled parents
                  c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
                  c(rep(Juv_sample_prop, times = n_params)), # prop population sampled-juvs
                  c(rep(Adult_sample_prop, times = n_params)), # prop population sampled-rents

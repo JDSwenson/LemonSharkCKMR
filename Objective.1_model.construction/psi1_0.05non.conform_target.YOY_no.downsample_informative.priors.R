@@ -35,24 +35,24 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set up simulation----------------------------
-script_name <- "test" #Copy name of script here
-primary_goal <- "test" #Why am I running this simulation? Provide details
+script_name <- "psi1_0.05non.conform_target.YOY_no.downsample_informative.priors.R" #Copy name of script here
+primary_goal <- "Set psi to a value where we KNOW what it is and examine model performance. Here, I assign individuals as conformists or non-conformists at birth. Non-conformists breed annually while conformists breed biennially." #Why am I running this simulation? Provide details
 
-question1 <- "test"
-question2 <- "test"
-question3 <- "test"
-purpose <- "test" #For naming output files
+question1 <- "Can the model estimate psi (and other parameters) when the interpretation of psi is easy to understand?"
+question2 <- "How does the model perform when most individuals breed biennially and some breed annually?"
+question3 <- "Do informative priors improve parameter estimates?"
+purpose <- "psi1_0.05non.conform_target.YOY_no.downsample_informative.priors" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nfb", "psi", "Nm", "surv", "lam")
+fixed.parameters <- "psi" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+jags_params = c("Nfb", "Nm", "surv", "lam")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -410,7 +410,7 @@ iterations <- 100 #Number of iterations to loop over
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB_uninformative.priors.R")
+    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB_informative.priors.R")
 
     #Calculate expectations
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
@@ -423,7 +423,7 @@ iterations <- 100 #Number of iterations to loop over
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("01_MAIN_scripts/functions/compile.results_HS.only_SB.R")
+    source("01_MAIN_scripts/functions/compile.results_HS.only_SB_fixed.params.R")
     
     #-----------------Loop end-----------------------------
     #Bind results from previous iterations with current iteration
@@ -498,8 +498,11 @@ iterations <- 100 #Number of iterations to loop over
 #Calculate relative bias for all estimates
 #If using breeding individuals for Nf truth
    results2 <- results %>%
-     mutate(relative_bias = round(((Q50 - truth)/truth)*100, 1)) %>% 
-     mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>%
+     mutate(relative_bias = ifelse(parameter == "Nfb", round(((Q50 - breed.truth)/breed.truth)*100, 1),
+                                   round(((Q50 - all.truth)/all.truth)*100, 1))) %>% 
+     mutate(in_interval = ifelse(parameter == "Nfb", 
+                                 ifelse(HPD2.5 < breed.truth & breed.truth < HPD97.5, "Y", "N"),
+                                 ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N"))) %>%
      mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
      as_tibble()
 
