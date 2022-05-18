@@ -35,17 +35,17 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set up simulation----------------------------
-script_name <- "test" #Copy name of script here
-primary_goal <- "test" #Why am I running this simulation? Provide details
+script_name <- "base_simulation_and_model_UPDATED_SB.R" #Copy name of script here
+primary_goal <- "Save workspace for Liz" #Why am I running this simulation? Provide details
 
-question1 <- "test"
-question2 <- "test"
-question3 <- "test"
-purpose <- "test" #For naming output files
+question1 <- ""
+question2 <- ""
+question3 <- ""
+purpose <- "base_simulation_and_model_UPDATED_SB" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
@@ -497,11 +497,14 @@ iterations <- 100 #Number of iterations to loop over
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
 #If using breeding individuals for Nf truth
-   results2 <- results %>%
-     mutate(relative_bias = round(((Q50 - truth)/truth)*100, 1)) %>% 
-     mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>%
-     mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
-     as_tibble()
+ results2 <- results %>%
+   mutate(relative_bias = ifelse(parameter == "Nfb", round(((Q50 - breed.truth)/breed.truth)*100, 1),
+                                 round(((Q50 - all.truth)/all.truth)*100, 1))) %>% 
+   mutate(in_interval = ifelse(parameter == "Nfb", 
+                               ifelse(HPD2.5 < breed.truth & breed.truth < HPD97.5, "Y", "N"),
+                               ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N"))) %>%
+   mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
+   as_tibble()
 
  
    #If using all individuals for Nf truth, instead of breeders
@@ -576,10 +579,10 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
  saveRDS(dad.comps.tibble, file = paste0(results_location, dad.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
  #Save parents tibble
- saveRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+ saveRDS(parents.tibble_all, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
  # Detailed info on population size
- saveRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+ saveRDS(pop.size.tibble_all, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
  
 #To read in RDS file
 #pp <- readRDS("~/R/working_directory/temp_results/neutralGrowth_estSurv_iteration_5_samplesize_800")

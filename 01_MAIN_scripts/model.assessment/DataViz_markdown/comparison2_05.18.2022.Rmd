@@ -1,5 +1,5 @@
 ---
-title: "CKMR simulation results"
+title: "CKMR simulation results 05/18/2022"
 output: 
   html_document:
     df_print: tibble
@@ -108,6 +108,9 @@ results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
     mutate(model_type = model.type4,
            purpose.lab = purpose4.lab) %>% 
       mutate(total_samples = total_juvenile_samples + total_adult_samples)
+
+#Load MCMC results for one group - 1% sampled group - so I can add cross-correlation plots
+s1.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose1))
 ```
 
 ```{r Quick-analysis-of-results, echo = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
@@ -120,7 +123,7 @@ results.all <- results.1 %>%
   #mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
   mutate(cv = (sd/mean)*100) %>% 
   mutate(samples.lab = paste0(prop_sampled_juvs, " percent sampled")) %>% 
-  separate(col = purpose.lab, into = "sampling.scheme", sep = " -", remove = FALSE)
+  separate(purpose.lab, into = c("sampling.scheme", "prior"), sep = " \\| ", remove = FALSE) #Have to use two escape characters to cancel the "or" command from the "|"
 
 results.all$samples.lab <- factor(results.all$samples.lab, levels = c(samples1.lab, samples2.lab, samples3.lab, samples4.lab))
 
@@ -246,7 +249,9 @@ all.samples4.4viz <- HPD.samples4.1.4viz %>% bind_rows(HPD.samples4.2.4viz, HPD.
 all.samples4.4viz$purpose.lab <- factor(all.samples4.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 
 #For when we need everything together
-all.4viz <- HPD.1.summary.tidy %>% bind_rows(HPD.2.summary.tidy, HPD.3.summary.tidy, HPD.4.summary.tidy)
+all.4viz <- HPD.1.summary.tidy %>% bind_rows(HPD.2.summary.tidy, HPD.3.summary.tidy, HPD.4.summary.tidy) %>% 
+  separate(purpose.lab, into = c("sampling.scheme", "prior"), sep = " \\| ", remove = FALSE)
+
 all.4viz$purpose.lab <- factor(all.4viz$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
 ```
 
@@ -280,7 +285,7 @@ p.Nm <- all.4viz %>% dplyr::filter(parameter == "Nm", proportion_sampled == "0.5
   facet_wrap(~proportion_sampled)
 
 
-p.surv <- all.4viz %>% dplyr::filter(parameter == "surv") %>% 
+p.surv <- all.4viz %>% dplyr::filter(parameter == "surv", proportion_sampled == "0.5_percent_sampled" | proportion_sampled == "2_percent_sampled") %>% 
   ggplot(aes(x = interval.scale)) +
   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
@@ -308,12 +313,12 @@ p.lam <- all.4viz %>% dplyr::filter(parameter == "lam") %>%
   scale_colour_brewer(palette = "Set1") +
   facet_wrap(~proportion_sampled)
 
-p.psi <- all.4viz %>% dplyr::filter(parameter == "psi") %>% 
+p.psi <- all.4viz %>% dplyr::filter(parameter == "psi", proportion_sampled == "0.5_percent_sampled" | proportion_sampled == "2_percent_sampled") %>% 
     ggplot(aes(x = interval.scale)) +
-    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
-    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+    geom_point(aes(y = percent_in_interval, color = sampling.scheme, fill = sampling.scheme, shape = sampling.scheme), size = 2.5, alpha = .7) + 
+    geom_smooth(aes(y = percent_in_interval, color = sampling.scheme, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
     geom_line(aes(y = interval.scale), size = 1.5) + 
-    ggtitle("Percent biennial breeders (psi)") + 
+    ggtitle("C) Percent biennial breeders (psi)") + 
     labs(x = "HPDI",
          y = "Percent in HPDI") +
     theme_bw() + 
@@ -347,10 +352,10 @@ p2.Nm <- results.all %>% dplyr::filter(parameter == "Nm", samples.lab == samples
   xlim(-100, 100) + 
   facet_wrap(~samples.lab)
 
-p2.surv <- results.all %>% dplyr::filter(parameter == "surv") %>% 
+p2.surv <- results.all %>% dplyr::filter(parameter == "surv", samples.lab == samples1.lab | samples.lab == samples4.lab) %>% 
   ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
   geom_density(alpha = 0.6) + 
-  ggtitle("B)") + 
+  ggtitle("B) Survival") + 
   labs(x = "Relative bias of posterior median") +
   geom_vline(xintercept=c(0), linetype="dotted") +
   theme_bw() + 
@@ -360,16 +365,16 @@ p2.surv <- results.all %>% dplyr::filter(parameter == "surv") %>%
   facet_wrap(~samples.lab)
 
 
-p2.psi <- results.all %>% dplyr::filter(parameter == "psi") %>% 
-    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+p2.psi <- results.all %>% dplyr::filter(parameter == "psi", samples.lab == samples1.lab | samples.lab == samples4.lab) %>% 
+    ggplot(aes(x = relative_bias, color = sampling.scheme, fill = sampling.scheme)) +
     geom_density(alpha = 0.6) + 
-    ggtitle("Percent biennial breeders (psi)") + 
+    ggtitle("D) Percent biennial breeders (psi)") + 
     labs(x = "Relative bias of posterior median") +
     geom_vline(xintercept=c(0), linetype="dotted") +
     theme_bw() + 
     theme(legend.title = element_blank()) + 
     scale_fill_brewer(palette = "Set1") +
-    xlim(-100, 100) + 
+    xlim(-25, 25) + 
     facet_wrap(~samples.lab)
 
 
@@ -390,35 +395,82 @@ p2.lam <- results.all %>% dplyr::filter(parameter == "lam") %>%
 
 ```
 
-## Background info
-One hundred different populations were simulated where 100% of females in the population bred biennially. Each population was sampled at four different sampling intensities corresponding to 0.5, 1, 1.5, and 2 percent of the juvenile population each year over four consecutive years. Samples were either targeted to the young-of-year (YOY) portion of the population only, or included juveniles of all age classes. A pairwise comparisons matrix that included all possible positive and negative comparisons was used as input to a CKMR model that either a) assumed no prior information for breeding schedule (psi) and survival, or b) assumed the breeding schedule was known without error (i.e. fixed to the truth) and included a tight prior on survival dnorm(mean = truth, sd = 0.02).
+## Action items from last meeting on 5/12/2022:
+1. For knitting, can I publish to an html folder on my GitHub (see below)?
+2. Change script to assign individuals as consistent skipped-breeders or non-conformists (instead of a specific breeding interval)
+  - Simplest thing - and easy test - just assign non-conformists to always be non-conformists
+  - Also look at Lemon Shark dataset to see what their pattern looks like
+3. Look at cross-correlation between psi and phi
+4. Contemplate the meaning of life (and psi)
 
-## Figure 1: Model performance estimating abundance based on sampling scheme and priors.
-**Sampling scheme:** Red and blue reflect sampling schemes that target YOY only; green and purple reflect sampling schemes where the entire juvenile population (ages 0-11) were available for sampling.
-**Prior information:** Red and green results come from a model that assumed no prior information for psi or survival; blue and purpose results come from a model that assumed psi was known without error and gave a tight prior to survival.
-**Main takeaways:** This figure shows results for the lowest and highest sample schemes employed only (i.e. 0.5% and 2% of the juvenile population). When all age classes are sampled, the HPDI is slightly less likely to capture the truth, suggesting that the model may converge on inaccurate values in some instances. However, the density plots show that the median of the posteriors for the same scenarios do tend to be centered on 0.
 
-With diffuse priors on psi and survival (red and green), there is a difference in the potential for the HPDI to capture the truth, with targeted sampling (red) performing better than sampling across age classes. Regardless of sampling scheme, when using a diffuse prior on survival and psi, the posterior medians for abundance estimates have a tendency to get pulled upward, similar to survival (Fig 2), though this effect is reduced when all age classes are sampled relative to targeted sampling of YOY.
+## Major takeaways
+1) The model does a good job of estimating abundance of males and females, particularly when sampling is targeted to YOY only (Figure 1)
+2) The model struggles to capture the truth of survival within the HPDI when using a diffuse prior (Figure 2A); however, the posterior medians are generally unbiased when sampling all age classes (Figure 2B).
+3) The model systemically underestimates psi (Figure 2C, 2D).
+4) Survival tends to be strongly correlated (can be up to 0.8) with both female and male abundance, while psi tends to be pretty strongly negatively correlated with female abundance (around -0.5) (Figure 3)
+5) We detect more half sibling pairs when sampling across juvenile age classes relative to targeted sampling of YOY (Figure 4 A & B)
+6) Relative bias of female abundance when observed half-sibling pairs matches expectations (i.e. when x = 0) remains positive (Figure 4 C & D), suggesting that I'm calculating the expectations wrong.
+
+## Major questions
+1) Why does the model fail to capture the truth within the HPDI for females when sampling all juvenile age classes? (Figure 1)
+2) How do we rectify the difference between the HPDI seemingly struggling to capture survival when all age classes are sampled (Fig 2A, green), and the median relative bias of the same scenario generally being centered on 0 (Fig 2B, green)?
+3) Is there a way we can re-parameterize the model to better capture breeding interval? OR, do we consider this more of a nuisance parameter and let it go, since abundance estimates are generally solid? See **Methods_and_equations_UPDATED.docx** document for the equation, and **run.JAGS_HS.only_SB_uninformative.priors.R** for the model code.
+4) How concerned should we be about the cross-correlation among parameters? (Figure 3) Are there ideas for how to rectify this?
+5) What am I doing wrong in my calculations of expected half-sibling pairs? (Figure 4) See **calculate_expectations.R** for the function I use to calculate expected half-sibling pairs. These are based on Waples & Feutry (see Table 3 in the main text and Supplementary Material section S2.4.2)
+
+
+
+## Background info on simulations
+One hundred different populations were simulated where 95% of females in the population bred biennially, and 5% of the population were "non-conformists" that bred annually. Each population was sampled at four different sampling intensities corresponding to 0.5, 1, 1.5, and 2 percent of the juvenile population each year over four consecutive years. Samples were either targeted to the young-of-year (YOY) portion of the population only, or included juveniles of all age classes. A pairwise comparisons matrix that included all possible positive and negative comparisons was used as input to a CKMR model that either a) assumed no prior information for breeding schedule (psi) and survival, or b) assumed the psi was known without error (i.e. fixed to the truth) and included a tight prior on survival dnorm(mean = truth, sd = 0.02).
+
+## Figure 1: Model performance estimating abundance based on sampling scheme and priors
+
+**Sampling scheme:** <span style="color:red">**Red**</span> and <span style="color:blue">**blue**</span> reflect sampling schemes that target YOY only; <span style="color:green">**green**</span> and <span style="color:#800080">**purple**</span> reflect sampling schemes where the entire juvenile population (ages 0-11) were available for sampling.\
+**Prior information:** <span style="color:red">**Red**</span> and <span style="color:green">**green**</span> results come from a model that assumed no prior information for psi or survival; <span style="color:blue">**blue**</span> and <span style="color:#800080">**purple**</span> results come from a model that assumed psi was known without error and gave a tight prior to survival.\
+**Main takeaways:** With diffuse priors on psi and survival, there is a difference in the potential for the HPDI to capture the truth, with <span style="color:red">**targeted sampling**</span> performing better than <span style="color:green">**sampling across age classes**</span>. Regardless of sampling scheme, when using a diffuse prior on survival and psi, the posterior modes for abundance estimates have a tendency to get pulled upward, similar to survival (Fig 2), though this effect is slightly reduced when all age classes are sampled relative to targeted sampling of YOY.\
+**With regards to sampling,** it appears that targeted sampling of YOY gives a better measure of the uncertainty surrounding the truth relative to sampling across all juvenile age classes, at least with regards to female abundance. However, the same scenario results in a slightly elevated posterior median, suggesting that results are best interpreted as the range of values captured within the HPDI, while less weight should be given to point estimates.
+
 
 ```{r print-N-plots, echo=FALSE, out.width = "120%", fig.height = 12}
 #Male and female HPDI and relative bias for low and high sample sizes
 ggarrange(p.Nfb, p2.Nfb, p.Nm, p2.Nm, common.legend = TRUE, nrow = 4, ncol = 1, legend = "bottom")
 ```
 
-## Figure 2: Model performance estimating survival based on sampling scheme and priors.
-**Sampling scheme:** Red and blue reflect sampling schemes that target YOY only; green and purple reflect sampling schemes where the entire juvenile population (ages 0-11) were available for sampling.
-**Prior information:** Red and green results come from a model that assumed no prior information for psi or survival (diffuse priors); blue and purpose results come from a model that assumed psi was known without error and gave a tight prior to survival.
-**Main takeaways:** When priors are diffuse, survival estimates have a tendency to get pulled upward. This tendency is amplified when sampling is targeted to YOY, likely because there are fewer age gaps represented in the data as well as fewer half-siblings available to inform survival estimates.
+## Figure 2: Model performance estimating survival based on sampling scheme and priors
+**Sampling scheme:** <span style="color:red">**Red**</span> and <span style="color:blue">**blue**</span> reflect sampling schemes that target YOY only; <span style="color:green">**green**</span> and <span style="color:#800080">**purple**</span> reflect sampling schemes where the entire juvenile population (ages 0-11) were available for sampling.\
+**Prior information:** <span style="color:red">**Red**</span> and <span style="color:green">**green**</span> results come from a model that assumed no prior information for psi or survival (diffuse priors); <span style="color:blue">**blue**</span> and <span style="color:#800080">**purple**</span> results come from a model that assumed psi was known without error and gave a tight prior to survival.\
+**Main takeaways**\
+**A & B: **When priors are diffuse, survival estimates have a tendency to get pulled upward. This tendency is amplified when sampling is targeted to YOY (red), likely because there are fewer age gaps represented in the data as well as fewer half-siblings available to inform survival estimates. These results suggest that accurate estimates of survival are more likely when there are multiple age classes represented in the data.\
+**C & D:**The model still struggles to estimate psi, even though the interpretation of psi is straightforward in this scenario (95% of individuals breed biennially; 5% breed annually). The main tendency seems to be to underestimate psi, though not by a lot. Not quite sure how to rectify this ...
 
-```{r print-surv-plots, echo=FALSE, out.width = "120%", fig.height = 12}
+```{r print-surv-plots, echo=FALSE, out.width = "120%", fig.height = 7}
 #Survival HPDI and relative bias for all four sample sizes
-ggarrange(p.surv, p2.surv, common.legend = TRUE, nrow = 2, legend = "bottom")
+ggarrange(p.surv, p2.surv, common.legend = TRUE, nrow = 2, legend = "top")
 ```
 
-## Figure 3
-**A and B:** Number of HSPs detected based on sampling scheme. **A)** For females that breed intermittently, more HSPs are found when sampling across juvenile age classes. When sampling is limited to YOY over four years of sampling, and females breed every other year, there are only two potential comparisons that would be expected to yield HSPs (cohorts 1 & 3; cohorts 2 & 4). When sampling across age classes, there are more cohorts available to yield HSPs. **B)** For males that breed annually, there is no difference in the number of HSPs detected based on sampling scheme. Note that for both males and females, the lowest sampling intensity results in fewer than 25 HSPs, which is half the recommended target of 50 for a reasonable CV. This is why results at this sampling intensity are so varied.
-**C and D:** Relative bias of abundance estimate by the percent difference between observed and expected HSPs.
-Here, we see that as the observed number of HSPs deviates from expectations, results become more biased, as expected. Interestingly, we see an exponential rise in bias in the positive direction at the lowest sampling intensity, but this trend is not apparent in the negative direction. **C)** notice that when priors are diffuse, there remains a slight residual positive bias across sampling intensities when observed and expected HSPs match (i.e. x axis = 0) **D)** However, that bias disappears when survival and psi are given informed priors (except at the lowest sampling intensity).
+```{r print-psi-plots, echo=FALSE, out.width = "120%", fig.height = 7}
+ggarrange(p.psi, p2.psi, common.legend = TRUE, nrow = 2, legend = "bottom")
+```
+
+## Figure 3: Cross-correlation among parameters
+This plot represents one random iteration from the scenario where 1% of the juvenile population was sampled, but we see a similar trend from other sampling schemes and other iterations.\
+Here, we see a couple interesting trends:\
+1) psi is negatively correlated with female abundance at ~ 0.5,\
+2) survival is positively correlated with both male and female abundance at ~0.70 - 0.75, and\
+3) male and female abundance are positive correlated at ~ 0.70
+
+```{r, echo = FALSE}
+#randomly sample from iterations for cross-correlation plot
+it <- sample(c(1:length(s1.2)), size = 1)
+crosscorr.plot(s1.2[[it]][, c(1, 2, 4, 5, 6)])
+crosscorr(s1.2[[it]][, c(1, 2, 4, 5, 6)])
+```
+
+## Figure 4: Number of HSPs detected by sampling scheme and bias
+**A and B:** Number of HSPs detected based on sampling scheme. **A)** For females that breed intermittently, more HSPs are found when sampling across juvenile age classes. When sampling is limited to YOY over four years of sampling, and females breed every other year, there are only two potential comparisons that would be expected to yield HSPs (cohorts 1 & 3; cohorts 2 & 4). When sampling across age classes, there are more cohorts available to yield HSPs. **B)** For males that breed annually, there is no difference in the number of HSPs detected based on sampling scheme. Note that for both males and females, the lowest sampling intensity results in fewer than 25 HSPs, which is half the recommended target of 50 for a reasonable CV. This is why results at this sampling intensity are so varied.\
+**C and D:** Relative bias of abundance estimate by the percent difference between observed and expected HSPs. Here, we see that as the observed number of HSPs deviates from expectations, results become more biased, as expected. Interestingly, we see an exponential rise in bias in the positive direction at the lowest sampling intensity, but this trend is not apparent in the negative direction. **C)** notice that when priors are diffuse, there remains a slight residual positive bias across sampling intensities when observed and expected HSPs match (i.e. x axis = 0) **D)** That bias remains - primarily for females - when survival and psi are given informed priors.\
+**Main takeaways:** These graphs suggest that 1) sampling more age classes results in more half-siblings detected, and 2) there may be an error in my calculations of expected numbers of half-siblings for females (which makes sense because they depend on psi, and I'm not sure I'm incorporating that properly ...)
 
 ```{r Kin pairs, echo=FALSE}
 ####---------------------Density plots of kin detected----------------------------------------------####
