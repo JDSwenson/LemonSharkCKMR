@@ -36,17 +36,17 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings----------------------------
-script_name <- "base_simulation_and_model_UPDATED_SB.R" #Copy name of script here
-primary_goal <- "Save workspace for Liz" #Why am I running this simulation? Provide details
+script_name <- "psi1_0.05non.conform_all.ages.sampled_no.downsample_UpdatedEquation.R" #Copy name of script here
+primary_goal <- "Test new equation from Liz" #Why am I running this simulation? Provide details
 
-question1 <- ""
-question2 <- ""
-question3 <- ""
-purpose <- "base_simulation_and_model_UPDATED_SB" #For naming output files
+question1 <- "Does the generalized updated equation from Liz improve estimates of abundance and psi?"
+question2 <- "Are survival estimates improved by using the same values as the Leslie matrix?"
+question3 <- "Better to use targeted sampling of YOY or sample all age classes"
+purpose <- "psi1_0.05non.conform_all.ages.sampled_no.downsample_UpdatedEquation" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
@@ -170,18 +170,20 @@ simulation.df <- tibble(script_name = script_name,
                         burn_in = nb,
                         years_sampled = length(sample.years),
                         breeding_periodicity = mating.periodicity,
-                        non_conformists = non.conformists
+                        non_conformists = non.conformists,
+                        survival_cv = surv.cv,
+                        fecundity_cv = fec.cv
 )
 
 #Save simulation settings in Simulation_log
- # simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
- #  tail(simulation.log)
- #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
- #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
+   # simulation.log <- read_csv("Simulation_log.csv")
+   #  tail(simulation.log)
+   #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
+   #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 3 #Number of iterations to loop over
+iterations <- 100 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -258,10 +260,10 @@ iterations <- 3 #Number of iterations to loop over
   parents.tibble_all <- bind_rows(parents.tibble_all, parents.tibble)
   
   #Save parents tibble
-#  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
+  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
   
   # Detailed info on population size
-#  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
+  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
 
   
   # saveRDS(loopy.list, file = "../loopy.list")
@@ -491,24 +493,24 @@ iterations <- 3 #Number of iterations to loop over
   sim.samples.4 <- paste0(sample.vec.prop[4], "prop.sampled")
   
 #Results
-#    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
 #    #Model output for diagnostics
-#     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
 # 
-#    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
 # 
-#    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
 #    
-#    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
 # 
 # # Detailed info on samples and parents to examine in more detail
-#    saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+    saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 # 
 #    #Save pairwise comparisons matrices
-#    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 #    
-#    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
       sim.end <- Sys.time()
    
@@ -521,22 +523,22 @@ iterations <- 3 #Number of iterations to loop over
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
 #If using breeding individuals for Nf truth
- results2 <- results %>%
-   mutate(relative_bias = ifelse(parameter == "Nfb", round(((Q50 - breed.truth)/breed.truth)*100, 1),
-                                 round(((Q50 - all.truth)/all.truth)*100, 1))) %>% 
-   mutate(in_interval = ifelse(parameter == "Nfb", 
-                               ifelse(HPD2.5 < breed.truth & breed.truth < HPD97.5, "Y", "N"),
-                               ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N"))) %>%
-   mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
-   as_tibble()
+ # results2 <- results %>%
+ #   mutate(relative_bias = ifelse(parameter == "Nfb", round(((Q50 - breed.truth)/breed.truth)*100, 1),
+ #                                 round(((Q50 - all.truth)/all.truth)*100, 1))) %>% 
+ #   mutate(in_interval = ifelse(parameter == "Nfb", 
+ #                               ifelse(HPD2.5 < breed.truth & breed.truth < HPD97.5, "Y", "N"),
+ #                               ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N"))) %>%
+ #   mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
+ #   as_tibble()
 
  
    #If using all individuals for Nf truth, instead of breeders
-   # results2 <- results %>% 
-   #   mutate(relative_bias = round(((Q50 - truth)/truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
-   #   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
-   #   mutate(total_samples = Juvenile_samples + Adult_samples) %>% 
-   #   as_tibble()
+   results2 <- results %>%
+     mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+     mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>%
+     mutate(total_samples = total_juvenile_samples + total_adult_samples) %>%
+     as_tibble()
    
 #Within HPD interval?
 results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>% 

@@ -89,7 +89,8 @@ survival.sd <- survival.sd
     survival.sd = survival.sd,
 
     # #Breeding interval
-    psi = psi.truth
+    #psi = psi.truth,
+    a = mating.periodicity
     
       )
   
@@ -99,11 +100,11 @@ survival.sd <- survival.sd
     for(c in 1:nc){
       inits[[c]] = list(
         #If estimating all parameters
-        surv = runif(1, min=.5, max=.95),
+        surv = runif(1, min=0.5, max=0.95),
         Nfb = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
-        lam = 1
-        #psi = runif(1, min=0, max=1)
+        lam = 1,
+        psi = runif(1, min=0.5, max=0.95)
         
       )
     }
@@ -125,23 +126,23 @@ survival.sd <- survival.sd
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
     #surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
     lam ~ dnorm(mean.lambda, lam.tau)
-    #psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
+    psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
-    surv ~ dnorm(Adult.survival, 1/(survival.sd^2)) #Informative prior
+    surv ~ dnorm(Adult.survival, 1/(survival.sd^2));T(0.5, 0.99) #Informative prior
     
     
     #Likelihood
     #Moms
     #HS - even years
     for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-      mom.positives_HS.even[i] ~ dbin((surv^mom.mort.yrs_HS.even[i])/(Nfb*(lam^mom.popGrowth.yrs_HS.even[i])), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+      mom.positives_HS.even[i] ~ dbin((a*(surv^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nfb*(lam^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
     }
     
     #Moms
     #HS - odd years
     for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-      mom.positives_HS.odd[j] ~ dbin(((surv^mom.mort.yrs_HS.odd[j])*(1-psi))/(Nfb*(lam^mom.popGrowth.yrs_HS.odd[j])), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+      mom.positives_HS.odd[j] ~ dbin(((surv^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nfb*(lam^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
     }
     
     #Dads

@@ -204,7 +204,7 @@ dad_positives.PO <- positives.PO %>% dplyr::filter(parent == "father") %>%
 #Create dataframe of all, negative, and positive comparisons for each combination of parent capture year and offspring birth year
 mom_comps.PO <- pairwise.df_all.info.PO %>%
   dplyr::filter(parent.sex == "F") %>% 
-  select(offspring.birth, parent.capture.year) %>% 
+  dplyr::select(offspring.birth, parent.capture.year) %>% 
   plyr::count() %>% 
   rename(all = freq) %>% 
   left_join(mom_positives.PO, by = c("offspring.birth", "parent.capture.year")) %>% 
@@ -216,7 +216,7 @@ mom_comps.PO <- pairwise.df_all.info.PO %>%
   
 dad_comps.PO <- pairwise.df_all.info.PO %>%
   dplyr::filter(parent.sex == "M") %>% 
-  select(offspring.birth, parent.capture.year) %>% 
+  dplyr::select(offspring.birth, parent.capture.year) %>% 
   plyr::count() %>% 
   rename(all = freq) %>% 
   left_join(dad_positives.PO, by = c("offspring.birth", "parent.capture.year")) %>% 
@@ -247,7 +247,7 @@ head(pairwise.df.HS)
 
 #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
 OlderSib_birthyears.HS <- filtered.samples.HS.df %>%
-  select(older.sib = indv.name, 
+  dplyr::select(older.sib = indv.name, 
          older.sib.birth = birth.year, 
          older.sib.age = age.x, 
          older.sib.mom = mother.x,
@@ -287,12 +287,12 @@ positives.HS <- pairwise.df_HS.filt %>% filter(older.sib.mom == younger.sib.mom 
 ####----------------Split dataframes into final form for model----------####
 #Sex-specific half-sib
 mom_positives.HS <- positives.HS %>% filter(shared.parent == "mother") %>% 
-  select(older.sib.birth, younger.sib.birth) %>% 
+  dplyr::select(older.sib.birth, younger.sib.birth) %>% 
   plyr::count() %>% 
   rename(yes = freq)
 
 dad_positives.HS <- positives.HS %>% filter(shared.parent == "father")  %>%
-  select(older.sib.birth, younger.sib.birth) %>%
+  dplyr::select(older.sib.birth, younger.sib.birth) %>%
   plyr::count() %>% 
   rename(yes = freq)
 
@@ -511,7 +511,7 @@ calc.psi <- function(loopy.list, mom_comps.all){
   
   #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
   OlderSib_birthyears.BI <- BI.df %>%
-    select(older.sib = indv.name, 
+    dplyr::select(older.sib = indv.name, 
            older.sib.birth = birth.year, 
            older.sib.age = age.x, 
            older.sib.mom = mother.x,

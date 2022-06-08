@@ -20,7 +20,7 @@ library(viridis)
 
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
-purpose.combo <- "Examine_model_performance_when_psi_is_set_at_birth_plus_downsample" #What am I comparing right now? This will be used to name output files
+purpose.combo <- "test new equation from Liz" #What am I comparing right now? This will be used to name output files
 
 
 #----------------Read in files ------------------------------
@@ -35,19 +35,19 @@ MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 purpose1.lab = purpose2.lab = purpose3.lab = purpose4.lab <- NULL
 
 #------------- Simulation parameters and labels  ----------------#
-date.of.simulation1 <- "16May2022"
-purpose1 <- "psi1_0.05non.conform_target.YOY_yes.downsample"
-purpose1.lab <- "Target YOY | diffuse priors"
+date.of.simulation1 <- "06Jun2022"
+purpose1 <- "psi1_0.05non.conform_target.YOY_no.downsample_UpdatedEquation"
+purpose1.lab <- "Target YOY"
 model.type1 <- "HS.only"
 
-date.of.simulation2 <- "16May2022"
-purpose2 <- "psi1_0.05non.conform_target.YOY_yes.downsample_informative.priors"
-purpose2.lab <- "Target YOY | informed priors"
+date.of.simulation2 <- "06Jun2022"
+purpose2 <- "psi1_0.05non.conform_all.ages.sampled_no.downsample_UpdatedEquation"
+purpose2.lab <- "All ages sampled"
 model.type2 <- "HS.only"
 
-date.of.simulation3 <- "16May2022"
-purpose3 <- "psi1_0.05non.conform_all.ages.sampled_yes.downsample"
-purpose3.lab <- "All ages sampled | diffuse priors"
+date.of.simulation3 <- "07Jun2022"
+purpose3 <- "psi1_0.05non.conform_all.ages.sampled_yes.downsample_UpdatedEquation"
+purpose3.lab <- "All ages sampled + downsample"
 model.type3 <- "HS.only"
 
 date.of.simulation4 <- "16May2022"
@@ -179,9 +179,8 @@ dad.comps.4 <- readRDS(paste0(results_location, dad.comps.prefix, "_", date.of.s
 
 results.all <- results.1 %>% 
   bind_rows(results.2, results.3, results.4) %>% 
-  #mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
-  #mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-  #mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
+     mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+     mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>% 
   mutate(cv = (sd/mean)*100) %>% 
   mutate(samples.lab = paste0(prop_sampled_juvs, " percent sampled")) %>% 
   separate(col = purpose.lab, into = "sampling.scheme", sep = " -", remove = FALSE)
@@ -260,7 +259,7 @@ results.all %>% group_by(model_type, purpose.lab, total_samples, parameter) %>%
 results.all %>% dplyr::filter(parameter == "Nfb" | parameter == "Nm") %>% 
   group_by(purpose.lab, parameter, prop_sampled_juvs) %>% 
   summarize(mean.HSPs = mean(HSPs_detected),
-            mean.POPs = mean(POPs_detected)) %>% 
+            mean.POPs = mean(POPs_detected)) %>%
   View()
 
 
@@ -457,6 +456,9 @@ for(i in 1:length(s3.1)){ #Loop over all the posterior samples from each iterati
       rownames_to_column(var = "parameter")
 
     HPD.samples4.3 <- rbind(HPD.samples4.3, post.HPD.samples4.3)
+   }
+   print(paste0("Finished with iteration ", i))
+   }
 
     #---------------------------Purpose 4--------------------------------#
     #samples1 samples
@@ -507,9 +509,9 @@ for(i in 1:length(s3.1)){ #Loop over all the posterior samples from each iterati
 
     HPD.samples4.4 <- rbind(HPD.samples4.4, post.HPD.samples4.4)
 
-   }
-   print(paste0("Finished with iteration ", i))
-   }
+   # }
+   # print(paste0("Finished with iteration ", i))
+   # }
 ```
 
 ```{r Create dataframes for HPDI plots}
@@ -540,19 +542,23 @@ HPD.samples4.1.4viz <- results.1 %>% filter(prop_sampled_juvs == sim.samples.all
 
 #Calculate percent estimates in each interval
 HPD.samples1.1.summary <- HPD.samples1.1.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples2.1.summary <- HPD.samples2.1.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%
-  dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
+#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%#If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
+    dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples3.1.summary <- HPD.samples3.1.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPDsamples4.1.summary <- HPD.samples4.1.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+  #mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes    
@@ -604,19 +610,23 @@ HPD.samples4.2.4viz <- results.2 %>% filter(prop_sampled_juvs == sim.samples.all
 
 #Calculate percent estimates in each interval
 HPD.samples1.2.summary <- HPD.samples1.2.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples2.2.summary <- HPD.samples2.2.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples3.2.summary <- HPD.samples3.2.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPDsamples4.2.summary <- HPD.samples4.2.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+  #mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
@@ -670,20 +680,23 @@ HPD.samples4.3.4viz <- results.3 %>% filter(prop_sampled_juvs == sim.samples.all
 
 #Calculate percent estimates in each interval
 HPD.samples1.3.summary <- HPD.samples1.3.4viz %>% group_by(parameter, interval) %>% 
-  drop_na() %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples2.3.summary <- HPD.samples2.3.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+  # mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPD.samples3.3.summary <- HPD.samples3.3.4viz %>% group_by(parameter, interval) %>% 
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%
+  # mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 HPDsamples4.3.summary <- HPD.samples4.3.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%  
+  # mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth  
   dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes

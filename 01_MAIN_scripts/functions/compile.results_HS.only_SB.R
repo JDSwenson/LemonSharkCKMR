@@ -3,31 +3,59 @@
 # store years from youngest sibling in comparisons to end of study
 
 ####-------------------Compile results when estimating all parameters----------------
-#Extract true values from year of estimation (ie estimation.year)
+#### TRUTH ####
+#Abundance
 Mom.all_truth <- round(pop.size.tibble$Female.adult.pop[estimation.year],0) # True Nf
 Dad.all_truth <- round(pop.size.tibble$Male.adult.pop[estimation.year], 0) # True Nm
 Mom.breed_truth <- round(pop.size.tibble$Num.mothers[estimation.year],0) # True Nf
 Dad.breed_truth <- round(pop.size.tibble$Num.fathers[estimation.year], 0) # True Nm
-pb_truth <- Mom.breed_truth/Mom.all_truth #True percentage of breeders
-surv_mean <- round(mean(sVec[ref.year:n_yrs]), 4) # True adult survival over estimation period
-#Adult_truth <- round(pop.size.tibble$Total.adult.pop[estimation.year], 0) # Used for sex-aggregated model
-lam_truth <- round(mean.adult.lambda, 4)
-psi_truth <- psi.truth
+pb_truth <- Mom.breed_truth/Mom.all_truth #True percentage of female breeders
 Mom_min <- min(pop.size.tibble$Female.adult.pop[estimation.year:n_yrs]) #Minimum Nf over estimation period
 Mom_max <- max(pop.size.tibble$Female.adult.pop[estimation.year:n_yrs]) #Maximum Nf over estimation period
 Dad_min <- min(pop.size.tibble$Male.adult.pop[estimation.year:n_yrs]) #Minimum Nm over estimation period
 Dad_max <- max(pop.size.tibble$Male.adult.pop[estimation.year:n_yrs]) #Maximum Nm over estimation period
-#Adult_min <- min(pop.size.tibble$Total.adult.pop[estimation.year:n_yrs]) # Used for sex-aggregated model
-#Adult_max <- max(pop.size.tibble$Total.adult.pop[estimation.year:n_yrs]) # Used for sex-aggregated model
+
+#Survival
+surv_mean <- round(mean(sVec[ref.year:n_yrs]), 4) # True adult survival over estimation period
 surv_min <- min(sVec[estimation.year:n_yrs]) #Minimum survival over estimation period
 surv_max <- max(sVec[estimation.year:n_yrs]) #Maximum survival over estimation period
+
+#Lambda
+lam_truth <- round(mean.adult.lambda, 4)
 lam_min <- min(adult.lambda[ref.year:n_yrs]) #Minimum lambda over estimation period
 lam_max <- max(adult.lambda[ref.year:n_yrs]) #Maximum lambda over estimation period
+
+#psi
+psi_truth <- psi.truth
+
+#### PRIORS ####
+#Abundance
+#mean
+Nf.prior <- NA
+Nm.prior <- NA
+Nf.sd <- NA
+Nm.sd <- NA
+
+#psi
+#mean
+psi.prior <- NA
+psi.sd <- NA
+
+#Survival
+#mean
+survival.prior <- mean.survival
+survival.sd <- survival.sd
+
+#Lambda
+lambda.prior <- mean.lambda
+lambda.sd <- lambda.sd
 
 #Create dataframe of estimates and truth
 estimates <- model.summary2 %>%
   mutate(all.truth = c(Mom.all_truth, psi_truth, Dad.all_truth, surv_mean, lam_truth),
-         breed.truth = c(Mom.breed_truth, psi_truth, Dad.breed_truth, surv_mean, lam_truth)) %>%
+         breed.truth = c(Mom.breed_truth, psi_truth, Dad.breed_truth, surv_mean, lam_truth),
+         prior.mean = c(Nf.prior, psi.prior, Nm.prior, survival.prior, lambda.prior),
+         prior.sd = c(Nf.sd, psi.sd, Nm.sd, survival.sd, lambda.sd)) %>%
   as_tibble()
 
 
@@ -96,10 +124,6 @@ metrics <- cbind(c(rep(mom.Exp.PO, times = 2), #for Nfa, Nfb
                    dad.HS.matches,
                    rep(mom.HS.matches + dad.HS.matches,
                        times = n_params-3)),
-                 c(rep(length(sampled.mothers), times = 2),
-                   length(sampled.fathers),
-                   rep(length(sampled.mothers) + length(sampled.fathers),
-                       times = n_params-3)), #number of unique sampled parents
                  c(rep(mean.adult.lambda, times = n_params)), # mean lambda over estimation period
                  c(rep(Juv_sample_prop, times = n_params)), # prop population sampled-juvs
                  c(rep(Adult_sample_prop, times = n_params)), # prop population sampled-rents
@@ -107,4 +131,4 @@ metrics <- cbind(c(rep(mom.Exp.PO, times = 2), #for Nfa, Nfb
                  c(rep(Total.adult.samples, times = n_params)), # Adult total samples
                  c(rep(iter, times = n_params)), #iteration
                  c(rep(rseed, times = n_params)))
-colnames(metrics) <- c("Exp_POPs", "POPs_detected", "Exp_HSPs", "HSPs_detected", "unique_parents_in_sample", "mean_adult_lambda", "prop_sampled_juvs", "prop_sampled_adults", "total_juvenile_samples", "total_adult_samples", "iteration", "seed")
+colnames(metrics) <- c("Exp_POPs", "POPs_detected", "Exp_HSPs", "HSPs_detected", "mean_adult_lambda", "prop_sampled_juvs", "prop_sampled_adults", "total_juvenile_samples", "total_adult_samples", "iteration", "seed")

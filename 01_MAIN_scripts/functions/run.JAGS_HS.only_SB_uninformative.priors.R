@@ -45,7 +45,7 @@ dad.yrs <- nrow(dad_comps.all)
 #dad.R0 <- dad_comps.all$R0
 
 #Set mean and sd (precision) for lambda
-lam.tau <- 1/(0.02277^2) #Value derived from Leslie matrix
+lam.tau <- 1/(lambda.sd^2) #Value derived from Leslie matrix
 #N.tau <- 1/(sd^2)
 
 

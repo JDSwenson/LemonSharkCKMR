@@ -39,25 +39,25 @@ MCMC.settings <- paste0("thin", nt, "_draw", ni, "_burn", nb)
 purpose1.lab = purpose2.lab = purpose3.lab = purpose4.lab <- NULL
 
 #------------- Simulation parameters and labels  ----------------#
-date.of.simulation1 <- "16May2022"
-purpose1 <- "psi1_0.05non.conform_target.YOY_no.downsample"
-purpose1.lab <- "Target YOY | diffuse priors"
+date.of.simulation1 <- "06Jun2022"
+purpose1 <- "psi1_0.05non.conform_target.YOY_no.downsample_UpdatedEquation"
+purpose1.lab <- "Target YOY"
 model.type1 <- "HS.only"
 
-date.of.simulation2 <- "16May2022"
-purpose2 <- "psi1_0.05non.conform_target.YOY_no.downsample_informative.priors"
-purpose2.lab <- "Target YOY | informed priors"
+date.of.simulation2 <- "06Jun2022"
+purpose2 <- "psi1_0.05non.conform_all.ages.sampled_no.downsample_UpdatedEquation"
+purpose2.lab <- "All ages sampled"
 model.type2 <- "HS.only"
 
-date.of.simulation3 <- "16May2022"
-purpose3 <- "psi1_0.05non.conform_all.ages.sampled_no.downsample"
-purpose3.lab <- "All ages sampled | diffuse priors"
-model.type3 <- "HS.only"
+date.of.simulation3 <- ""
+purpose3 <- ""
+purpose3.lab <- NULL
+model.type3 <- ""
 
-date.of.simulation4 <- "16May2022"
-purpose4 <- "psi1_0.05non.conform_all.ages.sampled_no.downsample_informative.priors"
-purpose4.lab <- "All ages sampled | informed priors"
-model.type4 <- "HS.only"
+date.of.simulation4 <- ""
+purpose4 <- ""
+purpose4.lab <- NULL
+model.type4 <- ""
 
 seeds <- "Seeds2022.04.15"
 sim.samples.1 <- "0.5prop.sampled" #Label on file output
@@ -99,15 +99,15 @@ results.2 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
     mutate(total_samples = total_juvenile_samples + total_adult_samples)
 
 
-results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation3, "_", seeds, "_", purpose3, ".csv")) %>% 
-  mutate(model_type = model.type3,
-         purpose.lab = purpose3.lab) %>% 
-      mutate(total_samples = total_juvenile_samples + total_adult_samples)
-
-results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation4, "_", seeds, "_", purpose4, ".csv")) %>% 
-    mutate(model_type = model.type4,
-           purpose.lab = purpose4.lab) %>% 
-      mutate(total_samples = total_juvenile_samples + total_adult_samples)
+# results.3 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation3, "_", seeds, "_", purpose3, ".csv")) %>% 
+#   mutate(model_type = model.type3,
+#          purpose.lab = purpose3.lab) %>% 
+#       mutate(total_samples = total_juvenile_samples + total_adult_samples)
+# 
+# results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation4, "_", seeds, "_", purpose4, ".csv")) %>% 
+#     mutate(model_type = model.type4,
+#            purpose.lab = purpose4.lab) %>% 
+#       mutate(total_samples = total_juvenile_samples + total_adult_samples)
 ```
 
 ```{r Quick-analysis-of-results, echo = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
@@ -116,8 +116,8 @@ results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
 results.all <- results.1 %>% 
   bind_rows(results.2, results.3, results.4) %>% 
   #mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
-  #mutate(relative_bias = round(((Q50 - truth)/truth)*100,1)) %>%
-  #mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
+     mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+     mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>% 
   mutate(cv = (sd/mean)*100) %>% 
   mutate(samples.lab = paste0(prop_sampled_juvs, " percent sampled")) %>% 
   separate(col = purpose.lab, into = "sampling.scheme", sep = " -", remove = FALSE)
@@ -150,6 +150,8 @@ results.all <- results.all %>% dplyr::filter(Rhat < 1.01)
 ```
 
 ```{r Calcualte HPDI intervals, echo=FALSE}
+HPD.1.summary.tidy = HPD.2.summary.tidy = HPD.3.summary.tidy = HPD.4.summary.tidy <- NULL
+
 #Read in previously saved file
 HPD.1.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation1, "_", purpose1, ".csv"))
 
@@ -180,56 +182,57 @@ HPD.2.summary.tidy <- HPD.2.summary_all %>%
 #---------------------------Purpose 3 --------------------------------#    
 
 #Read in previously saved file
-HPD.3.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation3, "_", purpose3, ".csv"))
-
-HPD.3.summary.tidy <- HPD.3.summary_all %>% 
-  pivot_longer(
-    cols = starts_with("percent"),
-    names_to = "proportion_sampled",
-    names_prefix = "percent_in_interval.",
-    values_to = "percent_in_interval"
-  ) %>% 
-  mutate(model_type = model.type3,
-         purpose.lab = purpose3.lab)
-
-
-#---------------------------Purpose 4 --------------------------------# 
-#Read in previously saved file
-HPD.4.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation4, "_", purpose4, ".csv"))
-
-HPD.4.summary.tidy <- HPD.4.summary_all %>%
-  pivot_longer(
-    cols = starts_with("percent"),
-    names_to = "proportion_sampled",
-    names_prefix = "percent_in_interval.",
-    values_to = "percent_in_interval"
-  ) %>%
-  mutate(model_type = model.type4,
-         purpose.lab = purpose4.lab)
+# HPD.3.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation3, "_", purpose3, ".csv"))
+# 
+# HPD.3.summary.tidy <- HPD.3.summary_all %>% 
+#   pivot_longer(
+#     cols = starts_with("percent"),
+#     names_to = "proportion_sampled",
+#     names_prefix = "percent_in_interval.",
+#     values_to = "percent_in_interval"
+#   ) %>% 
+#   mutate(model_type = model.type3,
+#          purpose.lab = purpose3.lab)
+# 
+# 
+# #---------------------------Purpose 4 --------------------------------# 
+# #Read in previously saved file
+# HPD.4.summary_all <- read_csv(file = paste0(results_location, "HPD.summaries/HPD.summary_", date.of.simulation4, "_", purpose4, ".csv"))
+# 
+# HPD.4.summary.tidy <- HPD.4.summary_all %>%
+#   pivot_longer(
+#     cols = starts_with("percent"),
+#     names_to = "proportion_sampled",
+#     names_prefix = "percent_in_interval.",
+#     values_to = "percent_in_interval"
+#   ) %>%
+#   mutate(model_type = model.type4,
+#          purpose.lab = purpose4.lab)
 
 #---------------Create dataframes to plot by sample size--------#
 #Set eveyrthing to Null so the below scripts will run
 HPD.samples1.1.4viz = HPD.samples2.1.4viz = HPD.samples3.1.4viz = HPD.samples4.1.4viz = HPD.samples1.2.4viz = HPD.samples2.2.4viz = HPD.samples3.2.4viz = HPD.samples4.2.4viz = HPD.samples1.3.4viz = HPD.samples2.3.4viz = HPD.samples3.3.4viz = HPD.samples4.3.4viz = HPD.samples1.4.4viz = HPD.samples2.4.4viz = HPD.samples3.4.4viz = HPD.samples4.4.4viz <- NULL
 
-HPD.samples1.1.4viz <- HPD.1.summary.tidy %>% filter(proportion_sampled == "0.5_percent_sampled")
-HPD.samples2.1.4viz <- HPD.1.summary.tidy %>% filter(proportion_sampled == "1_percent_sampled")
-HPD.samples3.1.4viz <- HPD.1.summary.tidy %>% filter(proportion_sampled == "1.5_percent_sampled")
-HPD.samples4.1.4viz <- HPD.1.summary.tidy %>% filter(proportion_sampled == "2_percent_sampled")
 
-HPD.samples1.2.4viz <- HPD.2.summary.tidy %>% filter(proportion_sampled == "0.5_percent_sampled")
-HPD.samples2.2.4viz <- HPD.2.summary.tidy %>% filter(proportion_sampled == "1_percent_sampled")
-HPD.samples3.2.4viz <- HPD.2.summary.tidy %>% filter(proportion_sampled == "1.5_percent_sampled")
-HPD.samples4.2.4viz <- HPD.2.summary.tidy %>% filter(proportion_sampled == "2_percent_sampled")
+HPD.samples1.1.4viz <- HPD.1.summary.tidy %>% dplyr::filter(proportion_sampled == "0.5_percent_sampled")
+HPD.samples2.1.4viz <- HPD.1.summary.tidy %>% dplyr::filter(proportion_sampled == "1_percent_sampled")
+HPD.samples3.1.4viz <- HPD.1.summary.tidy %>% dplyr::filter(proportion_sampled == "1.5_percent_sampled")
+HPD.samples4.1.4viz <- HPD.1.summary.tidy %>% dplyr::filter(proportion_sampled == "2_percent_sampled")
 
-HPD.samples1.3.4viz <- HPD.3.summary.tidy %>% filter(proportion_sampled == "0.5_percent_sampled")
-HPD.samples2.3.4viz <- HPD.3.summary.tidy %>% filter(proportion_sampled == "1_percent_sampled")
-HPD.samples3.3.4viz <- HPD.3.summary.tidy %>% filter(proportion_sampled == "1.5_percent_sampled")
-HPD.samples4.3.4viz <- HPD.3.summary.tidy %>% filter(proportion_sampled == "2_percent_sampled")
+HPD.samples1.2.4viz <- HPD.2.summary.tidy %>% dplyr::filter(proportion_sampled == "0.5_percent_sampled")
+HPD.samples2.2.4viz <- HPD.2.summary.tidy %>% dplyr::filter(proportion_sampled == "1_percent_sampled")
+HPD.samples3.2.4viz <- HPD.2.summary.tidy %>% dplyr::filter(proportion_sampled == "1.5_percent_sampled")
+HPD.samples4.2.4viz <- HPD.2.summary.tidy %>% dplyr::filter(proportion_sampled == "2_percent_sampled")
 
-HPD.samples1.4.4viz <- HPD.4.summary.tidy %>% filter(proportion_sampled == "0.5_percent_sampled")
-HPD.samples2.4.4viz <- HPD.4.summary.tidy %>% filter(proportion_sampled == "1_percent_sampled")
-HPD.samples3.4.4viz <- HPD.4.summary.tidy %>% filter(proportion_sampled == "1.5_percent_sampled")
-HPD.samples4.4.4viz <- HPD.4.summary.tidy %>% filter(proportion_sampled == "2_percent_sampled")
+# HPD.samples1.3.4viz <- HPD.3.summary.tidy %>% dplyr::filter(proportion_sampled == "0.5_percent_sampled")
+# HPD.samples2.3.4viz <- HPD.3.summary.tidy %>% dplyr::filter(proportion_sampled == "1_percent_sampled")
+# HPD.samples3.3.4viz <- HPD.3.summary.tidy %>% dplyr::filter(proportion_sampled == "1.5_percent_sampled")
+# HPD.samples4.3.4viz <- HPD.3.summary.tidy %>% dplyr::filter(proportion_sampled == "2_percent_sampled")
+# 
+# HPD.samples1.4.4viz <- HPD.4.summary.tidy %>% dplyr::filter(proportion_sampled == "0.5_percent_sampled")
+# HPD.samples2.4.4viz <- HPD.4.summary.tidy %>% dplyr::filter(proportion_sampled == "1_percent_sampled")
+# HPD.samples3.4.4viz <- HPD.4.summary.tidy %>% dplyr::filter(proportion_sampled == "1.5_percent_sampled")
+# HPD.samples4.4.4viz <- HPD.4.summary.tidy %>% dplyr::filter(proportion_sampled == "2_percent_sampled")
 
 
 #Combine above dataframes, and re-order purpose as factors
