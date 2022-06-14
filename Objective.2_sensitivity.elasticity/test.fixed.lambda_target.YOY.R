@@ -21,9 +21,9 @@ source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO_SB.R")
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/models/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -36,13 +36,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings----------------------------
-script_name <- "psi1_0.05non.conform_target.YOY_no.downsample_UpdatedEquation.R" #Copy name of script here
-primary_goal <- "Test new equation from Liz" #Why am I running this simulation? Provide details
+script_name <- "test.fixed.lambda_target.YOY.R" #Copy name of script here
+primary_goal <- "Compare how to approach lambda when limited or no information is available to set a prior on population growth rate" #Why am I running this simulation? Provide details
 
-question1 <- "Does the generalized updated equation from Liz improve estimates of abundance and psi?"
-question2 <- "Are survival estimates improved by using the same values as the Leslie matrix?"
-question3 <- "Better to use targeted sampling of YOY or sample all age classes"
-purpose <- "psi1_0.05non.conform_target.YOY_no.downsample_UpdatedEquation" #For naming output files
+question1 <- "In the absence of reliable population-level data, how shall we approach lambda"
+question2 <- ""
+question3 <- ""
+purpose <- "test.fixed.lambda_target.YOY" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -53,7 +53,7 @@ max.POPs <- 150
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nfb", "psi", "Nm", "surv", "lam")
+jags_params = c("Nf", "psi", "Nm", "surv")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -83,10 +83,12 @@ num.mates <- c(1:3) #vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
-ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
-ff
-ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-ff
+ff1 <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
+ff1
+ff1 <- ff1*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
+ff1
+
+#If wanting to make population growth potentially positive or negative, increase or decrease female fecundity by 0.2
 
 #Stable age distribution
 props <- rep(NA, max.age+1)
@@ -113,15 +115,15 @@ estimation.year <- n_yrs - 5 # Set year of estimation
 #-----------------Leslie Matrix parameters--------------------
 #To set a prior on lambda, we will run a Leslie matrix, assuming the following information for survival and fecundity
 leslie.survival <- Adult.survival
-leslie.fecundity <- ff/mating.periodicity
+leslie.fecundity <- ff1/mating.periodicity
 surv.cv <- 0.1 #What is the CV on survival?
 fec.cv <- 0.1 #What is the CV on fecundity?
 corr.vec <- c(0, -0.25, -0.5)
-n.draws <- 1000 #Number of draws from a multivariate normal distribution
+n.draws <- 100 #Number of draws from a multivariate normal distribution
 
 #Run leslie matrix to generate priors for lambda and survival
 set.seed(rseeds[1])
-source("./01_MAIN_scripts/functions/Leslie_matrix_source.R")
+source("./Objective.2_sensitivity.elasticity/functions/Leslie_matrix_source.R")
 
 #Check values from Leslie matrix
 mean.lambda
@@ -180,8 +182,7 @@ simulation.df <- tibble(script_name = script_name,
 )
 
 #Save simulation settings in Simulation_log
-  # simulation.log <- read_csv("Simulation_log.csv") %>% 
-  #  tail(simulation.log)
+  # simulation.log <- read_csv("Simulation_log.csv")
   #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
   #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
 
@@ -226,14 +227,24 @@ iterations <- 100 #Number of iterations to loop over
 #rseed.pop <- 87625053 #Want to use the same population for all simulations
 #set.seed(rseed.pop)
 
+ #Fix lambda to three different values
+ lambda.vec <- c(0.95, 1, 1.05)
+ 
+ for(lf in 1:3){
+
+   lam.fix <- lambda.vec[lf]
+     
  for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
    sim.start <- Sys.time()
    #rseed <- sample(1:1000000,1)
-   set.seed(rseeds[iter])
    rseed <- rseeds[iter]
+   set.seed(rseed)
 
-   source("./01_MAIN_scripts/functions/Dovi_IBS_SB_test.assign.conformity.R")
+   #source("./01_MAIN_scripts/functions/Dovi_IBS_SB_test.assign.conformity.R")
+   
+   #Randomly make population growth positive, negative, or neutral
+   ff <- sample(c(ff1-0.4, ff1, ff1+0.4), size = 1)
    
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -439,8 +450,8 @@ iterations <- 100 #Number of iterations to loop over
       
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
-      set.seed(rseed)
-    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB_UPDATED.R")
+    set.seed(rseed)
+    source("Objective.2_sensitivity.elasticity/functions/run.JAGS_HS.only_fixed.lambda.R")
 
     #Calculate expectations
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
@@ -453,7 +464,7 @@ iterations <- 100 #Number of iterations to loop over
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("01_MAIN_scripts/functions/compile.results_HS.only_SB.R")
+    source("Objective.2_sensitivity.elasticity/functions/compile.results_HS.only_SB_no.lam.R")
     
     #-----------------Loop end-----------------------------
     #Bind results from previous iterations with current iteration
@@ -520,17 +531,17 @@ iterations <- 100 #Number of iterations to loop over
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("Finished iteration ", iter, ". \n Took ", iter.time, " minutes"))
-   } # end loop over iterations
-  
+   } # End loop over iterations
+ } #End loop over fixed lambda
   
   
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
 #If using breeding individuals for Nf truth
  # results2 <- results %>%
- #   mutate(relative_bias = ifelse(parameter == "Nfb", round(((Q50 - breed.truth)/breed.truth)*100, 1),
+ #   mutate(relative_bias = ifelse(parameter == "Nf", round(((Q50 - breed.truth)/breed.truth)*100, 1),
  #                                 round(((Q50 - all.truth)/all.truth)*100, 1))) %>% 
- #   mutate(in_interval = ifelse(parameter == "Nfb", 
+ #   mutate(in_interval = ifelse(parameter == "Nf", 
  #                               ifelse(HPD2.5 < breed.truth & breed.truth < HPD97.5, "Y", "N"),
  #                               ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N"))) %>%
  #   mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
