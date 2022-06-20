@@ -1,3 +1,9 @@
+length(s1.2)
+length(s2.2)
+length(s3.2)
+length(s4.2)
+
+
 library(jagsUI)
 
 

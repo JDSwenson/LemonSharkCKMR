@@ -17,6 +17,7 @@ library(coda)
 library(runjags)
 library(ggmcmc)
 library(viridis)
+library(postpack)
 
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
@@ -45,31 +46,28 @@ purpose2 <- "test.uniform.lambda_sample.all.ages"
 purpose2.lab <- "All ages sampled | Uniform lambda"
 model.type2 <- "HS.only"
 
-date.of.simulation3 <- "14Jun2022"
+date.of.simulation3 <- "17Jun2022"
 purpose3 <- "test.fixed.lambda_target.YOY"
 purpose3.lab <- "Target YOY | Fixed lambda"
 model.type3 <- "HS.only"
 
-date.of.simulation4 <- "14Jun2022"
+date.of.simulation4 <- "17Jun2022"
 purpose4 <- "test.fixed.lambda_sample.all.ages"
 purpose4.lab <- "All ages sampled | Fixed lambda"
 model.type4 <- "HS.only"
 
 seeds <- "Seeds2022.04.15"
-sim.samples.1 <- "0.5prop.sampled" #Label on file output
-samples1.lab <- "0.5 percent sampled" #Label for dataframe and figures
-sim.samples.2 <- "1prop.sampled" #Label on file output
-samples2.lab <- "1 percent sampled" #Label for dataframe and figures
-sim.samples.3 <- "1.5prop.sampled"  #Label on file output
-samples3.lab <- "1.5 percent sampled" #Label for dataframe and figures
-sim.samples.4 <- "2prop.sampled" #Label on file output
-samples4.lab <- "2 percent sampled" #Label for dataframe and figures
-sim.samples.all <- c(0.5, 1, 1.5, 2) #This is the number of samples when sampling specific proportions of the juvenile population for the HS only model. Current as of 05/03/2022
+sim.samples <- "1prop.sampled" #Label on file output
+samples.lab <- "1 percent sampled" #Label for dataframe and figures
 
-sim.samples.labs.all <- c(samples1.lab, samples2.lab, samples3.lab, samples4.lab)
+lam.1 <- "0.95_fixed.lambda"
+lam.2 <- "1.0_fixed.lambda"
+lam.3 <- "1.05_fixed.lambda"
 
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/"
+
+
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/Model.results/"
 results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/figures/"
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -87,7 +85,8 @@ results.1 = results.2 = results.3 = results.4 <- NULL
 results.1 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation1, "_", seeds, "_", purpose1, ".csv")) %>% 
   mutate(model_type = model.type1, 
          purpose.lab = purpose1.lab) %>% 
-  mutate(total_samples = total_juvenile_samples + total_adult_samples)
+  mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
+  dplyr::filter(iteration <= 100)
 
 results.2 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation2, "_", seeds, "_", purpose2, ".csv")) %>% 
   mutate(model_type = model.type2,
@@ -107,51 +106,34 @@ results.4 <- read_csv(paste0(results_location, results_prefix, "_", date.of.simu
 #------------------------------- MCMC output -----------------------------------#
 #date.of.simulation <- "07Apr2022"
 #Trial 1
-s1.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose1))
-
-s1.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose1))
-
-s1.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose1))
-
-s1.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose1))
+s1.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation1, "_", seeds, "_", sim.samples, "_", MCMC.settings, "_", purpose1))
+s1.1 <- s1.1[1:100]
 
 #Trial 2
-s2.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose2))
-
-s2.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose2))
-
-s2.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose2))
-
-s2.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose2))
+s2.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation2, "_", seeds, "_", sim.samples, "_", MCMC.settings, "_", purpose2))
 
 #Trial 3
 #date.of.simulation <- "05Apr2022"
-s3.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose3))
+s3.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples, "_", MCMC.settings, "_", purpose3, "_", lam.1))
 
-s3.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose3))
+s3.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples, "_", MCMC.settings, "_", purpose3, "_", lam.2))
 
-s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose3))
+s3.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples, "_", MCMC.settings, "_", purpose3, "_", lam.3))
 
-s3.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose3))
+#s3.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation3, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose3))
 
 #Trial 4
- s4.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose4))
+ s4.1 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples, "_", MCMC.settings, "_", purpose4, "_", lam.1))
 
- s4.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose4))
+ s4.2 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples, "_", MCMC.settings, "_", purpose4, "_", lam.2))
 
- s4.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose4))
- 
-  s4.4 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose4))
+ s4.3 <- readRDS(paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation4, "_", seeds, "_", sim.samples, "_", MCMC.settings, "_", purpose4, "_", lam.3))
+
 
 #------------------------------- Population size details -----------------------------------#
 #date.of.simulation <- "07Apr2022"
-pop.size.1 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation1, "_", seeds, "_", purpose1))
+pop.size.tibble <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation3, "_", seeds, "_", purpose3)) %>% mutate(Total.adult.pop = Male.adult.pop + Female.adult.pop)
 
-pop.size.2 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation2, "_", seeds, "_", purpose2))
-
-pop.size.3 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation3, "_", seeds, "_", purpose3))
-
-pop.size.4 <- readRDS(paste0(results_location, pop.size.prefix, "_", date.of.simulation4, "_", seeds, "_", purpose4))
 
 #------------------------------ Pairwise comparison matrices -------------------------------#
 #Mom
@@ -171,97 +153,6 @@ dad.comps.2 <- readRDS(paste0(results_location, dad.comps.prefix, "_", date.of.s
 dad.comps.3 <- readRDS(paste0(results_location, dad.comps.prefix, "_", date.of.simulation3, "_", seeds, "_", purpose3))
 
 dad.comps.4 <- readRDS(paste0(results_location, dad.comps.prefix, "_", date.of.simulation4, "_", seeds, "_", purpose4))
-
-```
-
-```{r Quick analysis of results}
-####------------------------------- Quick analysis of results -----------------------------------####
-
-results.all <- results.1 %>% 
-  bind_rows(results.2, results.3, results.4) %>% 
-     mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
-     mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>% 
-  mutate(cv = (sd/mean)*100) %>% 
-  mutate(samples.lab = paste0(prop_sampled_juvs, " percent sampled")) %>% 
-  separate(col = purpose.lab, into = "sampling.scheme", sep = " -", remove = FALSE)
-
-results.all$samples.lab <- factor(results.all$samples.lab, levels = c(samples1.lab, samples2.lab, samples3.lab, samples4.lab))
-results.all %>% dplyr::filter(is.na(samples.lab == TRUE)) #Should not be any
-
-results.all$purpose.lab <- factor(results.all$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
-results.all %>% dplyr::filter(is.na(purpose.lab == TRUE)) #Should not be any
-#Specify parameters
-#jags_params <- c("Nfa", "Nfb", "Nm", "surv", "lam", "psi", "pb") #if estimating all parameters with the HS|PO model
-jags_params <- c("Nfb", "psi", "Nm", "surv", "lam") #If estimating all parameters with the HS only model
-
-head(results.all)
-
-
-#View instances where the model failed to converge
-results.all %>% dplyr::filter(Rhat > 1.01) %>% nrow()
-
-#Save instances that failed to converge so they can be removed later from the HPDI dataframes
-no.convergence <- results.all %>% dplyr::filter(Rhat > 1.01) %>% 
-  mutate(purp = ifelse(purpose.lab == purpose1.lab, 1,
-                       ifelse(purpose.lab == purpose2.lab, 2,
-                              ifelse(purpose.lab == purpose3.lab, 3, 4)))) %>% 
-  mutate(samps = ifelse(total_samples == sim.samples.all[1], 1,
-                        ifelse(total_samples == sim.samples.all[2], 2,
-                               ifelse(total_samples == sim.samples.all[3], 3, 4)))) %>% 
-  distinct(purpose.lab, purp, total_samples, iteration, samps)
-
-#Remove instances that failed to converge
-results.all <- results.all %>% dplyr::filter(Rhat < 1.01)
-
- #-----------Median Relative bias by sample size-------------------------#
-results.all %>% group_by(prop_sampled_juvs, parameter, purpose.lab) %>% 
-#  dplyr::filter(model_type == "HS.PO") %>%
-  dplyr::summarize(median = median(relative_bias)) %>% 
-  arrange(desc(median)) %>%
-#  dplyr::filter(parameter == "psi") %>% 
-  View()
-
-# results2 %>% dplyr::filter(parameter == "lam") %>% 
-#   ggplot(aes(relative_bias, colour = which.dup, fill = which.dup)) +
-#   geom_density(alpha = 0.5)
-# 
-# 
-# results2 %>%  mutate(cv = (sd/mean)*100) %>% 
-#   group_by(parameter, which.dup) %>% 
-#   dplyr::summarize(mean.cv = mean(cv), mean.relative.bias = mean(relative_bias)) %>%
-# #  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
-#   arrange(mean.cv) %>% 
-#   write_csv(file = paste0(results_location, "Mean_bias_and_precision_", date.of.simulation, "_", purpose, ".csv"))
-
-
-#------------------------------- Within HPDI? -----------------------------------#
-results.all %>% group_by(purpose.lab, prop_sampled_juvs, parameter) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% 
-#  filter(parameter != "lam") %>% 
-  arrange(desc(percent_in_interval)) %>% 
-  #dplyr::filter(parameter == "psi") %>% 
-  View()
-
-results.all %>% dplyr::filter(parameter == "psi", samples.lab != samples1.lab) %>% 
-  View()
-
-#------------------------------- CV -----------------------------------#
-results.all %>% group_by(model_type, purpose.lab, total_samples, parameter) %>% 
-  dplyr::summarize(mean.cv = mean(cv), 
-                   median.bias = median(relative_bias),
-                   percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
-#  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
-  arrange(mean.cv) %>% 
-#  write_csv(file = paste0(results_location, "bias_and_precision/Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
-
-
-#-----------------------------Numbers of Kin pairs---------------------#
-results.all %>% dplyr::filter(parameter == "Nfb" | parameter == "Nm") %>% 
-  group_by(purpose.lab, parameter, prop_sampled_juvs) %>% 
-  summarize(mean.HSPs = mean(HSPs_detected),
-            mean.POPs = mean(POPs_detected)) %>%
-  View()
-
 
 ```
 
@@ -313,43 +204,6 @@ for(i in 1:length(s1.1)){ #Loop over all the posterior samples from each iterati
 
     HPD.samples1.1 <- rbind(HPD.samples1.1, post.HPD.samples1.1)
     
-    #samples2 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples2.1 <- combine.mcmc(s1.2[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.samples2.1 <- post.HPD.samples2.1[row.names(post.HPD.samples2.1) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.samples2.1 <- rbind(HPD.samples2.1, post.HPD.samples2.1)
-    
-     #samples3 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples3.1 <- combine.mcmc(s1.2[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.samples3.1 <- post.HPD.samples3.1[row.names(post.HPD.samples3.1) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.samples3.1 <- rbind(HPD.samples3.1, post.HPD.samples3.1)
-
-    #samples4 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples4.1 <- combine.mcmc(s1.3[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.samples4.1 <- post.HPD.samples4.1[row.names(post.HPD.samples4.1) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.samples4.1 <- rbind(HPD.samples4.1, post.HPD.samples4.1)
-    
-    
     #---------------------------Purpose 2--------------------------------#    
     #samples1 samples
     #Calcualte HPD interval for iteration i and interval j
@@ -364,53 +218,63 @@ for(i in 1:length(s1.1)){ #Loop over all the posterior samples from each iterati
     
     HPD.samples1.2 <- rbind(HPD.samples1.2, post.HPD.samples1.2)
     
-    #samples2 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples2.2 <- combine.mcmc(s2.2[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.samples2.2 <- post.HPD.samples2.2[row.names(post.HPD.samples2.2) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.samples2.2 <- rbind(HPD.samples2.2, post.HPD.samples2.2)
-    
-        #samples3 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples3.2 <- combine.mcmc(s2.2[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.samples3.2 <- post.HPD.samples3.2[row.names(post.HPD.samples3.2) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.samples3.2 <- rbind(HPD.samples3.2, post.HPD.samples3.2)
-    
-    #samples4 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples4.2 <- combine.mcmc(s2.3[[i]]) %>% 
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>% 
-      mutate(interval = intervals[j], iteration = i)
-    
-    post.HPD.samples4.2 <- post.HPD.samples4.2[row.names(post.HPD.samples4.2) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-    
-    HPD.samples4.2 <- rbind(HPD.samples4.2, post.HPD.samples4.2)
   }    
      print(paste0("Finished with iteration ", i))
   }
 
-  
-for(i in 1:length(s3.1)){ #Loop over all the posterior samples from each iteration; length should be same as number of iterations
-  for(j in 1:length(intervals)){ #Loop over the different intervals for calculating HPDI
 
+for(i in 1:length(s3.1)){ #Loop over all the posterior samples from each iteration; length should be same as number of iterations
    # #---------------------------Purpose 3--------------------------------#
     #samples1 samples
     #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples1.3 <- combine.mcmc(s3.1[[i]]) %>%
+    HPD.1.3.temp <- combine.mcmc(list(s3.1[[i]], s3.2[[i]], s3.3[[i]]))
+    
+    #Put together new results file from combined mcmc runs
+    post.95.3 <- combine.mcmc(HPD.1.3.temp) %>%
+      HPDinterval() %>%
+      data.frame() %>%
+      rownames_to_column(var = "parameter")
+    post.95.3 <- post.95.3 %>% filter(parameter %in% jags_params3.4) #Remove deviance
+    
+    
+    model.sum.3 <- data.frame(t(post_summ(HPD.1.3.temp, jags_params3.4, Rhat = T, neff = T))) %>% 
+  rownames_to_column(var = "parameter")
+    
+    #Combine into data.frame
+    model.sum.3.2 <- model.sum.3 %>% left_join(post.95.3, by = "parameter") %>%
+      rename(HPD2.5 = lower, HPD97.5 = upper) %>%
+      dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff) %>% 
+      mutate(iteration = i)
+    
+    model.sum.3.all <- rbind(model.sum.3.all, model.sum.3.2)
+
+        #---------------------------Purpose 4--------------------------------#
+    #Combine chains for different fixed lambdas
+    HPD.1.4.temp <- combine.mcmc(list(s4.1[[i]], s4.2[[i]], s4.3[[i]]))
+    
+    #Put together new results file from combined mcmc runs
+    post.95.4 <- combine.mcmc(HPD.1.4.temp) %>%
+      HPDinterval() %>%
+      data.frame() %>%
+      rownames_to_column(var = "parameter")
+    post.95.4 <- post.95.4 %>% filter(parameter %in% jags_params3.4) #Remove deviance
+    
+    
+    model.sum.4 <- data.frame(t(post_summ(HPD.1.4.temp, jags_params3.4, Rhat = T, neff = T))) %>% 
+  rownames_to_column(var = "parameter")
+    
+    #Combine into data.frame
+    model.sum.4.2 <- model.sum.4 %>% left_join(post.95.4, by = "parameter") %>%
+      rename(HPD2.5 = lower, HPD97.5 = upper) %>%
+      dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff) %>% 
+      mutate(iteration = i)
+    
+    model.sum.4.all <- rbind(model.sum.4.all, model.sum.4.2)
+
+    
+    for(j in 1:length(intervals)){ #Loop over the different intervals for calculating HPDI
+   # #---------------------------Purpose 3--------------------------------#
+    post.HPD.samples1.3 <- combine.mcmc(HPD.1.3.temp) %>%
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>%
       mutate(interval = intervals[j], iteration = i)
@@ -421,49 +285,9 @@ for(i in 1:length(s3.1)){ #Loop over all the posterior samples from each iterati
     HPD.samples1.3 <- rbind(HPD.samples1.3, post.HPD.samples1.3)
     
 
-    #samples2 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples2.3 <- combine.mcmc(s3.2[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
-
-    post.HPD.samples2.3 <- post.HPD.samples2.3[row.names(post.HPD.samples2.3) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.samples2.3 <- rbind(HPD.samples2.3, post.HPD.samples2.3)
-
-        #samples3 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples3.3 <- combine.mcmc(s3.2[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
-
-    post.HPD.samples3.3 <- post.HPD.samples3.3[row.names(post.HPD.samples3.3) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.samples3.3 <- rbind(HPD.samples3.3, post.HPD.samples3.3)
-
-    #samples4 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples4.3 <- combine.mcmc(s3.3[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
-
-    post.HPD.samples4.3 <- post.HPD.samples4.3[row.names(post.HPD.samples4.3) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.samples4.3 <- rbind(HPD.samples4.3, post.HPD.samples4.3)
-   }
-   print(paste0("Finished with iteration ", i))
-   }
-
-    #---------------------------Purpose 4--------------------------------#
-    #samples1 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples1.4 <- combine.mcmc(s4.1[[i]]) %>%
+        #---------------------------Purpose 4--------------------------------#
+    
+    post.HPD.samples1.4 <- combine.mcmc(HPD.1.4.temp) %>%
       HPDinterval(prob = intervals[j]) %>%
       data.frame() %>%
       mutate(interval = intervals[j], iteration = i)
@@ -473,98 +297,155 @@ for(i in 1:length(s3.1)){ #Loop over all the posterior samples from each iterati
 
     HPD.samples1.4 <- rbind(HPD.samples1.4, post.HPD.samples1.4)
 
-    #samples2 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples2.4 <- combine.mcmc(s4.2[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
+   }
+   print(paste0("Finished with iteration ", i))
+}
 
-    post.HPD.samples2.4 <- post.HPD.samples2.4[row.names(post.HPD.samples2.4) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.samples2.4 <- rbind(HPD.samples2.4, post.HPD.samples2.4)
-
-        #samples3 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples3.4 <- combine.mcmc(s4.2[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
-
-    post.HPD.samples3.4 <- post.HPD.samples3.4[row.names(post.HPD.samples3.4) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.samples3.4 <- rbind(HPD.samples3.4, post.HPD.samples3.4)
-
-    #samples4 samples
-    #Calcualte HPD interval for iteration i and interval j
-    post.HPD.samples4.4 <- combine.mcmc(s4.3[[i]]) %>%
-      HPDinterval(prob = intervals[j]) %>%
-      data.frame() %>%
-      mutate(interval = intervals[j], iteration = i)
-
-    post.HPD.samples4.4 <- post.HPD.samples4.4[row.names(post.HPD.samples4.4) %in% jags_params,] %>% #Remove deviance
-      rownames_to_column(var = "parameter")
-
-    HPD.samples4.4 <- rbind(HPD.samples4.4, post.HPD.samples4.4)
-
-   # }
-   # print(paste0("Finished with iteration ", i))
-   # }
+#HPD.1.3.temp <- HPD.1.4.temp <- HPD.samples1.4 <- HPD.samples1.3 <- model.sum.4 <- model.sum.4.2 <- model.sum.3 <- model.sum.3.2 <- model.sum.3.all <- model.sum.4.all <-   NULL
 ```
+
+```{r Create results file for combined mcmc chains for lambda}
+#Extract truth values from runs with same sample scheme
+results.1.4comb <- results.1 %>% dplyr::select(!c(Q2.5, Q97.5, Q50, mean, sd, HPD2.5, HPD97.5, Rhat, neff, purpose, purpose.lab))
+
+results.3 <- model.sum.3.all %>% left_join(results.1.4comb, by = c("parameter", "iteration")) %>% 
+  mutate(purpose = purpose3, purpose.lab = purpose3.lab)
+
+results3.2 <- results.3 %>%
+     mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+     mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>%
+     mutate(total_samples = total_juvenile_samples + total_adult_samples) %>%
+     as_tibble()
+
+write.table(results3.2, file = paste0(results_location, results_prefix, "_", date.of.simulation3, "_", seeds, "_", purpose3, "allCombined.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+   
+
+#Same for second round (sampling all)
+results.2.4comb <- results.2 %>% dplyr::select(!c(Q2.5, Q97.5, Q50, mean, sd, HPD2.5, HPD97.5, Rhat, neff, purpose, purpose.lab, relative_bias, in_interval))
+results.4 <- model.sum.4.all %>% left_join(results.2.4comb, by = c("parameter", "iteration")) %>% 
+    mutate(purpose = purpose4, purpose.lab = purpose4.lab)
+
+results4.2 <- results.4 %>%
+     mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+     mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>%
+     mutate(total_samples = total_juvenile_samples + total_adult_samples) %>%
+     as_tibble()
+
+write.table(results4.2, file = paste0(results_location, results_prefix, "_", date.of.simulation4, "_", seeds, "_", purpose4, "allCombined.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+```
+
+```{r Quick analysis of results}
+
+
+####------------------------------- Quick analysis of results -----------------------------------####
+
+results.all <- results.1 %>% 
+  bind_rows(results.2, results3.2, results4.2) %>% 
+     mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+     mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>% 
+  mutate(cv = (sd/mean)*100) %>% 
+  mutate(samples.lab = paste0(prop_sampled_juvs, " percent sampled")) %>% 
+  separate(col = purpose.lab, into = "sampling.scheme", sep = " -", remove = FALSE)
+
+results.all$samples.lab <- factor(results.all$samples.lab, levels = c(samples.lab))
+results.all %>% dplyr::filter(is.na(samples.lab == TRUE)) #Should not be any
+
+results.all$purpose.lab <- factor(results.all$purpose.lab, levels = c(purpose1.lab, purpose2.lab, purpose3.lab, purpose4.lab))
+results.all %>% dplyr::filter(is.na(purpose.lab == TRUE)) #Should not be any
+#Specify parameters
+#jags_params <- c("Nfa", "Nfb", "Nm", "surv", "lam", "psi", "pb") #if estimating all parameters with the HS|PO model
+jags_params <- c("Nf", "psi", "Nm", "surv", "lam") #If estimating all parameters with the HS only model
+jags_params3.4 <- c("Nf", "psi", "Nm", "surv")
+
+head(results.all)
+
+
+#View instances where the model failed to converge
+results.all %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+
+#Save instances that failed to converge so they can be removed later from the HPDI dataframes
+no.convergence <- results.all %>% dplyr::filter(Rhat > 1.01) %>% 
+  mutate(purp = ifelse(purpose.lab == purpose1.lab, 1,
+                       ifelse(purpose.lab == purpose2.lab, 2,
+                              ifelse(purpose.lab == purpose3.lab, 3, 4)))) %>% 
+  distinct(purpose.lab, purp, total_samples, iteration)
+
+#Remove instances that failed to converge
+results.all <- results.all %>% dplyr::filter(Rhat < 1.01)
+
+ #-----------Median Relative bias by sample size-------------------------#
+results.all %>% group_by(prop_sampled_juvs, parameter, purpose.lab) %>% 
+#  dplyr::filter(model_type == "HS.PO") %>%
+  dplyr::summarize(median = median(relative_bias)) %>% 
+  arrange(desc(median)) %>%
+#  dplyr::filter(parameter == "psi") %>% 
+  View()
+
+# results2 %>% dplyr::filter(parameter == "lam") %>% 
+#   ggplot(aes(relative_bias, colour = which.dup, fill = which.dup)) +
+#   geom_density(alpha = 0.5)
+# 
+# 
+# results2 %>%  mutate(cv = (sd/mean)*100) %>% 
+#   group_by(parameter, which.dup) %>% 
+#   dplyr::summarize(mean.cv = mean(cv), mean.relative.bias = mean(relative_bias)) %>%
+# #  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+#   arrange(mean.cv) %>% 
+#   write_csv(file = paste0(results_location, "Mean_bias_and_precision_", date.of.simulation, "_", purpose, ".csv"))
+
+
+#------------------------------- Within HPDI? -----------------------------------#
+results.all %>% group_by(purpose.lab, prop_sampled_juvs, parameter) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>% 
+#  filter(parameter != "lam") %>% 
+  arrange(desc(percent_in_interval)) %>% 
+  #dplyr::filter(parameter == "psi") %>% 
+  View()
+
+results.all %>% dplyr::filter(parameter == "psi", samples.lab != samples1.lab) %>% 
+  View()
+
+#------------------------------- CV -----------------------------------#
+results.all %>% dplyr::group_by(model_type, purpose.lab, parameter) %>% 
+  dplyr::summarize(mean.cv = mean(cv), 
+                   median.bias = median(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
+#  dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+  arrange(mean.cv) #%>% 
+#  write_csv(file = paste0(results_location, "bias_and_precision/Mean_bias_and_precision_", today, "_", purpose.combo, ".csv"))
+
+
+#-----------------------------Numbers of Kin pairs---------------------#
+results.all %>% dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+  group_by(purpose.lab, parameter, prop_sampled_juvs) %>% 
+  summarize(mean.HSPs = mean(HSPs_detected),
+            mean.POPs = mean(POPs_detected)) %>%
+  View()
+
+
+```
+
 
 ```{r Create dataframes for HPDI plots}
 ####------------------------------- Create dataframes for HPDI plotting------------------------------#### 
 
 #---------------------------Purpose 1 --------------------------------#    
 #Separate out by sample size
-HPD.samples1.1.4viz <- results.1 %>% filter(prop_sampled_juvs == sim.samples.all[1]) %>% 
+HPD.samples1.1.4viz <- results.1 %>%
   right_join(HPD.samples1.1, by = c("parameter", "iteration")) %>% 
   anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples1.lab)
+  mutate(samples.lab = samples.lab)
   
-HPD.samples2.1.4viz <- results.1 %>% filter(prop_sampled_juvs == sim.samples.all[2]) %>% 
-  right_join(HPD.samples2.1, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples2.lab)
-
-HPD.samples3.1.4viz <- results.1 %>% dplyr::filter(prop_sampled_juvs == sim.samples.all[3]) %>% 
-  right_join(HPD.samples3.1, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples3.lab)
-
-HPD.samples4.1.4viz <- results.1 %>% filter(prop_sampled_juvs == sim.samples.all[4]) %>% 
-  right_join(HPD.samples4.1, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples4.lab)
-
 
 #Calculate percent estimates in each interval
 HPD.samples1.1.summary <- HPD.samples1.1.4viz %>% group_by(parameter, interval) %>% 
 #  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
   mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD.samples2.1.summary <- HPD.samples2.1.4viz %>% group_by(parameter, interval) %>% 
-#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%#If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-    dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPD.samples3.1.summary <- HPD.samples3.1.4viz %>% group_by(parameter, interval) %>% 
-#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPDsamples4.1.summary <- HPD.samples4.1.4viz %>% group_by(parameter, interval) %>%
-  #mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes    
-HPD.1.summary_all <- HPD.samples1.1.summary %>% inner_join(HPD.samples2.1.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPD.samples3.1.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPDsamples4.1.summary, by = c("parameter", "interval")) %>% 
+HPD.1.summary_all <- HPD.samples1.1.summary %>% 
   mutate(interval.scale = interval*100)
 
 #Read in previously saved file
@@ -586,53 +467,20 @@ HPD.1.summary.tidy <- HPD.1.summary_all %>%
 
 #---------------------------Purpose 2 --------------------------------#    
 #Separate out by sample size
-HPD.samples1.2.4viz <- results.2 %>% filter(prop_sampled_juvs == sim.samples.all[1]) %>% 
+HPD.samples1.2.4viz <- results.2 %>% 
   right_join(HPD.samples1.2, by = c("parameter", "iteration")) %>% 
   anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples1.lab)
-
-HPD.samples2.2.4viz <- results.2 %>% filter(prop_sampled_juvs == sim.samples.all[2]) %>% 
-  right_join(HPD.samples2.2, by = c("parameter", "iteration")) %>% 
-    anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples2.lab)
-
-HPD.samples3.2.4viz <- results.2 %>% filter(prop_sampled_juvs == sim.samples.all[3]) %>% 
-  right_join(HPD.samples3.2, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples3.lab)
-
-
-HPD.samples4.2.4viz <- results.2 %>% filter(prop_sampled_juvs == sim.samples.all[4]) %>% 
-  right_join(HPD.samples4.2, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples4.lab)
+  mutate(samples.lab = samples.lab)
 
 
 #Calculate percent estimates in each interval
 HPD.samples1.2.summary <- HPD.samples1.2.4viz %>% group_by(parameter, interval) %>% 
 #  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
   mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPD.samples2.2.summary <- HPD.samples2.2.4viz %>% group_by(parameter, interval) %>% 
-#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPD.samples3.2.summary <- HPD.samples3.2.4viz %>% group_by(parameter, interval) %>% 
-#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPDsamples4.2.summary <- HPD.samples4.2.4viz %>% group_by(parameter, interval) %>%
-  #mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
-HPD.2.summary_all <- HPD.samples1.2.summary %>% inner_join(HPD.samples2.2.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPD.samples3.2.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPDsamples4.2.summary, by = c("parameter", "interval")) %>% 
+HPD.2.summary_all <- HPD.samples1.2.summary %>% 
   mutate(interval.scale = interval*100)
 
 #Read in previously saved file
@@ -654,55 +502,20 @@ HPD.2.summary.tidy <- HPD.2.summary_all %>%
 
 #---------------------------Purpose 3 --------------------------------# 
 #Separate out by sample size
-HPD.samples1.3.4viz <- results.3 %>% filter(prop_sampled_juvs == sim.samples.all[1]) %>% 
+HPD.samples1.3.4viz <- results.3 %>%
   right_join(HPD.samples1.3, by = c("parameter", "iteration")) %>% 
   anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples1.lab)
-
-
-HPD.samples2.3.4viz <- results.3 %>% filter(prop_sampled_juvs == sim.samples.all[2]) %>% 
-  right_join(HPD.samples2.3, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples2.lab)
-
-
-HPD.samples3.3.4viz <- results.3 %>% filter(prop_sampled_juvs == sim.samples.all[3]) %>% 
-  right_join(HPD.samples3.3, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples3.lab)
-
-
-HPD.samples4.3.4viz <- results.3 %>% filter(prop_sampled_juvs == sim.samples.all[4]) %>% 
-  right_join(HPD.samples4.3, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples4.lab)
+  mutate(samples.lab = samples.lab)
 
 
 #Calculate percent estimates in each interval
 HPD.samples1.3.summary <- HPD.samples1.3.4viz %>% group_by(parameter, interval) %>% 
 #  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
   mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPD.samples2.3.summary <- HPD.samples2.3.4viz %>% group_by(parameter, interval) %>% 
-  # mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPD.samples3.3.summary <- HPD.samples3.3.4viz %>% group_by(parameter, interval) %>% 
-  # mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
-  dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPDsamples4.3.summary <- HPD.samples4.3.4viz %>% group_by(parameter, interval) %>%
-  # mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% #If using breed truth for females
-  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth  
-  dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
+  dplyr::summarize(percent_in_interval = sum(in_HPD_interval == "Y")/n() * 100)
 
 #Combine above dataframes
-HPD.3.summary_all <- HPD.samples1.3.summary %>% inner_join(HPD.samples2.3.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPD.samples3.3.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPDsamples4.3.summary, by = c("parameter", "interval")) %>% 
+HPD.3.summary_all <- HPD.samples1.3.summary %>% 
   mutate(interval.scale = interval*100)
 
 #Read in previously saved file
@@ -724,52 +537,20 @@ HPD.3.summary.tidy <- HPD.3.summary_all %>%
 
 #---------------------------Purpose 4 --------------------------------# 
 #Separate out by sample size
-HPD.samples1.4.4viz <- results.4 %>% filter(prop_sampled_juvs == sim.samples.all[1]) %>%
+HPD.samples1.4.4viz <- results.4 %>% 
   right_join(HPD.samples1.4, by = c("parameter", "iteration")) %>% 
   anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples1.lab)
-
-
-HPD.samples2.4.4viz <- results.4 %>% filter(prop_sampled_juvs == sim.samples.all[2]) %>%
-  right_join(HPD.samples2.4, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples2.lab)
-
-
-HPD.samples3.4.4viz <- results.4 %>% filter(prop_sampled_juvs == sim.samples.all[3]) %>%
-  right_join(HPD.samples3.4, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples3.lab)
-
-
-HPD.samples4.4.4viz <- results.4 %>% filter(prop_sampled_juvs == sim.samples.all[4]) %>%
-  right_join(HPD.samples4.4, by = c("parameter", "iteration")) %>% 
-  anti_join(no.convergence, by = c("purpose.lab", "iteration", "total_samples")) %>%  #Remove iterations that failed to converge
-  mutate(samples.lab = samples4.lab)
-
+  mutate(samples.lab = samples.lab)
 
 
 #Calculate percent estimates in each interval
 HPD.samples1.4.summary <- HPD.samples1.4.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
+#  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>%
+  mutate(in_HPD_interval = ifelse(lower < all.truth & all.truth < upper, "Y", "N")) %>% #If using all truth
   dplyr::summarize(percent_in_interval.0.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
 
-HPD.samples2.4.summary <- HPD.samples2.4.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
-  dplyr::summarize(percent_in_interval.1_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPD.samples3.4.summary <- HPD.samples3.4.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
-  dplyr::summarize(percent_in_interval.1.5_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
-HPDsamples4.4.summary <- HPD.samples4.4.4viz %>% group_by(parameter, interval) %>%
-  mutate(in_HPD_interval = ifelse(parameter == "Nfb", ifelse(lower < breed.truth & breed.truth < upper, "Y", "N"), ifelse(lower < all.truth & all.truth < upper, "Y", "N"))) %>% 
-  dplyr::summarize(percent_in_interval.2_percent_sampled = sum(in_HPD_interval == "Y")/n() * 100)
-
 #Combine above dataframes
-HPD.4.summary_all <- HPD.samples1.4.summary %>% inner_join(HPD.samples2.4.summary, by = c("parameter", "interval")) %>%
-  inner_join(HPD.samples3.4.summary, by = c("parameter", "interval")) %>% 
-  inner_join(HPDsamples4.4.summary, by = c("parameter", "interval")) %>%
+HPD.4.summary_all <- HPD.samples1.4.summary %>%
   mutate(interval.scale = interval*100)
 
 #Read in previously saved file

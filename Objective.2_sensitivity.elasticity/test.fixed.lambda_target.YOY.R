@@ -13,6 +13,7 @@ library(Rlab)
 library(runjags)
 library(postpack)
 library(coda)
+library(largeList) #See https://cran.r-project.org/web/packages/largeList/vignettes/intro_largeList.html for help/manual
 
 rm(list=ls())
 
@@ -21,9 +22,10 @@ source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO_SB.R")
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/Model.output/"
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/models/"
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/Model.results/"
+PopSim_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/population.simulation_lambda.test/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -52,7 +54,7 @@ max.HSPs <- 150
 max.POPs <- 150
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+fixed.parameters <- "lambda" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
 jags_params = c("Nf", "psi", "Nm", "surv")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
@@ -145,7 +147,7 @@ sample.years <- c(n_yrs - c(3:0)) #For two years of sampling
 #sample.vec.juvs <- c(50, 100, 150, 200) #vector to sample over per year
 #sample.vec.adults <- c(sample.vec.juvs/5)
 #sample.vec.total <- sample.vec.juvs + sample.vec.adults
-sample.vec.prop <- c(.5, 1, 1.5, 2)
+sample.vec.prop <- c(1)
 
 #----------------------- MCMC parameters ----------------------#
 ni <- 40000 # number of post-burn-in samples per chain
@@ -196,7 +198,7 @@ iterations <- 100 #Number of iterations to loop over
  sims.list.1 <- NULL
  sims.list.2 <- NULL
  sims.list.3 <- NULL
- sims.list.4 <- NULL
+# sims.list.4 <- NULL
  sample.info <- NULL
  parents.tibble_all <- NULL
  pop.size.tibble_all <- NULL
@@ -230,10 +232,6 @@ iterations <- 100 #Number of iterations to loop over
  #Fix lambda to three different values
  lambda.vec <- c(0.95, 1, 1.05)
  
- for(lf in 1:3){
-
-   lam.fix <- lambda.vec[lf]
-     
  for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
    sim.start <- Sys.time()
@@ -267,6 +265,11 @@ iterations <- 100 #Number of iterations to loop over
     as_tibble() %>% 
     mutate(seed = rseed, iteration = iter)
 
+  print("saving loopy list")
+  largeList::saveList(object = loopy.list, file = paste0(PopSim_location, "loopy.list2"), append = T)
+  
+  print("list saved")
+  
   pop.size.tibble_all <- bind_rows(pop.size.tibble_all, pop.size.tibble)
   
   parents.tibble <- out[[3]] %>% 
@@ -275,19 +278,16 @@ iterations <- 100 #Number of iterations to loop over
   parents.tibble_all <- bind_rows(parents.tibble_all, parents.tibble)
   
   #Save parents tibble
-  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
+#  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
   
   # Detailed info on population size
-  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
+#  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
 
   
-  # saveRDS(loopy.list, file = "../loopy.list")
-  # saveRDS(parents.tibble, file = "../parents.tibble")
-  # saveRDS(pop.size.tibble, file = "../pop.size.tibble")
-  # loopy.list <- readRDS("loopy.list")
-  # parents.tibble <- readRDS(parents.tibble, file = paste0(results_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-  #pop.size.tibble <- readRDS(pop.size.tibble, file = paste0(results_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
-  # 
+#   parents.tibble <- readRDS(file = paste0(PopSim_location, "CKMR_parents.breakdown_17Jun2022_Seeds2022.04.15_lambda.test"))
+#  pop.size.tibble <- readRDS(file = paste0(PopSim_location, "CKMR_pop.size_17Jun2022_Seeds2022.04.15_lambda.test"))
+  #loopy.list2 <- readList(file = paste0(PopSim_location, "loopy.list2"))
+  
   #organize results and calculate summary statistics from the simulation
   source("./01_MAIN_scripts/functions/query_results_SB.R")
   
@@ -449,6 +449,10 @@ iterations <- 100 #Number of iterations to loop over
     
       
     # ####------------------------ Fit CKMR model ----------------####
+      for(lf in 1:3){
+        
+        lam.fix <- lambda.vec[lf]
+        
     #Define JAGS data and model, and run the MCMC engine
     set.seed(rseed)
     source("Objective.2_sensitivity.elasticity/functions/run.JAGS_HS.only_fixed.lambda.R")
@@ -497,8 +501,9 @@ iterations <- 100 #Number of iterations to loop over
                                               seed = rseed)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
     
-  } # end loop over sample sizes
-  }
+  } # end loop over lambda
+  } # end if statement
+  } #End loop over sample sizes
     
   #-----------------Save output files iteratively--------------------
   
@@ -511,13 +516,13 @@ iterations <- 100 #Number of iterations to loop over
     write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
 #    #Model output for diagnostics
-     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_0.95_fixed.lambda"))
 # 
-    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.0_fixed.lambda"))
 # 
-    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.05_fixed.lambda"))
 #    
-    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
+#    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
 # 
 # # Detailed info on samples and parents to examine in more detail
     saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
@@ -532,7 +537,6 @@ iterations <- 100 #Number of iterations to loop over
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("Finished iteration ", iter, ". \n Took ", iter.time, " minutes"))
    } # End loop over iterations
- } #End loop over fixed lambda
   
   
 ########## Save and check results ##########
@@ -603,13 +607,13 @@ results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>%
 write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
  
  #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
+ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_0.95_fixed.lambda")) #Sample size 1
  
- saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
+ saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.0_fixed.lambda")) #Sample size 2
  
- saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
+ saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.05_fixed.lambda")) #Sample size 3
  
- saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose)) #Sample size 4
+# saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose)) #Sample size 4
  
  #Save detailed info about samples from population
  saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
@@ -635,7 +639,7 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
 
 #-------------Quick viz of results--------------#
 #Box plot of relative bias
-ggplot(data=results2, aes(x=factor(prop_sampled_juvs))) +
+ggplot(data=results2, aes(x=factor(lambda.fix))) +
   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
   ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +

@@ -112,11 +112,12 @@ estimation.year <- n_yrs - 5 # Set year of estimation
 
 #-----------------Leslie Matrix parameters--------------------
 #To set a prior on lambda, we will run a Leslie matrix, assuming the following information for survival and fecundity
-leslie.survival <- Adult.survival
 leslie.fecundity <- ff/mating.periodicity
-surv.cv <- 0.1 #What is the CV on survival?
-fec.cv <- 0.1 #What is the CV on fecundity?
-corr.vec <- c(0, -0.25, -0.5)
+YOY.surv.cv <- 0
+adult.surv.cv <- 0 #What is the CV on survival?
+fec.cv <- 0 #What is the CV on fecundity?
+survival.corr <- 0.1 #How correlated are YOY and adult survival?
+fec.surv.corr <- c(0, -0.25) #How correlated are survival and fecundity?
 n.draws <- 100 #Number of draws from a multivariate normal distribution
 #Run leslie matrix to generate priors for lambda and survival
 source("./01_MAIN_scripts/functions/Leslie_matrix_source.R")

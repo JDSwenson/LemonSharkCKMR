@@ -13,7 +13,6 @@ library(Rlab)
 library(runjags)
 library(postpack)
 library(coda)
-library(largeList) #See https://cran.r-project.org/web/packages/largeList/vignettes/intro_largeList.html for help/manual
 
 rm(list=ls())
 
@@ -22,9 +21,9 @@ source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO_SB.R")
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/models/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -37,24 +36,24 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings----------------------------
-script_name <- "test.fixed.lambda_sample.all.ages.R" #Copy name of script here
-primary_goal <- "Compare how to approach lambda when limited or no information is available to set a prior on population growth rate" #Why am I running this simulation? Provide details
+script_name <- "base_simulation_and_model_UPDATED_SB.R" #Copy name of script here
+primary_goal <- "Save workspace for Liz" #Why am I running this simulation? Provide details
 
-question1 <- "In the absence of reliable population-level data, how shall we approach lambda"
+question1 <- ""
 question2 <- ""
 question3 <- ""
-purpose <- "test.fixed.lambda_sample.all.ages" #For naming output files
+purpose <- "base_simulation_and_model_UPDATED_SB" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- 150
 max.POPs <- 150
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "lambda" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nf", "psi", "Nm", "surv")
+fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+jags_params = c("Nfb", "psi", "Nm", "surv", "lam")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -74,7 +73,7 @@ init.adult.pop.size <- 1000 # CHANGED FROM 3000; Initial adult population size
 init.prop.female <- 0.5 # proportion of the initial population size that is female
 birth.sex.ratio <- c(0.5,0.5) # The probability that each baby is F:M - has to add up to 1
 YOY.survival <- 0.7 # CHANGED FROM 0.8; young of year survival
-juvenile.survival <- 0.8 # CHANGED FROM 0.9; juvenile survival
+Juvenile.survival <- 0.8 # CHANGED FROM 0.9; juvenile survival
 Adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
@@ -84,12 +83,10 @@ num.mates <- c(1:3) #vector of potential number of mates per mating
 #avg.num.offspring <- 3 # NOT USED? CHANGED FROM 3; set the average number of offspring per mating (from a poisson distribution)
 
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
-ff1 <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
-ff1
-ff1 <- ff1*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-ff1
-
-#If wanting to make population growth potentially positive or negative, increase or decrease female fecundity by 0.2
+ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
+ff
+ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
+ff
 
 #Stable age distribution
 props <- rep(NA, max.age+1)
@@ -115,25 +112,22 @@ estimation.year <- n_yrs - 5 # Set year of estimation
 
 #-----------------Leslie Matrix parameters--------------------
 #To set a prior on lambda, we will run a Leslie matrix, assuming the following information for survival and fecundity
-leslie.survival <- Adult.survival
-leslie.fecundity <- ff1/mating.periodicity
-surv.cv <- 0.1 #What is the CV on survival?
-fec.cv <- 0.1 #What is the CV on fecundity?
-corr.vec <- c(0, -0.25, -0.5)
+leslie.fecundity <- ff/mating.periodicity
+YOY.surv.cv <- 0
+adult.surv.cv <- 0 #What is the CV on survival?
+fec.cv <- 0 #What is the CV on fecundity?
+survival.corr <- 0.1 #How correlated are YOY and adult survival?
+fec.surv.corr <- 0 #How correlated are survival and fecundity?
 n.draws <- 100 #Number of draws from a multivariate normal distribution
-
 #Run leslie matrix to generate priors for lambda and survival
-set.seed(rseeds[1])
-source("./Objective.2_sensitivity.elasticity/functions/Leslie_matrix_source.R")
+source("./01_MAIN_scripts/functions/Leslie_matrix_source.R")
 
 #Check values from Leslie matrix
-mean.lambda
 lambda.sd
 lambda.df
 mean(lambda.df$mean.survival)
 min(lambda.df$mean.survival)
 max(lambda.df$mean.survival)
-sd(lambda.df$mean.survival)
 mean(lambda.df$mean.fecundity)
 min(lambda.df$mean.fecundity)
 max(lambda.df$mean.fecundity)
@@ -146,7 +140,7 @@ sample.years <- c(n_yrs - c(3:0)) #For two years of sampling
 #sample.vec.juvs <- c(50, 100, 150, 200) #vector to sample over per year
 #sample.vec.adults <- c(sample.vec.juvs/5)
 #sample.vec.total <- sample.vec.juvs + sample.vec.adults
-sample.vec.prop <- c(1)
+sample.vec.prop <- c(.5, 1, 1.5, 2)
 
 #----------------------- MCMC parameters ----------------------#
 ni <- 40000 # number of post-burn-in samples per chain
@@ -177,19 +171,18 @@ simulation.df <- tibble(script_name = script_name,
                         burn_in = nb,
                         years_sampled = length(sample.years),
                         breeding_periodicity = mating.periodicity,
-                        non_conformists = non.conformists,
-                        survival_cv = surv.cv,
-                        fecundity_cv = fec.cv
+                        non_conformists = non.conformists
 )
 
 #Save simulation settings in Simulation_log
-  # simulation.log <- read_csv("Simulation_log.csv")
-  #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
-  #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
+ # simulation.log <- read_csv("Simulation_log.csv") #Read in simulation log
+ #  tail(simulation.log)
+ #  simulation.log_updated <- bind_rows(simulation.log, simulation.df) #Combine old simulation settings with these
+ #  write_csv(simulation.log_updated, file = "Simulation_log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 100 #Number of iterations to loop over
+iterations <- 3 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -197,7 +190,7 @@ iterations <- 100 #Number of iterations to loop over
  sims.list.1 <- NULL
  sims.list.2 <- NULL
  sims.list.3 <- NULL
-# sims.list.4 <- NULL
+ sims.list.4 <- NULL
  sample.info <- NULL
  parents.tibble_all <- NULL
  pop.size.tibble_all <- NULL
@@ -228,20 +221,14 @@ iterations <- 100 #Number of iterations to loop over
 #rseed.pop <- 87625053 #Want to use the same population for all simulations
 #set.seed(rseed.pop)
 
- #Fix lambda to three different values
- lambda.vec <- c(0.95, 1, 1.05)
- 
- for(iter in 2:iterations) {
+ for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
    sim.start <- Sys.time()
    #rseed <- sample(1:1000000,1)
+   set.seed(rseeds[iter])
    rseed <- rseeds[iter]
-   set.seed(rseed)
 
-   #source("./01_MAIN_scripts/functions/Dovi_IBS_SB_test.assign.conformity.R")
-   
-   #Randomly make population growth positive, negative, or neutral
-   ff <- sample(c(ff1-0.4, ff1, ff1+0.4), size = 1)
+   source("./01_MAIN_scripts/functions/Dovi_IBS_SB_test.assign.conformity.R")
    
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -264,11 +251,6 @@ iterations <- 100 #Number of iterations to loop over
     as_tibble() %>% 
     mutate(seed = rseed, iteration = iter)
 
-  print("saving loopy list")
-  saveList(object = loopy.list, file = paste0(results_location, "loopy.list"))
-  
-  print("list saved")
-  
   pop.size.tibble_all <- bind_rows(pop.size.tibble_all, pop.size.tibble)
   
   parents.tibble <- out[[3]] %>% 
@@ -277,10 +259,10 @@ iterations <- 100 #Number of iterations to loop over
   parents.tibble_all <- bind_rows(parents.tibble_all, parents.tibble)
   
   #Save parents tibble
-  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
+#  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
   
   # Detailed info on population size
-  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
+#  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter))
 
   
   # saveRDS(loopy.list, file = "../loopy.list")
@@ -451,13 +433,9 @@ iterations <- 100 #Number of iterations to loop over
     
       
     # ####------------------------ Fit CKMR model ----------------####
-      for(lf in 1:3){
-        
-        lam.fix <- lambda.vec[lf]
-        
     #Define JAGS data and model, and run the MCMC engine
-    set.seed(rseed)
-    source("Objective.2_sensitivity.elasticity/functions/run.JAGS_HS.only_fixed.lambda.R")
+      set.seed(rseed)
+    source("01_MAIN_scripts/functions/run.JAGS_HS.only_SB_UPDATED.R")
 
     #Calculate expectations
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
@@ -470,7 +448,7 @@ iterations <- 100 #Number of iterations to loop over
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("Objective.2_sensitivity.elasticity/functions/compile.results_HS.only_SB_no.lam.R")
+    source("01_MAIN_scripts/functions/compile.results_HS.only_SB.R")
     
     #-----------------Loop end-----------------------------
     #Bind results from previous iterations with current iteration
@@ -503,9 +481,8 @@ iterations <- 100 #Number of iterations to loop over
                                               seed = rseed)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
     
-  } # end loop over lambda
-  } # end if statement
-  } #End loop over sample sizes
+  } # end loop over sample sizes
+  }
     
   #-----------------Save output files iteratively--------------------
   
@@ -515,51 +492,52 @@ iterations <- 100 #Number of iterations to loop over
   sim.samples.4 <- paste0(sample.vec.prop[4], "prop.sampled")
   
 #Results
-    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+#    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
 #    #Model output for diagnostics
-     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_0.95_fixed.lambda"))
+#     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
 # 
-    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.0_fixed.lambda"))
+#    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
 # 
-    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.05_fixed.lambda"))
+#    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
 #    
 #    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
 # 
 # # Detailed info on samples and parents to examine in more detail
-    saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+#    saveRDS(sample.info, file = paste0(temp_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 # 
 #    #Save pairwise comparisons matrices
-    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+#    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 #    
-    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
+#    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
 
       sim.end <- Sys.time()
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("Finished iteration ", iter, ". \n Took ", iter.time, " minutes"))
-   } # End loop over iterations
+   } # end loop over iterations
+  
   
   
 ########## Save and check results ##########
 #Calculate relative bias for all estimates
 #If using breeding individuals for Nf truth
- # results2 <- results %>%
- #   mutate(relative_bias = ifelse(parameter == "Nf", round(((Q50 - breed.truth)/breed.truth)*100, 1),
- #                                 round(((Q50 - all.truth)/all.truth)*100, 1))) %>% 
- #   mutate(in_interval = ifelse(parameter == "Nf", 
- #                               ifelse(HPD2.5 < breed.truth & breed.truth < HPD97.5, "Y", "N"),
- #                               ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N"))) %>%
- #   mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
- #   as_tibble()
+ results2 <- results %>%
+   mutate(relative_bias = ifelse(parameter == "Nfb", round(((Q50 - breed.truth)/breed.truth)*100, 1),
+                                 round(((Q50 - all.truth)/all.truth)*100, 1))) %>% 
+   mutate(in_interval = ifelse(parameter == "Nfb", 
+                               ifelse(HPD2.5 < breed.truth & breed.truth < HPD97.5, "Y", "N"),
+                               ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N"))) %>%
+   mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
+   as_tibble()
 
  
    #If using all individuals for Nf truth, instead of breeders
-   results2 <- results %>%
-     mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
-     mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>%
-     mutate(total_samples = total_juvenile_samples + total_adult_samples) %>%
-     as_tibble()
+   # results2 <- results %>% 
+   #   mutate(relative_bias = round(((Q50 - truth)/truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+   #   mutate(in_interval = ifelse(HPD2.5 < truth & truth < HPD97.5, "Y", "N")) %>% 
+   #   mutate(total_samples = Juvenile_samples + Adult_samples) %>% 
+   #   as_tibble()
    
 #Within HPD interval?
 results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>% 
@@ -609,13 +587,13 @@ results2 %>% group_by(prop_sampled_juvs, parameter, purpose) %>%
 write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
  
  #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_0.95_fixed.lambda")) #Sample size 1
+ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
  
- saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.0_fixed.lambda")) #Sample size 2
+ saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
  
- saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.05_fixed.lambda")) #Sample size 3
+ saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
  
-# saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose)) #Sample size 4
+ saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", seeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose)) #Sample size 4
  
  #Save detailed info about samples from population
  saveRDS(sample.info, file = paste0(results_location, sample.prefix, "_", date.of.simulation, "_", seeds, "_", purpose))
@@ -641,7 +619,7 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
 
 #-------------Quick viz of results--------------#
 #Box plot of relative bias
-ggplot(data=results2, aes(x=factor(lambda.fix))) +
+ggplot(data=results2, aes(x=factor(prop_sampled_juvs))) +
   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
   ylim(-100, 100) +
   geom_hline(yintercept=0, col="black", size=1.25) +

@@ -81,14 +81,15 @@ survival.sd <- survival.sd
     
 
     #Lambda
-    lam = lam.fix,
+    mean.lambda = mean.lambda,
+    lam.tau = lam.tau,
 
     #survival
     Adult.survival = Adult.survival,
     survival.sd = survival.sd,
 
     # #Breeding interval
-    #psi = psi.truth,
+    psi = 1,
     a = mating.periodicity
     
       )
@@ -102,7 +103,8 @@ survival.sd <- survival.sd
         surv = runif(1, min=0.5, max=0.95),
         Nf = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
-        psi = runif(1, min=0.5, max=0.95)
+        lam = 1
+#        psi = runif(1, min=0.5, max=0.95)
         
       )
     }
@@ -123,7 +125,8 @@ survival.sd <- survival.sd
     Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
     #surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
-    psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
+    lam ~ dnorm(mean.lambda, lam.tau)
+    #psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
     surv ~ dnorm(Adult.survival, 1/(survival.sd^2));T(0.5, 0.99) #Informative prior
@@ -138,9 +141,9 @@ survival.sd <- survival.sd
     
     #Moms
     #HS - odd years
-    for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-      mom.positives_HS.odd[j] ~ dbin(((surv^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lam^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
-    }
+    # for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
+    #   mom.positives_HS.odd[j] ~ dbin(((surv^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lam^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+    # }
     
     #Dads
     #HS + PO
@@ -179,16 +182,18 @@ post = jagsUI::jags.basic(data = jags_data, #If using postpack from AFS workshop
                           n.thin = jags_dims["nt"],
                           n.burnin = jags_dims["nb"],
                           n.chains = jags_dims["nc"],
-                          parallel = T
+                          parallel = F
 )
 
 
-if(lf == 1){
+if(samps == 1){
   sims.list.1[[iter]] <- post
-} else if(lf == 2){
+} else if(samps == 2){
   sims.list.2[[iter]] <- post
-} else if(lf == 3){
+} else if(samps == 3){
   sims.list.3[[iter]] <- post
+} else if(samps == 4){
+  sims.list.4[[iter]] <- post
 }
 
 #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#

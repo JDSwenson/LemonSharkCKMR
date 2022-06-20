@@ -250,7 +250,7 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
 } # end loop over sim years
 
 #Label the list elements with the year
-names(loopy.list) <- paste0("year.end.pop.", seq(1:(burn.in + Num.years)))
+names(loopy.list) <- paste0("year.end.pop.", seq(1:(burn.in + Num.years)), "_iteration_", iter)
 
 return(invisible(list(loopy.list, pop.size, parents.tibble)))
 }

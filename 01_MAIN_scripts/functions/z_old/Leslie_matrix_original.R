@@ -36,7 +36,6 @@ init.prop.female = init.prop.female
 ff <- ff # female fecundity per breeding cycle
 mean.fecundity <- ff
 
-
 #------------------Correlation-------------------#
 corr.vec <- c(0.25, 0, -0.25, -0.5, -0.75)
 vec.mean <- c(mean.fecundity, mean.survival)   #vector of the means
