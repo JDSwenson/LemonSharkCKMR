@@ -1,0 +1,4 @@
+Objective,Test
+Obj1.1,Initial model validation
+Obj1.2,Which diffuse prior to use with lambda
+Obj1.3,Do we need to estimate psi or can we fix it

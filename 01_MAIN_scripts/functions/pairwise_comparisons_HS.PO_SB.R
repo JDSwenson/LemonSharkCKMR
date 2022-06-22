@@ -480,13 +480,13 @@ return(list(HS.samps.df.down,
 
 
 
-calc.psi <- function(loopy.list, mom_comps.all){
+calc.psi <- function(loopy.list){
   #Calculate breeding interval
   #Initialize sample dataframes
   BI.df <- NULL
   BI.df_temp <- NULL
   
-  ref.years <- c(min(mom_comps.all$ref.year):n_yrs)
+  ref.years <- c(50:n_yrs)
   
   for(i in ref.years){ #Extract all YOY for each year sampled
     BI.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
