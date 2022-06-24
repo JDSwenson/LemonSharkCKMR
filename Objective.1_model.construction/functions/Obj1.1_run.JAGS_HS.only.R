@@ -2,8 +2,6 @@
 yrs <- c(estimation.year:n_yrs)
 ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
 
-mean.adult.lambda <- mean(adult.lambda[ref.year:n_yrs], na.rm=T)
-
 #Create vectors of data for JAGS
 #Mom
 #HS - even years
@@ -45,9 +43,12 @@ dad.yrs <- nrow(dad_comps.all)
 #dad.R0 <- dad_comps.all$R0
 
 #Set mean and sd (precision) for lambda
-lam.tau <- 1/(lambda.sd^2) #Value derived from Leslie matrix
-#N.tau <- 1/(sd^2)
-survival.sd <- survival.sd
+lam.tau <- 1/(lambda.prior.sd^2) #Value derived from Leslie matrix
+
+#Calculate parameters for beta distribution from mean and variance for survival
+surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
+surv.alpha <- surv.betaParams[[1]]
+surv.beta <- surv.betaParams[[2]]
 
 
   #Define data
@@ -81,16 +82,20 @@ survival.sd <- survival.sd
     
 
     #Lambda
-    lam = lam.fix,
+    lambda.prior.mean = lambda.prior.mean,
+    lam.tau = lam.tau,
 
     #survival
-    Adult.survival = Adult.survival,
-    survival.sd = survival.sd,
+    surv.alpha = surv.alpha,
+    surv.beta = surv.beta,
+    
+    #In case I want to use the truncated normal prior
+#    adult.survival = adult.survival, 
+#    survival.prior.sd = survival.prior.sd,
 
     # #Breeding interval
     #psi = psi.truth,
     a = mating.periodicity
-    
       )
   
   #------------ STEP 2: SPECIFY INITIAL VALUES ---------------#
@@ -99,9 +104,10 @@ survival.sd <- survival.sd
     for(c in 1:nc){
       inits[[c]] = list(
         #If estimating all parameters
-        surv = runif(1, min=0.5, max=0.95),
+        survival = runif(1, min=0.5, max=0.95),
         Nf = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
+        lambda = 1,
         psi = runif(1, min=0.5, max=0.95)
         
       )
@@ -123,29 +129,31 @@ survival.sd <- survival.sd
     Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
     #surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
+    lambda ~ dnorm(lambda.prior.mean, lam.tau)
     psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
-    surv ~ dnorm(Adult.survival, 1/(survival.sd^2));T(0.5, 0.99) #Informative prior
+    survival ~ dbeta(surv.alpha, surv.beta) #Informative prior
+#    surv ~ dnorm(adult.survival, 1/(survival.prior.sd^2));T(0.5, 0.99) #Informative prior
     
     
     #Likelihood
     #Moms
     #HS - even years
     for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-      mom.positives_HS.even[i] ~ dbin((a*(surv^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lam^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+      mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
     }
     
     #Moms
     #HS - odd years
     for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-      mom.positives_HS.odd[j] ~ dbin(((surv^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lam^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+      mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
     }
     
     #Dads
     #HS + PO
     for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-      dad.positives[f] ~ dbin((surv^dad.mort.yrs[f])/(Nm*(lam^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
+      dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
     }
   }
   
@@ -183,12 +191,14 @@ post = jagsUI::jags.basic(data = jags_data, #If using postpack from AFS workshop
 )
 
 
-if(lf == 1){
+if(s == 1){
   sims.list.1[[iter]] <- post
-} else if(lf == 2){
+} else if(s == 2){
   sims.list.2[[iter]] <- post
-} else if(lf == 3){
+} else if(s == 3){
   sims.list.3[[iter]] <- post
+} else if(s == 4){
+  sims.list.4[[iter]] <- post
 }
 
 #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
@@ -208,4 +218,5 @@ post.95 <- post.95 %>% filter(parameter %in% jags_params) #Remove deviance
 #Combine into data.frame
 model.summary2 <- model.summary %>% left_join(post.95, by = "parameter") %>% 
   rename(HPD2.5 = lower, HPD97.5 = upper) %>% 
-  dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff)
+  dplyr::select(parameter, Q2.5 = X2.5., Q97.5 = X97.5., Q50 = X50., mean = mean, sd = sd, HPD2.5, HPD97.5, Rhat, neff) %>% 
+  mutate(iteration = iter, seed = rseed)
