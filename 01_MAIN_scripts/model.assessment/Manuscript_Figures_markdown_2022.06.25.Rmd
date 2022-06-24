@@ -34,6 +34,7 @@ Here is the results section for the manuscript. I know there are myriad formatti
 _Model validation_  
 To initially validate our model, we assumed that adult survival and population growth rate are known with a 10% CV and used these values as priors on our model. We then used individual-based simulation to assess model performance under two different sampling schemes wherein 1% of a small population (~10,000 individuals total) of simulated lemon sharks was sampled. In the first sampling scheme, only young-of-year (YOY) were targeted for sampling; for the second, all juveniles were available for sampling. In most cases instances, the model captured the true value of abundance and survival parameters within the HPDI at the expected rate (Figure 1: A, C, E), with targeted sampling of YOY capturing the truth at a slightly higher rate, likely due to a slightly greater CV when sampling fewer age classes. In all cases, the relative bias of the posterior medians was unbiased within +/- 5%.
 
+
 _Sample size_  
 To test the effect of sample size on parameter estimates, we sampled at four different intensities, ranging from 0.5% of the population to 2% of the population (Figure S1). The model captured the true parameter values within the HPDI the majority of times for both sampling schemes and at all sampling intensities.  There was a difference in model performance between sampling schemes at high intensities (2% of the population sampled), with targeted sampling of YOY more accurately capturing the uncertainty of parameter estimates. Interestingly, this difference in performance is only observed for females and survival (Fig S1.A, Fig S1.E), and not for males (Fig S1.C). We expect the difference arises from oversampling the maternal line such that the pairwise comparisons are not independent. Indeed, we find that for females, there is a marked difference in the number of HSPs detected based on sampling scheme for females (Figure S2.A), but not for males (Fig S2.B). This is an expected consequence when females breed biennially and males breed annually, as there are fewer opportunities to detect maternal HSPs. This is further demonstrated by increased variance when comparing expected vs observed kin pairs in males and females (Figure S2.C), where we see a greater spread in the deviation from expectations in females.  In instances of suspected oversampling, however, issues in model performance can be mitigated by downsampling to 50-100 HSPs (Figure S1, Figure S2). Combined, these results demonstrate that our CKMR model reliably estimates abundance and survival parameters, while minor issues with model performance at high sample sizes can be mitigated by downsampling.
 
@@ -319,6 +320,12 @@ results.obj1.4viz <- results.obj1.all %>% dplyr::filter(purpose.lab != purpose.o
   xlim(-25, 25))
 
 ```
+
+
+Figure 1: Model validation: Uniform prior vs iteratively fixing lambda
+Figure 2: 
+Fig 2.1: Results from the survival trials (Scenario 2)
+Fig 2.2: A 3-d figure that has the CV on the three major parameters (YOY/juvenile survival, Adult survival, and fecundity) as the axes and the relative bias of the median from the associated lambda values/simulations as the landscape. Include a slice through the plane that represents 0% relative bias and/or dotted lines indicating the precision/accuracy needed to attain a relative bias of 20% or less?
 
 
 ```{r Fig1-print-model-validation-plots, echo=FALSE, out.width = "120%", fig.height = 10, fig.cap = "**Figure 1:** Validation of the base model. Survival and population growth rate are assumed known with a 10% CV. One percent of the population was sampled either targeting young-of-year (red) or including all juvenile age classes (ages 0-11; blue) in sampling. The CKMR model was fit to 100 different simulated populations and the collated results are summarized here. Line graphs (A, C, E) represent the proportion of times the true parameter value fell within the highest posterior density interval (HPDI). When colored lines are equal to or above the black line, then the model is capturing the truth as often or more than expected; colored lines below the black line indicate that the model is not capturing the truth as often as expected. Density plots (B, D, F) represent the relative bias of the posterior medians. Peaks that are centered at 0 (dotted vertical line) indicate that the medians of the posterior distributions are unbiased.  **A & B)** Model performance estimating number of mature females (Nf); mean CV = 24.6 for targeted sampling of YOY, mean CV = 20.4 when sampling all age classes. **C & D)** Model performance estimating number of mature males (Nm); mean CV = 21 for targeted sampling of YOY, mean CV = 18.8 when sampling all age classes.. **E & F)** Model performance estimating adult survival; mean CV = 7.9 for targeted sampling of YOY, mean CV = 4.3 when sampling all age classes.."}
@@ -611,6 +618,9 @@ Show model performance with different degrees of misassignment
 ### Supplementary material
 Figure S1: Kin pairs at different sampling intensities
 Figure S2: All sample size results for uniform prior on lambda
+Figure S3: Elasticity analysis
+Figure S4: Correlation plot
+Figure S5: Results from fixed vs estimable psi?
 
 ```{r FigS1-prep-data, echo=FALSE, include = FALSE}
 S1.all.4viz <- obj1.all.4viz

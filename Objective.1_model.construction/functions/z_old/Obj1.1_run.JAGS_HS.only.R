@@ -43,7 +43,7 @@ dad.yrs <- nrow(dad_comps.all)
 #dad.R0 <- dad_comps.all$R0
 
 #Set mean and sd (precision) for lambda
-#lam.tau <- 1/(lambda.prior.sd^2) #Value derived from Leslie matrix
+lam.tau <- 1/(lambda.prior.sd^2) #Value derived from Leslie matrix
 
 #Calculate parameters for beta distribution from mean and variance for survival
 surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
@@ -82,8 +82,8 @@ surv.beta <- surv.betaParams[[2]]
     
 
     #Lambda
-#    lambda.prior.mean = lambda.prior.mean,
-#    lam.tau = lam.tau,
+    lambda.prior.mean = lambda.prior.mean,
+    lam.tau = lam.tau,
 
     #survival
     surv.alpha = surv.alpha,
@@ -94,7 +94,7 @@ surv.beta <- surv.betaParams[[2]]
 #    survival.prior.sd = survival.prior.sd,
 
     # #Breeding interval
-    #psi = psi.truth,
+    psi = 1 - non.conformists,
     a = mating.periodicity
       )
   
@@ -107,8 +107,8 @@ surv.beta <- surv.betaParams[[2]]
         survival = runif(1, min=0.5, max=0.95),
         Nf = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
-        lambda = 1,
-        psi = runif(1, min=0.5, max=0.95)
+        lambda = 1
+        #psi = runif(1, min=0.5, max=0.95)
         
       )
     }
@@ -129,8 +129,8 @@ surv.beta <- surv.betaParams[[2]]
     Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
     #surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
-    lambda ~ dunif(0.95, 1.05)
-    psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
+    lambda ~ dnorm(lambda.prior.mean, lam.tau)
+    #psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
     survival ~ dbeta(surv.alpha, surv.beta) #Informative prior

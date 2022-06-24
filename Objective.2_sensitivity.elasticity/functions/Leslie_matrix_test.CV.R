@@ -3,29 +3,47 @@
 #set so R doesn't use scientific notation
 options("scipen"=100, "digits"=4)
 
-#CV is the ratio between the standard deviation and the mean
+options("scipen"=100, "digits"=4)
+
+library(tidyverse)
+library(ggpubr)
+library(MASS)
+library(popbio)
+#devtools::install_github("BruceKendall/mpmtools")
+library(mpmtools)
 
 #The goal here is to find a reasonable prior for lambda by setting a CV on survival and another CV on fecundity and playing around with the correlation. I can either run simulations using several of these values, or I can pick one and justify it in the text.
 
+#-----------------Leslie Matrix parameters--------------------
+#First, set the common values that will be used in the Leslie matrix
+cv <- c(0.05, 0.1)
+
 #-------------------Survival---------------------#
 #Keep these values here
-# maxAge <- maxAge
-# repro.age <- repro.age
+maxAge <- maxAge
+repro.age <- repro.age
 juv.ages <- repro.age - 1 #Years of being a juvenile
 ages <- c(0:maxAge) #Total ages
 adult.ages <- length(ages) - (juv.ages + 1)
 YOY.survival <- YOY.survival # young of year survival
 juvenile.survival <- juvenile.survival # juvenile survival
-Adult.survival <- Adult.survival #adult survival
+mean.survival <- Adult.survival #adult survival
 
 
 #-------------------Fecundity--------------------#
-# mating.periodicity <- mating.periodicity # number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-# num.mates <- num.mates # vector of potential number of mates per mating
-# f <- f # adult fecundity at equilibrium if no age truncation
-# init.prop.female = init.prop.female
-# ff <- ff # female fecundity per breeding cycle
-leslie.fecundity <- leslie.fecundity
+mating.periodicity <- mating.periodicity # number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+num.mates <- num.mates # vector of potential number of mates per mating
+f <- f # adult fecundity at equilibrium if no age truncation
+init.prop.female = init.prop.female
+mean.fecundity <- ff/2 # female fecundity per year
+
+#Dataframe of fecundity (female offspring only)
+fb <- mean.fecundity/2 #Adult fecundity - female offspring only (assume equal sexes)
+
+#------------------Correlation-------------------#
+
+#------------------Loop through different survival values----------------
+lambda.df = lambda.temp.df <- NULL #Initialize dataframe to store lambda values
 
 
 #------------------Correlation-------------------#
