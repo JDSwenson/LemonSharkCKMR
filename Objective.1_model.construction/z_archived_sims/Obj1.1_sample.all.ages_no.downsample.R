@@ -20,7 +20,7 @@ source("./Objective.1_model.construction/functions/Obj1.functions.R") #Changed n
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.variable"
+PopSim.lambda <- "lambda.1"
 Sampling.scheme <- "sample.all.ages"
 date.of.PopSim <- "21Jun2022"
 inSeeds <- "Seeds2022.04.15"
@@ -39,13 +39,14 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "Obj1.2_test.uniform.lambda_sample.all.ages.R" #Copy name of script here
-primary_goal <- "Re-run simulations using streamlined script and beta prior for survival" #Why am I running this simulation? Provide details
+script_name <- "Obj1.1_sample.all.ages_no.downsample.R" #Copy name of script here
+primary_goal <- "Validate model in data-rich scenario" #Why am I running this simulation? Provide details
 
-question1 <- "Better to fix lambda's prior to three different values in turn, or use a uniform distribution when no prior information exists?"
-question2 <- "Better to use targeted sampling of YOY or sample all age classes"
-question3 <- ""
-purpose <- "Obj1.2_test.uniform.lambda_sample.all.ages" #For naming output files
+question1 <- "How does the model perform in a data rich scenario?"
+question2 <- "Does the model perform alright with a beta prior on survival?"
+question3 <- "Better to use targeted sampling of YOY or sample all age classes?"
+
+purpose <- "Obj1.1_all.ages.sampled_no.downsample" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -55,7 +56,7 @@ max.HSPs <- 150
 max.POPs <- 150
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+fixed.parameters <- "psi" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
 jags_params = c("Nf", "psi", "Nm", "survival", "lambda")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
@@ -74,12 +75,10 @@ adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+non.conformists <- 0.05 #non-conformists used in the simulation
 
 #---------------------- Read in sampling and other dataframes --------------------------
 samples.df <- truth.df <- readRDS(file = paste0("G://My Drive/Personal_Drive/R/CKMR/Population.simulations/sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", Sampling.scheme))
-
-#check that correct sample scheme loaded by looking at ages
-samples.df %>% group_by(age.x) %>% summarize(n()) %>% arrange(age.x)
 
 pop_size.df <- readRDS(file = paste0("G://My Drive/Personal_Drive/R/CKMR/Population.simulations/pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", Sampling.scheme))
 
@@ -96,17 +95,16 @@ nc <- 2      # number of chains
 
 #Survival prior info
 survival.prior.mean <- adult.survival
-survival.prior.cv <- 0.1
+survival.prior.cv <- 0.01
 survival.prior.sd <- survival.prior.mean * survival.prior.cv
 
 #Lambda prior info
- lambda.prior.mean <- NA
- lambda.prior.cv <- NA
- lambda.prior.sd <- NA
-
+lambda.prior.mean <- 1
+lambda.prior.cv <- 0.01
+lambda.prior.sd <- lambda.prior.mean * lambda.prior.cv
 
 #psi prior
-psi.prior.info <- "diffuse beta"
+psi.prior.info <- "fixed to 0.95"
 
 #abundance prior
 abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"
@@ -142,10 +140,10 @@ model_settings.df <- tibble(script_name = script_name,
 )
 
 #Save simulation settings in Simulation_log
- # model.log <- read_csv("model_settings.log.csv")
- # tail(model.log)
- # model.log_updated <- bind_rows(model.log, model_settings.df) #Combine old simulation settings with these
- # write_csv(model.log_updated, file = "model_settings.log.csv") #Save the updated simulation log
+# model.log <- read_csv("model_settings.log.csv")
+# tail(model.log)
+# model.log_updated <- bind_rows(model.log, model_settings.df) #Combine old simulation settings with these
+#write_csv(model.log_updated, file = "model_settings.log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 iterations <- max(samples.df$iteration)
@@ -269,14 +267,14 @@ sample.sizes <- samples.df$sample.prop %>% unique()
     if(sum(mom_comps.all$yes) == 0 | sum(dad_comps.all$yes) == 0){
       next
     } else {
+    
       mom.HSPs <- sum(mom_comps.all$yes)
       dad.HSPs <- sum(dad_comps.all$yes)
-      
       
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.1_model.construction/functions/Obj1.2_run.JAGS_HS.only_uniform.lambda.R")
+    source("Objective.1_model.construction/functions/Obj1.1_run.JAGS_HS.only.R")
 
     #Calculate expectations
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
@@ -295,8 +293,8 @@ sample.sizes <- samples.df$sample.prop %>% unique()
     
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
       left_join(samples.iter, by = c("iteration", "seed")) %>% 
-      mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, rep(mom.Exp.HS + dad.Exp.HS, times = 2)),
-             HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, rep(mom.Exp.HS + dad.Exp.HS, times = 2)),
+      mutate(HSPs_detected = c(rep(mom.HSPs, times = 2), dad.HSPs, rep(mom.HSPs + dad.HSPs, times = 2)),
+             HSPs_expected = c(rep(mom.Exp.HS, times = 2), dad.Exp.HS, rep(mom.Exp.HS + dad.Exp.HS, times = 2)),
              purpose = purpose)
     
     results <- rbind(results, results.temp)

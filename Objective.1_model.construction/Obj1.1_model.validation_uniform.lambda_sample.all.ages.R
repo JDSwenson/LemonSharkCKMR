@@ -20,8 +20,8 @@ source("./Objective.1_model.construction/functions/Obj1.functions.R") #Changed n
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.1"
-Sampling.scheme <- "target.YOY"
+PopSim.lambda <- "lambda.variable"
+Sampling.scheme <- "sample.all.ages" #choices are target.YOY or sample.all.ages
 date.of.PopSim <- "21Jun2022"
 inSeeds <- "Seeds2022.04.15"
 
@@ -39,20 +39,21 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "Obj1.1_target.YOY_no.downsample.R" #Copy name of script here
-primary_goal <- "Re-run simulations using streamlined script and beta prior for survival" #Why am I running this simulation? Provide details
+script_name <- "Obj1.1_model.validation_uniform.lambda_sample.all.ages.R" #Copy name of script here
+primary_goal <- "Model validation in data-poor scenario" #Why am I running this simulation? Provide details
 
-question1 <- "Does the model perform alright with a beta prior on survival?"
-question2 <- "Better to use targeted sampling of YOY or sample all age classes"
-question3 <- ""
-purpose <- "Obj1.1_target.YOY_no.downsample" #For naming output files
+question1 <- "Does the model perform reasonable well when we have diffuse priors on everything?"
+question2 <- "Better to fix lambda's prior to three different values in turn, or use a uniform distribution when no prior information exists?"
+question3 <- "Better to use targeted sampling of YOY or sample all age classes?"
+
+purpose <- "Obj1.1_model.validation_uniform.lambda_sample.all.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
-max.HSPs <- 150
-max.POPs <- 150
+max.HSPs <- NA
+max.POPs <- NA
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
@@ -78,6 +79,8 @@ mating.periodicity <- 2 #number of years between mating; assigned to an individu
 #---------------------- Read in sampling and other dataframes --------------------------
 samples.df <- truth.df <- readRDS(file = paste0("G://My Drive/Personal_Drive/R/CKMR/Population.simulations/sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", Sampling.scheme))
 
+samples.df %>% group_by(age.x) %>% summarize(n()) #Check that correct age classes were sampled
+
 pop_size.df <- readRDS(file = paste0("G://My Drive/Personal_Drive/R/CKMR/Population.simulations/pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", Sampling.scheme))
 
 truth.df <- readRDS(file = paste0("G://My Drive/Personal_Drive/R/CKMR/Population.simulations/truth_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", Sampling.scheme))
@@ -92,17 +95,20 @@ nt <- 20     # thinning rate
 nc <- 2      # number of chains
 
 #Survival prior info
-survival.prior.mean <- adult.survival
-survival.prior.cv <- 0.1
-survival.prior.sd <- survival.prior.mean * survival.prior.cv
+survival.prior.mean <- NA
+survival.prior.cv <- NA
+survival.prior.sd <- NA
+survival.prior.info <- "diffuse uniform: 0.5 - 0.95"
 
 #Lambda prior info
-lambda.prior.mean <- 1
-lambda.prior.cv <- 0.02
-lambda.prior.sd <- lambda.prior.mean * lambda.prior.cv
+ lambda.prior.mean <- NA
+ lambda.prior.cv <- NA
+ lambda.prior.sd <- NA
+ lambda.prior.info <- "diffuse uniform: 0.95 - 1.05"
+
 
 #psi prior
-psi.prior.info <- "diffuse beta"
+psi.prior.info <- "diffuse beta: 1, 1"
 
 #abundance prior
 abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"
@@ -129,23 +135,21 @@ model_settings.df <- tibble(script_name = script_name,
                         thinning_rate = nt,
                         posterior_samples = ni,
                         burn_in = nb,
-                        survival.prior.mean = survival.prior.mean,
-                        survival.prior.cv = survival.prior.cv,
-                        lambda.prior.mean = lambda.prior.mean,
-                        lambda.prior.cv = lambda.prior.cv,
+                        survival.prior = survival.prior.info,
+                        lambda.prior = lambda.prior.info,
                         psi.prior = psi.prior.info,
                         abundance.prior = abundance.prior.info
 )
 
 #Save simulation settings in Simulation_log
-# model.log <- read_csv("model_settings.log.csv")
-# tail(model.log)
-# model.log_updated <- bind_rows(model.log, model_settings.df) #Combine old simulation settings with these
-# write_csv(model_settings.df, file = "model_settings.log.csv") #Save the updated simulation log
+ # model.log <- read_csv("model_settings.log.csv")
+ # tail(model.log, 10)
+ # model.log_updated <- bind_rows(model.log, model_settings.df) #Combine old simulation settings with these
+ # write_csv(model.log_updated, file = "model_settings.log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
-(iterations <- max(samples.df$iteration))
-(sample.sizes <- samples.df$sample.prop %>% unique())
+iterations <- max(samples.df$iteration)
+sample.sizes <- samples.df$sample.prop %>% unique()
 
 # Initialize arrays for saving results
  results <- NULL
@@ -265,12 +269,15 @@ model_settings.df <- tibble(script_name = script_name,
     if(sum(mom_comps.all$yes) == 0 | sum(dad_comps.all$yes) == 0){
       next
     } else {
-    
+      
+      mom.HSPs <- sum(mom_comps.all$yes)
+      dad.HSPs <- sum(dad_comps.all$yes)
+      
       
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.1_model.construction/functions/Obj1.1_run.JAGS_HS.only.R")
+    source("Objective.1_model.construction/functions/Obj1.1_run.JAGS_HS.only_diffuse.priors.R")
 
     #Calculate expectations
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
@@ -289,9 +296,9 @@ model_settings.df <- tibble(script_name = script_name,
     
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
       left_join(samples.iter, by = c("iteration", "seed")) %>% 
-      mutate(purpose = purpose) %>% 
-      mutate(all.truth = ifelse(parameter == "psi", psi.truth, all.truth),
-             breed.truth = ifelse(parameter == "psi", psi.truth, breed.truth))
+      mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, rep(mom.HSPs + dad.HSPs, times = 2)),
+             HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, rep(mom.Exp.HS + dad.Exp.HS, times = 2)),
+             purpose = purpose)
     
     results <- rbind(results, results.temp)
     

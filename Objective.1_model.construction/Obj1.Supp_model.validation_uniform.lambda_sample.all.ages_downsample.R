@@ -20,8 +20,8 @@ source("./Objective.1_model.construction/functions/Obj1.functions.R") #Changed n
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.variable" # Can be lambda.1 or lambda.variable
-Sampling.scheme <- "sample.all.ages" # sample.all.ages or target.YOY
+PopSim.lambda <- "lambda.variable"
+Sampling.scheme <- "sample.all.ages" #choices are target.YOY or sample.all.ages
 date.of.PopSim <- "21Jun2022"
 inSeeds <- "Seeds2022.04.15"
 
@@ -39,24 +39,25 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "Obj1.2_test.fixed.lambda_sample.all.ages.R" #Copy name of script here
-primary_goal <- "Test a uniform prior for lambda vs a fixing" #Why am I running this simulation? Provide details
+script_name <- "Obj1.Supp_model.validation_uniform.lambda_sample.all.ages_downsample.R" #Copy name of script here
+primary_goal <- "Show that downsampling can mitigate bias when sampling all age classes" #Why am I running this simulation? Provide details
 
-question1 <- "Better to fix lambda's prior to three different values in turn, or use a uniform distribution when no prior information exists?"
-question2 <- "Better to use targeted sampling of YOY or sample all age classes"
-question3 <- ""
-purpose <- "Obj1.2_test.fixed.lambda_sample.all.ages" #For naming output files
+question1 <- "Does the model perform reasonable well when we have diffuse priors on everything?"
+question2 <- "Does downsampling improve bias when the population is potentially oversampled?"
+question3 <- "Better to use targeted sampling of YOY or sample all age classes?"
+
+purpose <- "Obj1.Supp_model.validation_uniform.lambda_sample.all.ages_downsample" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
 target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
-down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
-max.HSPs <- NA
-max.POPs <- NA
+down_sample <- "yes" #Do we want to downsample to achieve close to max.HSPs?
+max.HSPs <- 150
+max.POPs <- 150
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "lambda" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nf", "psi", "Nm", "survival")
+fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+jags_params = c("Nf", "psi", "Nm", "survival", "lambda")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -100,10 +101,11 @@ survival.prior.sd <- NA
 survival.prior.info <- "diffuse uniform: 0.5 - 0.95"
 
 #Lambda prior info
-lambda.prior.mean <- NA
-lambda.prior.cv <- NA
-lambda.prior.sd <- NA
-lambda.prior.info <- "fixed: 0.95, 1.0, 1.05"
+ lambda.prior.mean <- NA
+ lambda.prior.cv <- NA
+ lambda.prior.sd <- NA
+ lambda.prior.info <- "diffuse uniform: 0.95 - 1.05"
+
 
 #psi prior
 psi.prior.info <- "diffuse beta: 1, 1"
@@ -140,31 +142,30 @@ model_settings.df <- tibble(script_name = script_name,
 )
 
 #Save simulation settings in Simulation_log
- # model.log <- read_csv("model_settings.log.csv")
- # tail(model.log)
- # model.log_updated <- bind_rows(model.log, model_settings.df) #Combine old simulation settings with these
- # write_csv(model.log_updated, file = "model_settings.log.csv") #Save the updated simulation log
+  # model.log <- read_csv("model_settings.log.csv")
+  # tail(model.log, 10)
+  # model.log_updated <- bind_rows(model.log, model_settings.df) #Combine old simulation settings with these
+  # write_csv(model.log_updated, file = "model_settings.log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 iterations <- max(samples.df$iteration)
-sample.sizes <- samples.df %>% dplyr::filter(sample.prop == 1) %>% distinct(sample.prop) %>% pull(sample.prop) #Subset for sample size of 1%
+sample.sizes <- samples.df$sample.prop %>% unique()
 
 # Initialize arrays for saving results
  results <- NULL
  sims.list.1 <- NULL
  sims.list.2 <- NULL
  sims.list.3 <- NULL
- 
+ sims.list.4 <- NULL
  mom.comps.tibble <- NULL
  dad.comps.tibble <- NULL
 
  sim.samples.1 <- paste0(sample.sizes[1], "prop.sampled")
  sim.samples.2 <- paste0(sample.sizes[2], "prop.sampled")
  sim.samples.3 <- paste0(sample.sizes[3], "prop.sampled")
+ sim.samples.4 <- paste0(sample.sizes[4], "prop.sampled")
 
-#Set up for loop over lambda values
-lambda.vec <- c(0.95, 1.0, 1.05) #Specify lambda values to loop over
-samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only running on 1% sampled (vs running every iteration on every value of lambda AND every sample scheme)
+
 
  for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
@@ -226,7 +227,7 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
       summarize(number = n())
     
     (psi.truth <- round(1 - psi.df[psi.df$repro.strategy == "non-conformist",2]/sum(psi.df$number), 3) %>% 
-      pull(number)) #Calculate number of non-conformists over total individuals  in samples for each iteration dataset
+      pull(number)) #Calculate number of non-conformists over number of conformists in samples for each iteration dataset
     
 
         ####-----------------------------Downsample if more than max.HSPs------------------------------------####
@@ -268,19 +269,15 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
     if(sum(mom_comps.all$yes) == 0 | sum(dad_comps.all$yes) == 0){
       next
     } else {
-    
+      
       mom.HSPs <- sum(mom_comps.all$yes)
       dad.HSPs <- sum(dad_comps.all$yes)
       
-      #Loop over fixed lambda values
-      for(lf in 1:3){
-        
-        lam.fix <- lambda.vec[lf]
       
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.1_model.construction/functions/Obj1.2_run.JAGS_HS.only_fixed.lambda.R")
+    source("Objective.1_model.construction/functions/Obj1.1_run.JAGS_HS.only_diffuse.priors.R")
 
     #Calculate expectations
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
@@ -299,11 +296,10 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
     
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
       left_join(samples.iter, by = c("iteration", "seed")) %>% 
-      mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs),
-             HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
-             purpose = purpose,
-             lambda.fix = lam.fix)
-
+      mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, rep(mom.HSPs + dad.HSPs, times = 2)),
+             HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, rep(mom.Exp.HS + dad.Exp.HS, times = 2)),
+             purpose = purpose)
+    
     results <- rbind(results, results.temp)
     
     
@@ -320,7 +316,6 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
                                               seed = rseed)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
     
-      } # End loop over lambda values
   } # End if/else statement
   } # end loop over sample sizes
     
@@ -329,13 +324,15 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
 #Results
     write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
-   #    #Model output for diagnostics
-   saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_0.95_fixed.lambda"))
-   # 
-   saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.0_fixed.lambda"))
-   # 
-   saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.05_fixed.lambda"))
-   # 
+#    #Model output for diagnostics
+     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+# 
+    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+# 
+    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+#    
+    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
+# 
 #    #Save pairwise comparisons matrices
     saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
 #    
@@ -361,7 +358,7 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
  #   mutate(total_samples = total_juvenile_samples + total_adult_samples) %>% 
  #   as_tibble()
 
-
+ 
    #If using all individuals for Nf truth, instead of breeders
    results2 <- results %>%
      mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
@@ -416,12 +413,14 @@ results2 %>% group_by(sample.prop.juvs, parameter, purpose) %>%
 write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
  
  #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_0.95_fixed.lambda")) #Lambda fixed 1
+ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
  
- saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.0_fixed.lambda")) #Lambda fixed 2
+ saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
  
- saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.05_fixed.lambda")) #Lambda fixed 3
-
+ saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
+ 
+ saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose)) #Sample size 4
+ 
  #Save final pairwise comparison matrices
  saveRDS(mom.comps.tibble, file = paste0(results_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
  

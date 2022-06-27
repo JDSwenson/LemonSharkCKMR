@@ -28,30 +28,34 @@ adult.survival <- 0.825 #adult survival
 
 
 #-------------------Fecundity--------------------#
-mating.periodicity <- 1 # number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+mating.periodicity <- 2 # number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 num.mates <- c(1:3) # vector of potential number of mates per mating
-f <- (1-adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
-init.prop.female = 0.5
+non.conformists <- 0.05
+f <- (1-adult.survival)/(YOY.survival * juvenile.survival^(repro.age-1)) # adult fecundity at equilibrium if no age truncation
 ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
+ff
+ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
+ff
+leslie.fecundity <- (ff/mating.periodicity)/2 #females produced per year
 
-batchSize <-  ff * mean(num.mates) #Adult fecundity -- average fecundity per breeding (2.91) x average number of mates (2)
-        
-#Dataframe of fecundity (female offspring only)
-fecundity <- batchSize/2 #Adult fecundity - female offspring only (assume equal sexes)
-        
+      
         
 #Input to Leslie matrix
 survival.vec <- c(YOY.survival, rep(juvenile.survival, times = juv.ages), rep(adult.survival, times = adult.ages - 1), 0)
 
-fecund.vec <- c(rep(0, times = repro.age), rep(fecundity, times = maxAge - juv.ages))
+fecund.vec <- c(rep(0, times = repro.age), rep(leslie.fecundity, times = maxAge - juv.ages))
         
 Leslie_input <- data.frame(
   x = c(0:maxAge), #age
   sx = survival.vec, #survival
   mx = fecund.vec
   )
+
         
 A1_pre <- make_Leslie_matrix(Leslie_input)
+lambda(A1_pre)
+
+
 A1_post <- pre_to_post(Amat = A1_pre, S0 = YOY.survival)
 #View(A1_post)
 
@@ -72,7 +76,7 @@ A1.e <- elasticity(A1_post) %>%
   as_tibble()
 
 #Add age to column name
-colnames(A1.e) <- paste0("age_", seq(from = 1, to = maxAge, by = 1))
+colnames(A1.e) <- paste0("age_", seq(from = 1, to = maxAge+1, by = 1))
 
 #Convert first row (i.e. fecundity) to its own tidy dataframe for joining later
 A1.e_fec.e <- A1.e[1,] %>% pivot_longer(cols = starts_with("age"), names_to = "age", values_to = "fecundity")
@@ -97,14 +101,14 @@ A1.e_tidy2 %>% ggplot(aes(x = age, y = elasticity, group = parameter)) +
   theme(axis.text.x = element_text(angle = 90, vjust = -.15)) +
   labs(title = "Elasticity")
 
-
+saveRDS(A1.e_tidy2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_Sensitivity.elasticity/elasticity_tidy_df")
 
 #----------Elasticity: post matrix
 A1.ePost <- elasticity(A1_post) %>% 
   as_tibble()
 
 #Add age to column name
-colnames(A1.ePost) <- paste0("age_", seq(from = 1, to = maxAge, by = 1))
+colnames(A1.ePost) <- paste0("age_", seq(from = 1, to = maxAge+1, by = 1))
 
 #Convert first row (i.e. fecundity) to its own tidy dataframe for joining later
 A1.ePost_fec.e <- A1.ePost[1,] %>% pivot_longer(cols = starts_with("age"), names_to = "age", values_to = "fecundity")

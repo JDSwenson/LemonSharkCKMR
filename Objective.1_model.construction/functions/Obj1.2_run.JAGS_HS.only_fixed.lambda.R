@@ -49,9 +49,9 @@ dad.yrs <- nrow(dad_comps.all)
 #N.tau <- 1/(sd^2)
 
 #Calculate parameters for beta distribution from mean and variance for survival
-surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
-surv.alpha <- surv.betaParams[[1]]
-surv.beta <- surv.betaParams[[2]]
+# surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
+# surv.alpha <- surv.betaParams[[1]]
+# surv.beta <- surv.betaParams[[2]]
 
 
   #Define data
@@ -88,8 +88,8 @@ surv.beta <- surv.betaParams[[2]]
     lambda = lam.fix,
 
     #survival
-    surv.alpha = surv.alpha,
-    surv.beta = surv.beta,
+    # surv.alpha = surv.alpha,
+    # surv.beta = surv.beta,
     
     #In case I want to use the truncated normal prior
     #    adult.survival = adult.survival, 
@@ -107,7 +107,7 @@ surv.beta <- surv.betaParams[[2]]
     for(c in 1:nc){
       inits[[c]] = list(
         #If estimating all parameters
-        surv = runif(1, min=0.5, max=0.95),
+        survival = runif(1, min=0.5, max=0.95),
         Nf = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
         psi = runif(1, min=0.5, max=0.95)
@@ -130,11 +130,11 @@ surv.beta <- surv.betaParams[[2]]
     sd ~ dunif(1, 10000)
     Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
-    #surv ~ dbeta(1 ,1) # Uninformative prior for adult survival
+    survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
     psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
-    survival ~ dbeta(surv.alpha, surv.beta) #Informative prior
+#    survival ~ dbeta(surv.alpha, surv.beta) #Informative prior
 #    surv ~ dnorm(Adult.survival, 1/(survival.sd^2));T(0.5, 0.99) #Informative prior
     
     

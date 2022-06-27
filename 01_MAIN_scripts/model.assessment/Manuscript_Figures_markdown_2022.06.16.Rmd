@@ -609,6 +609,8 @@ Show model performance with different degrees of misassignment
   
 
 ### Supplementary material
+Figure S1: Kin pairs at different sampling intensities
+Figure S2: All sample size results for uniform prior on lambda
 
 ```{r FigS1-prep-data, echo=FALSE, include = FALSE}
 S1.all.4viz <- obj1.all.4viz
