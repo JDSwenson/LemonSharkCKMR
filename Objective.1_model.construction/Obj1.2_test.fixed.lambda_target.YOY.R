@@ -40,7 +40,7 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 #-------------------Set simulation settings and scenario info----------------------------
 script_name <- "Obj1.2_test.fixed.lambda_target.YOY.R" #Copy name of script here
-primary_goal <- "Test a uniform prior for lambda vs a diffuse prior" #Why am I running this simulation? Provide details
+primary_goal <- "Test a uniform prior for lambda vs fixing" #Why am I running this simulation? Provide details
 
 question1 <- "Better to fix lambda's prior to three different values in turn, or use a uniform distribution when no prior information exists?"
 question2 <- "Better to use targeted sampling of YOY or sample all age classes"
@@ -51,8 +51,8 @@ date.of.simulation <- today
 
 target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
-max.HSPs <- 150
-max.POPs <- 150
+max.HSPs <- NA
+max.POPs <- NA
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 fixed.parameters <- "lambda" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
@@ -94,17 +94,19 @@ nt <- 20     # thinning rate
 nc <- 2      # number of chains
 
 #Survival prior info
-survival.prior.mean <- adult.survival
-survival.prior.cv <- 0.1
-survival.prior.sd <- survival.prior.mean * survival.prior.cv
+survival.prior.mean <- NA
+survival.prior.cv <- NA
+survival.prior.sd <- NA
+survival.prior.info <- "diffuse uniform: 0.5 - 0.95"
 
 #Lambda prior info
 lambda.prior.mean <- NA
 lambda.prior.cv <- NA
 lambda.prior.sd <- NA
+lambda.prior.info <- "fixed: 0.95, 1.0, 1.05"
 
 #psi prior
-psi.prior.info <- "diffuse beta"
+psi.prior.info <- "diffuse beta: 1, 1"
 
 #abundance prior
 abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"
@@ -131,10 +133,8 @@ model_settings.df <- tibble(script_name = script_name,
                         thinning_rate = nt,
                         posterior_samples = ni,
                         burn_in = nb,
-                        survival.prior.mean = survival.prior.mean,
-                        survival.prior.cv = survival.prior.cv,
-                        lambda.prior.mean = lambda.prior.mean,
-                        lambda.prior.cv = lambda.prior.cv,
+                        survival.prior = survival.prior.info,
+                        lambda.prior = lambda.prior.info,
                         psi.prior = psi.prior.info,
                         abundance.prior = abundance.prior.info
 )
