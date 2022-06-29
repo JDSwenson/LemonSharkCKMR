@@ -1,3 +1,5 @@
+#Note that mating periodicity only applies to females, even though males are assigned it as well. And the repro.cycle column determines which year the animal breeds in, not the frequency. So females can have a 1 or 2 for biennial breeding. And males can be anything, but it doesn't actually come into play.
+
 simulate.pop <- function(init.pop.size, init.prop.female, Nages, mating.periodicity, repro.age, YOY.survival, juvenile.survival, Adult.survival, max.age, num.mates, ff, burn.in, Num.years){
 ####---------Set up initial population-----####
 
