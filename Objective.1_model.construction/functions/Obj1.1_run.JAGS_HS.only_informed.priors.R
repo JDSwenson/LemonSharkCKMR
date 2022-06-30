@@ -2,8 +2,6 @@
 yrs <- c(estimation.year:n_yrs)
 ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
 
-#mean.adult.lambda <- mean(adult.lambda[ref.year:n_yrs], na.rm=T)
-
 #Create vectors of data for JAGS
 #Mom
 #HS - even years
@@ -45,13 +43,12 @@ dad.yrs <- nrow(dad_comps.all)
 #dad.R0 <- dad_comps.all$R0
 
 #Set mean and sd (precision) for lambda
-#lam.tau <- 1/(lambda.sd^2) #Value derived from Leslie matrix
-#N.tau <- 1/(sd^2)
+lam.tau <- 1/(lambda.prior.sd^2) #Value derived from Leslie matrix
 
 #Calculate parameters for beta distribution from mean and variance for survival
-# surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
-# surv.alpha <- surv.betaParams[[1]]
-# surv.beta <- surv.betaParams[[2]]
+ surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
+ surv.alpha <- surv.betaParams[[1]]
+ surv.beta <- surv.betaParams[[2]]
 
 
   #Define data
@@ -85,20 +82,20 @@ dad.yrs <- nrow(dad_comps.all)
     
 
     #Lambda
-    lambda = lam.fix,
+    lambda.prior.mean = lambda.prior.mean,
+    lam.tau = lam.tau,
 
     #survival
-    # surv.alpha = surv.alpha,
-    # surv.beta = surv.beta,
+     surv.alpha = surv.alpha,
+     surv.beta = surv.beta,
     
     #In case I want to use the truncated normal prior
-    #    adult.survival = adult.survival, 
-    #    survival.prior.sd = survival.prior.sd,
+#    adult.survival = adult.survival, 
+#    survival.prior.sd = survival.prior.sd,
 
     # #Breeding interval
     #psi = psi.truth,
     a = mating.periodicity
-    
       )
   
   #------------ STEP 2: SPECIFY INITIAL VALUES ---------------#
@@ -110,6 +107,7 @@ dad.yrs <- nrow(dad_comps.all)
         survival = runif(1, min=0.5, max=0.95),
         Nf = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
+        lambda = 1,
         psi = runif(1, min=0.5, max=0.95)
         
       )
@@ -130,12 +128,14 @@ dad.yrs <- nrow(dad_comps.all)
     sd ~ dunif(1, 10000)
     Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
-    survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
+#    survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
+#    lambda ~ dunif(0.95, 1.05)
     psi ~ dunif(0.5, 0.99) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
-#    survival ~ dbeta(surv.alpha, surv.beta) #Informative prior
-#    surv ~ dnorm(Adult.survival, 1/(survival.sd^2));T(0.5, 0.99) #Informative prior
+    survival ~ dbeta(surv.alpha, surv.beta) #Informative prior
+    lambda ~ dnorm(lambda.prior.mean, lam.tau)
+#    surv ~ dnorm(adult.survival, 1/(survival.prior.sd^2));T(0.5, 0.99) #Informative prior
     
     
     #Likelihood
@@ -192,13 +192,15 @@ post = jagsUI::jags.basic(data = jags_data, #If using postpack from AFS workshop
 )
 
 
-if(lf == 1){
+if(s == 1){
   sims.list.1[[iter]] <- post
-} else if(lf == 2){
-  sims.list.2[[iter]] <- post
-} else if(lf == 3){
-  sims.list.3[[iter]] <- post
-}
+ } #else if(s == 2){
+#   sims.list.2[[iter]] <- post
+# } else if(s == 3){
+#   sims.list.3[[iter]] <- post
+# } else if(s == 4){
+#   sims.list.4[[iter]] <- post
+# }
 
 #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
 # view convergence diagnostic summaries for all monitored nodes

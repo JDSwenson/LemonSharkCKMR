@@ -130,7 +130,7 @@ dad.yrs <- nrow(dad_comps.all)
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
     survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
     lambda ~ dunif(0.95, 1.05)
-    psi ~ dbeta(1, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
+    psi ~ dunif(0.5, 0.99) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
     #survival ~ dbeta(surv.alpha, surv.beta) #Informative prior
@@ -193,13 +193,13 @@ post = jagsUI::jags.basic(data = jags_data, #If using postpack from AFS workshop
 
 if(s == 1){
   sims.list.1[[iter]] <- post
-} else if(s == 2){
-  sims.list.2[[iter]] <- post
-} else if(s == 3){
-  sims.list.3[[iter]] <- post
-} else if(s == 4){
-  sims.list.4[[iter]] <- post
-}
+ } #else if(s == 2){
+#   sims.list.2[[iter]] <- post
+# } else if(s == 3){
+#   sims.list.3[[iter]] <- post
+# } else if(s == 4){
+#   sims.list.4[[iter]] <- post
+# }
 
 #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
 # view convergence diagnostic summaries for all monitored nodes
