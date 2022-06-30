@@ -16,20 +16,20 @@ library(coda)
 
 rm(list=ls())
 
-source("./Objective.1_model.construction/functions/Obj1.functions.R") #Changed name of script that includes pairwise comparison and other functions
+source("./Objective.2_sampling_schemes/functions/Obj2.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.variable" # Can be lambda.1 or lambda.variable
-Sampling.scheme <- "sample.all.ages" # sample.all.ages or target.YOY
-date.of.PopSim <- "21Jun2022"
+PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+Sampling.scheme <- "sample.all.juvenile.ages" # sample.all.ages or target.YOY
+date.of.PopSim <- "21Jun2022" #either 21Jun2022 for target YOY or sample.all.juvenile.ages OR 28Jun2022 for sample.ALL.ages
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/Model.output/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/models/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -39,13 +39,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "Obj1.2_test.fixed.lambda_sample.all.ages.R" #Copy name of script here
-primary_goal <- "Test a uniform prior for lambda vs a fixing" #Why am I running this simulation? Provide details
+script_name <- "Obj2.1_sample.all.juveniles.R" #Copy name of script here
+primary_goal <- "Test different sampling schemes for CKMR" #Why am I running this simulation? Provide details
 
-question1 <- "Better to fix lambda's prior to three different values in turn, or use a uniform distribution when no prior information exists?"
-question2 <- "Better to use targeted sampling of YOY or sample all age classes"
-question3 <- ""
-purpose <- "Obj1.2_test.fixed.lambda_sample.all.ages" #For naming output files
+question1 <- "How does the model perform under different sampling intensities?"
+question2 <- "How does the model perform under different sampling schemes (i.e. age classes)?"
+question3 <- "Does the model work fine to integrate POP relationships?"
+purpose <- "Obj2.1_sample.all.juveniles" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -55,8 +55,8 @@ max.HSPs <- NA
 max.POPs <- NA
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "lambda" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nf", "psi", "Nm", "survival")
+fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+jags_params = c("Nf", "psi", "Nm", "survival", "lambda")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -103,10 +103,10 @@ survival.prior.info <- "diffuse uniform: 0.5 - 0.95"
 lambda.prior.mean <- NA
 lambda.prior.cv <- NA
 lambda.prior.sd <- NA
-lambda.prior.info <- "fixed: 0.95, 1.0, 1.05"
+lambda.prior.info <- "diffuse uniform: 0.95 - 1.05"
 
 #psi prior
-psi.prior.info <- "diffuse beta: 1, 1"
+psi.prior.info <- "diffuse uniform: 0.5 - 0.99"
 
 #abundance prior
 abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"
@@ -140,32 +140,32 @@ model_settings.df <- tibble(script_name = script_name,
 )
 
 #Save simulation settings in Simulation_log
- # model.log <- read_csv("model_settings.log.csv")
- # tail(model.log)
- # model.log_updated <- bind_rows(model.log, model_settings.df) #Combine old simulation settings with these
- # write_csv(model.log_updated, file = "model_settings.log.csv") #Save the updated simulation log
+  # model.log <- read_csv("model_settings.log.csv")
+  # tail(model.log)
+  # (model.log_updated <- bind_rows(model.log, model_settings.df)) #Combine old simulation settings with these
+  # write_csv(model.log_updated, file = "model_settings.log.csv") #Save the updated simulation log
 
 ####-------------- Start simulation loop ----------------------
 iterations <- max(samples.df$iteration)
-sample.sizes <- samples.df %>% dplyr::filter(sample.prop == 1) %>% distinct(sample.prop) %>% pull(sample.prop) #Subset for sample size of 1%
+sample.sizes <- samples.df %>% distinct(sample.prop) %>% pull(sample.prop)
 
 # Initialize arrays for saving results
- results <- NULL
- sims.list.1 <- NULL
- sims.list.2 <- NULL
- sims.list.3 <- NULL
- 
- mom.comps.tibble <- NULL
- dad.comps.tibble <- NULL
+results <- NULL
+sims.list.1 <- NULL
+sims.list.2 <- NULL
+sims.list.3 <- NULL
+sims.list.4 <- NULL
+mom.comps.tibble <- NULL
+dad.comps.tibble <- NULL
 
- sim.samples.1 <- paste0(sample.sizes[1], "prop.sampled")
- sim.samples.2 <- paste0(sample.sizes[2], "prop.sampled")
- sim.samples.3 <- paste0(sample.sizes[3], "prop.sampled")
+sim.samples.1 <- paste0(sample.sizes[1], "prop.sampled")
+sim.samples.2 <- paste0(sample.sizes[2], "prop.sampled")
+sim.samples.3 <- paste0(sample.sizes[3], "prop.sampled")
+sim.samples.4 <- paste0(sample.sizes[4], "prop.sampled")
 
-#Set up for loop over lambda values
-lambda.vec <- c(0.95, 1.0, 1.05) #Specify lambda values to loop over
-samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only running on 1% sampled (vs running every iteration on every value of lambda AND every sample scheme)
 
+
+#Start iterations
  for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
    sim.start <- Sys.time()
@@ -272,15 +272,10 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
       mom.HSPs <- sum(mom_comps.all$yes)
       dad.HSPs <- sum(dad_comps.all$yes)
       
-      #Loop over fixed lambda values
-      for(lf in 1:3){
-        
-        lam.fix <- lambda.vec[lf]
-      
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.1_model.construction/functions/Obj1.2_run.JAGS_HS.only_fixed.lambda.R")
+    source("Objective.2_sampling_schemes/functions/Obj2.1_run.JAGS_HS.only.R")
 
     #Calculate expectations
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
@@ -299,10 +294,9 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
     
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
       left_join(samples.iter, by = c("iteration", "seed")) %>% 
-      mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs),
-             HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
-             purpose = purpose,
-             lambda.fix = lam.fix)
+      mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs + dad.HSPs),
+             HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
+             purpose = purpose)
 
     results <- rbind(results, results.temp)
     
@@ -320,31 +314,33 @@ samples.df <- samples.df %>% dplyr::filter(sample.prop == 1) #Filter so only run
                                               seed = rseed)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
     
-      } # End loop over lambda values
   } # End if/else statement
   } # end loop over sample sizes
     
   #-----------------Save output files iteratively--------------------
   
-#Results
-    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
-# 
+   #Results
+   write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+   # 
    #    #Model output for diagnostics
-   saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_0.95_fixed.lambda"))
+   saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
    # 
-   saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.0_fixed.lambda"))
+   saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
    # 
-   saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_1.05_fixed.lambda"))
+   saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+   #    
+   saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
    # 
-#    #Save pairwise comparisons matrices
-    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
-#    
-    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
-
-      sim.end <- Sys.time()
+   #    #Save pairwise comparisons matrices
+   saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
+   #    
+   saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
+   
+   sim.end <- Sys.time()
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("\n Finished iteration ", iter, ". \n Took ", iter.time, " minutes \n\n"))
+   
    } # end loop over iterations
   
   

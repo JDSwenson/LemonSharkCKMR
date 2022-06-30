@@ -124,7 +124,6 @@ for(i in 1:length(s1.1)){ #Loop over all the posterior samples from each iterati
 
 ```{r Quick analysis of results}
 ####------------------------------- Quick analysis of results -----------------------------------####
-
 results.all <- results.1 %>% 
      mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
      mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>% 
@@ -217,7 +216,7 @@ results.all %>% dplyr::filter(parameter == "Nf" | parameter == "Nm") %>%
 
 #---------------------------Purpose 1 --------------------------------#    
 #Separate out by sample size
-HPD.samples1.1.4viz <- results.1 %>% filter(sample.prop.juvs == sim.samples) %>% 
+HPD.samples1.1.4viz <- results.1 %>% 
   right_join(HPD.samples1.1, by = c("parameter", "iteration")) %>% 
   anti_join(no.convergence, by = c("purpose.lab", "iteration", "sample.size.juvs")) %>%  #Remove iterations that failed to converge
   mutate(samples.lab = samples.lab)
