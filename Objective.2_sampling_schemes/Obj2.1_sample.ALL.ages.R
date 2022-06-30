@@ -21,8 +21,8 @@ source("./Objective.2_sampling_schemes/functions/Obj2.functions.R") #Changed nam
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
-Sampling.scheme <- "sample.all.juvenile.ages" # sample.all.ages or target.YOY
-date.of.PopSim <- "21Jun2022" #either 21Jun2022 for target YOY or sample.all.juvenile.ages OR 28Jun2022 for sample.ALL.ages
+Sampling.scheme <- "sample.ALL.ages" # sample.all.ages or target.YOY
+date.of.PopSim <- "28Jun2022" #either 21Jun2022 for target YOY or sample.all.juvenile.ages OR 28Jun2022 for sample.ALL.ages
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
@@ -39,13 +39,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "Obj2.1_sample.all.juveniles.R" #Copy name of script here
+script_name <- "Obj2.1_sample.ALL.ages.R" #Copy name of script here
 primary_goal <- "Test different sampling schemes for CKMR" #Why am I running this simulation? Provide details
 
 question1 <- "How does the model perform under different sampling intensities?"
 question2 <- "How does the model perform under different sampling schemes (i.e. age classes)?"
 question3 <- "Does the model work fine to integrate POP relationships?"
-purpose <- "Obj2.1_sample.all.juveniles" #For naming output files
+purpose <- "Obj2.1_sample.ALL.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -53,7 +53,7 @@ target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- NA
 max.POPs <- NA
-HS.only <- "yes" #Do we only want to filter HS relationships?
+HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
 jags_params = c("Nf", "psi", "Nm", "survival", "lambda")
@@ -76,7 +76,8 @@ max.age <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 
 #---------------------- Read in sampling and other dataframes --------------------------
-samples.df <- truth.df <- readRDS(file = paste0("G://My Drive/Personal_Drive/R/CKMR/Population.simulations/sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", Sampling.scheme))
+samples.df <- readRDS(file = paste0("G://My Drive/Personal_Drive/R/CKMR/Population.simulations/sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", Sampling.scheme)) %>% 
+  rename(total.sample.size = sample.size)
 
 samples.df %>% group_by(age.x) %>% summarize(n()) #Check that correct age classes were sampled
 
@@ -184,7 +185,7 @@ sim.samples.4 <- paste0(sample.sizes[4], "prop.sampled")
     
  
     #Remove full sibs
-    filter1.out <- filter.samples(later.capture) #Filter for full sibs
+    filter1.out <- filter.samples(samples = later.capture) #Filter for full sibs
     PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
     HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings
     NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample PO samples if needed
@@ -269,13 +270,29 @@ sim.samples.4 <- paste0(sample.sizes[4], "prop.sampled")
       next
     } else {
     
-      mom.HSPs <- sum(mom_comps.all$yes)
-      dad.HSPs <- sum(dad_comps.all$yes)
+      #HSPs detected
+      mom.HSPs <- mom_comps.all %>% dplyr::filter(type == "HS") %>% 
+        summarize(HSPs = sum(yes)) %>% 
+        pull(HSPs)
       
+      dad.HSPs <- dad_comps.all %>% dplyr::filter(type == "HS") %>% 
+        summarize(HSPs = sum(yes)) %>% 
+        pull(HSPs)
+
+    #POPs detected
+      mom.POPs <- mom_comps.all %>% dplyr::filter(type == "PO") %>% 
+        summarize(POPs = sum(yes)) %>% 
+        pull(POPs)
+      
+      dad.POPs <- dad_comps.all %>% dplyr::filter(type == "PO") %>% 
+        summarize(POPs = sum(yes)) %>% 
+        pull(POPs)
+      
+            
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
-      set.seed(rseed)
-    source("Objective.2_sampling_schemes/functions/Obj2.1_run.JAGS_HS.only.R")
+    set.seed(rseed)
+    source("Objective.2_sampling_schemes/functions/Obj2.1_run.JAGS_HS.PO.R")
 
     #Calculate expectations
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
@@ -290,12 +307,15 @@ sim.samples.4 <- paste0(sample.sizes[4], "prop.sampled")
     
     truth.iter <- truth.df %>% dplyr::filter(iteration == iter)
     samples.iter <- samples.df %>% dplyr::filter(iteration == iter, sample.prop == sample.size) %>% 
-      distinct(seed, iteration, sample.prop.juvs = sample.prop, sample.size.juvs)
+      distinct(seed, iteration, sample.prop.juvs = sample.prop, total.sample.size)
     
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
       left_join(samples.iter, by = c("iteration", "seed")) %>% 
       mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs + dad.HSPs),
              HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
+             POPs_detected = c(mom.POPs, mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs + dad.POPs),
+             POPs_expected = c(mom.Exp.PO, mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO + dad.Exp.PO),
+                    
              purpose = purpose)
 
     results <- rbind(results, results.temp)
