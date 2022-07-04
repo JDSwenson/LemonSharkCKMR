@@ -16,7 +16,27 @@ library(coda)
 
 rm(list=ls())
 
-source("./Objective.2_sampling_schemes/functions/Obj2.functions.R") #Changed name of script that includes pairwise comparison and other functions
+source("./Objective.3_life_history_sensitivity/functions/Obj3.functions.R") #Changed name of script that includes pairwise comparison and other functions
+
+#----------------Get lambda values from Leslie matrix trials---------
+lambda.df <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.3_life_history_sensitivity/lambda.df")
+
+lambda.df.summ <- lambda.df %>% group_by(YOY.cv, juvenile.cv, adult.cv, fecund.cv, survival.fecundity_correlation, case) %>%
+  dplyr::filter(survival.fecundity_correlation == -0.25) %>% 
+  summarize(lambda.sd = sd(lambda, na.rm = TRUE),
+            lambda.mean = mean(lambda, na.rm = TRUE))
+
+lambda.df.summ_filt <- lambda.df %>% inner_join(lambda.df.summ, by = c("YOY.cv", "juvenile.cv", "adult.cv", "fecund.cv", "survival.fecundity_correlation", "case")) %>%
+  mutate(z_score = (lambda - lambda.mean)/lambda.sd) %>% 
+  dplyr::filter(z_score < 3 & z_score > -3) %>% 
+  group_by(YOY.cv, juvenile.cv, adult.cv, fecund.cv, survival.fecundity_correlation, case) %>% 
+  summarize(lambda.min = min(lambda),
+            lambda.max = max(lambda),
+            lambda.mean = mean(lambda, na.rm = TRUE),
+            lambda.sd = sd(lambda, na.rm = TRUE))
+
+lambda.split.1 <- lambda.df.summ_filt[1:(nrow(lambda.df.summ_filt)/2),]
+lambda.split.2 <- lambda.df.summ_filt[(nrow(lambda.df.summ_filt)/2 + 1):(nrow(lambda.df.summ_filt)),]
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
@@ -27,9 +47,9 @@ inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_life_history_sensitivity/Model.output/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_life_history_sensitivity/models/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_life_history_sensitivity/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -39,13 +59,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "Obj2.1_target.YOY.R" #Copy name of script here
-primary_goal <- "Test different sampling schemes for CKMR" #Why am I running this simulation? Provide details
+script_name <- "Obj3.1_target.YOY_1.R" #Copy name of script here
+primary_goal <- "Test different priors on lambda" #Why am I running this simulation? Provide details
 
-question1 <- "How does the model perform under different sampling intensities?"
-question2 <- "How does the model perform under different sampling schemes (i.e. age classes)?"
-question3 <- "Does the model work fine to integrate POP relationships?"
-purpose <- "Obj2.1_target.YOY" #For naming output files
+question1 <- "How does the model perform when different CVs are given to life history parameters and used to inform the prior on lambda?"
+question2 <- "Does performance under these scenarios differ based on sampling scheme?"
+question3 <- "Part 1 of lambda trials"
+purpose <- "Obj3.1_target.YOY_1" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -97,13 +117,13 @@ nc <- 2      # number of chains
 survival.prior.mean <- NA
 survival.prior.cv <- NA
 survival.prior.sd <- NA
-survival.prior.info <- "diffuse uniform: 0.5 - 0.95"
+survival.prior.info <- "beta centered on truth; CV determined by trial"
 
 #Lambda prior info
 lambda.prior.mean <- NA
 lambda.prior.cv <- NA
 lambda.prior.sd <- NA
-lambda.prior.info <- "diffuse uniform: 0.95 - 1.05"
+lambda.prior.info <- "Normal; mean and sd deteremined by trial"
 
 #psi prior
 psi.prior.info <- "diffuse uniform: 0.5 - 0.99"

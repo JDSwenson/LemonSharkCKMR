@@ -55,3 +55,8 @@ Age.length.ref %>% group_by(age.at.capture) %>%
 Age.length.ref %>% ggplot(aes(x = age.at.capture, y = PCL_cm)) + 
   geom_point() + 
   geom_smooth(method = "lm", formula = y~x)
+
+
+
+#Length is row name; age is column name each cell counts the number of fish at that length/age
+#Then create a second matrix that divides each cell by the row sum (so percent of individuals at each length that are each age)

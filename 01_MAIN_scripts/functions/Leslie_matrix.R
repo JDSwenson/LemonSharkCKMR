@@ -22,13 +22,13 @@ mating.periodicity <- 2 #number of years between mating; assigned to an individu
 non.conformists <- 0.05 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 num.mates <- c(1:3) #vector of potential number of mates per mating
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
-ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
-ff
-ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-ff
+# ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
+# ff
+# ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
+# ff
 
 #Fecundity for Leslie matrix
-leslie.fecundity <- (ff/2)/2 #Divide by 2 for biennial breeding; divide by 2 again for females only
+leslie.fecundity <- f #Divide by 2 for biennial breeding; divide by 2 again for females only
 
 
 #-----------------Leslie Matrix parameters--------------------
