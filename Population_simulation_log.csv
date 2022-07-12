@@ -1,6 +1,13 @@
 script_name,population.growth,sampling.scheme,date.of.simulation,target.YOY,seeds,years_sampled,YOY.survival,juvenile.survival,adult.survival,repro.age,max.age,breeding_periodicity,non_conformists,female.fecundity,n.sim.yrs
-population_simulation_lambda.variable_sample.all.ages.R,lambda.variable,sample.all.ages,21Jun2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794+/- 0.5,90
-population_simulation_lambda.variable_target.YOY.R,lambda.variable,target.YOY,21Jun2022,yes,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794+/- 0.5,90
-population_simulation_lambda1_target.YOY.R,lambda.1,target.YOY,21Jun2022,yes,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
-population_simulation_lambda1_sample.all.ages.R,lambda.1,sample.all.ages,21Jun2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
-population_simulation_lambda1_sample.all.ages.R,lambda.1,sample.all.ages,28Jun2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
+population_simulation_lambda1_target.YOY_SB.R,lambda.1,target.YOY,11Jul2022,yes,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
+population_simulation_lambda.1_sample.all.ages.SB.R,lambda.1,sample.ALL.ages,11Jul2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
+population_simulation_lambda1_sample.all.juvenile.ages_SB.R,lambda.1,sample.all.juvenile.ages,11Jul2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
+population_simulation_lambda.variable_sample.all.juveniles_SB.R,lambda.variable,sample.all.juvenile.ages,11Jul2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
+population_simulation_lambda.variable_target.YOY_SB.R,lambda.variable,target.YOY,11Jul2022,yes,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
+population_simulation_lambda.variable_sample.all.ages_SB.R,lambda.variable,sample.ALL.ages,11Jul2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,2,0.05,5.5297277867794,90
+population_simulation_lambda.variable_sample.all.juveniles_AB.R,lambda.variable,sample.all.juvenile.ages,11Jul2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,1,0,2.91038304567337,90
+population_simulation_lambda.variable_target.YOY_AB.R,lambda.variable,target.YOY,11Jul2022,yes,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,1,0,2.91038304567337,90
+population_simulation_lambda.variable_sample.all.ages_AB.R,lambda.variable,sample.ALL.ages,11Jul2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,1,0,2.91038304567337,90
+population_simulation_lambda1_target.YOY_AB.R,lambda.1,target.YOY,11Jul2022,yes,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,1,0,2.91038304567337,90
+population_simulation_lambda.1_sample.all.ages.AB.R,lambda.1,sample.ALL.ages,11Jul2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,1,0,2.91038304567337,90
+population_simulation_lambda.1_sample.all.juveniles_AB.R,lambda.1,sample.all.juvenile.ages,11Jul2022,no,Seeds2022.04.15,4,0.7,0.8,0.825,12,50,1,0,2.91038304567337,90

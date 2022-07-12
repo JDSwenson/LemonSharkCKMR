@@ -45,8 +45,8 @@ Age.length.ref <- Juv_ref %>% dplyr::filter(is.na(DOB_Yr2) == TRUE,
   mutate(DOB = as.numeric(DOB)) %>% 
   mutate(age.at.capture = Capture_Year - DOB)
 
-Age.length.ref %>% dplyr::filter(age.at.capture == 7)
 
+#Look at mean and sd of lengths at different ages
 Age.length.ref %>% group_by(age.at.capture) %>% 
   summarize(mean.PCL = mean(PCL_cm, na.rm = TRUE),
             sd.PCL = sd(PCL_cm, na.rm = TRUE),
@@ -57,6 +57,57 @@ Age.length.ref %>% ggplot(aes(x = age.at.capture, y = PCL_cm)) +
   geom_smooth(method = "lm", formula = y~x)
 
 
+min(Age.length.ref$PCL_cm)
+max(Age.length.ref$PCL_cm)
 
+#Create bins for length
+length_bins <- c(0, 
+                 seq(from = round(min(Age.length.ref$PCL_cm), 0),
+                to = round(max(Age.length.ref$PCL_cm), 0),
+                by = 5))
+
+#Make the last bin big enough to cover all the "+" values
+length_bins[length(length_bins)] <- max(Age.length.ref$PCL_cm) + 1
+
+#Create labels for the lengths
+length_tags_temp <- NULL
+for(i in 1:length(length_bins)){
+  length_tags_temp[i] <- paste0(length_bins[i], "-", length_bins[i+1])
+}
+
+#Need to remove the last one because there should be one less label than bin
+#length_tags_temp[length(length_tags_temp)] <- paste0(max(length_bins), "+")
+length_tags <- length_tags_temp[1:length(length_tags_temp) - 1]
+
+#Assign a length bin to each individual
+Age.length.ref2 <- Age.length.ref %>% mutate(
+  length_bin = cut(Age.length.ref$PCL_cm,
+      breaks = length_bins,
+      labels = length_tags,
+      right = FALSE
+      ))
+
+#Create an age-length count matrix, with the number of individuals at each age in each length bin
+(age.length.count <- Age.length.ref2 %>% dplyr::count(length_bin, age.at.capture) %>% 
+  dplyr::arrange(length_bin, age.at.capture) %>% 
+  pivot_wider(names_from = age.at.capture,
+              values_from = n,
+              names_prefix = "age_") %>% 
+  mutate_at(vars(contains("age")), ~replace_na(.,0)) %>% 
+  column_to_rownames(var = "length_bin"))
+
+#Convert the above matrix into probability densities
+age.length.density <- NULL
+for(d in 1:nrow(age.length.count)){
+  ald.vec <- round(age.length.count[d,]/rowSums(age.length.count[d,]), 3)
+  age.length.density <- rbind(age.length.density, ald.vec)
+}
+
+#Age-length probability matrix
+age.length.density
+
+
+
+#Notes from chatting with Liz:
 #Length is row name; age is column name each cell counts the number of fish at that length/age
 #Then create a second matrix that divides each cell by the row sum (so percent of individuals at each length that are each age)
