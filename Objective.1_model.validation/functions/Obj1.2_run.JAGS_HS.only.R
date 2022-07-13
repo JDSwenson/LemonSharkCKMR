@@ -34,9 +34,9 @@ dad.yrs <- nrow(dad_comps.all)
 #lam.tau <- 1/(lambda.prior.sd^2) #Value derived from Leslie matrix
 
 #Calculate parameters for beta distribution from mean and variance for survival
- surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
- surv.alpha <- surv.betaParams[[1]]
- surv.beta <- surv.betaParams[[2]]
+ # surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
+ # surv.alpha <- surv.betaParams[[1]]
+ # surv.beta <- surv.betaParams[[2]]
 
 
   #Define data
@@ -56,13 +56,13 @@ dad.yrs <- nrow(dad_comps.all)
     dad.popGrowth.yrs = dad.popGrowth.yrs,
     dad.n.comps = dad.n.comps,
     dad.positives = dad.positives,
-    dad.yrs = dad.yrs,
+    dad.yrs = dad.yrs
     #dad.R0 = dad.R0,
     
 
     #survival
-     surv.alpha = surv.alpha,
-     surv.beta = surv.beta
+     # surv.alpha = surv.alpha,
+     # surv.beta = surv.beta
     
       )
   
@@ -93,10 +93,10 @@ dad.yrs <- nrow(dad_comps.all)
     sd ~ dunif(1, 10000)
     Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
-#    survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
+    survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
     
     #PRIORS - informative
-    survival ~ dbeta(surv.alpha, surv.beta);T(0.001,0.999) #Informative prior
+#    survival ~ dbeta(surv.alpha, surv.beta);T(0.001,0.999) #Informative prior
 #    surv ~ dnorm(adult.survival, 1/(survival.prior.sd^2));T(0.5, 0.99) #Informative prior
     
     
