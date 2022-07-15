@@ -1,0 +1,815 @@
+---
+title: "Results for CKMR manuscript 07/01/2022"
+output: 
+  html_document:
+    df_print: tibble
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+---
+
+NEXT TO DO: 
+Fix purposes and make sure they mesh (they don't for obj2.2)
+Transfer new objective 2 trials from cluster to local computer (started running 7/15)
+Get plots together
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+#devtools::install_github("pconn/HierarchicalGOF/HierarchicalGOF")
+#install.packages("ggmcmc")
+library(tidyverse)
+library(ggpubr)
+library(RColorBrewer)
+library(coda)
+library(runjags)
+library(ggmcmc)
+library(viridis)
+library(scales)
+
+rm(list=ls())
+today <- format(Sys.Date(), "%d%b%Y")
+
+```
+
+
+
+```{r set-file-locations and read in files, include = FALSE}
+#------------- Simulation parameters and labels  ----------------#
+obj1.1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
+obj1.1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
+obj1.1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/figures/"
+
+obj1.2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
+obj1.2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
+obj1.2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/figures/"
+
+obj2.1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
+obj2.1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+obj2.1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+
+obj2.2.1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
+obj2.2.1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+obj2.2.1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+
+obj2.2.2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
+obj2.2.2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+obj2.2.2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+
+results_prefix <- "CKMR_results"
+MCMC_prefix <- "CKMR_modelout"
+parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
+sample.prefix <- "sample_info/CKMR_sample.info"
+pop.size.prefix <- "pop_size/CKMR_pop.size"
+mom.comps.prefix <- "comparisons/mom.comps"
+dad.comps.prefix <- "comparisons/dad.comps"
+
+#----------------Set input file locations ------------------------------
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
+PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+Sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "11Jul2022" # 11Jul2022
+inSeeds <- "Seeds2022.04.15"
+
+
+#-------------Objective 1.1 --------------------#
+date.of.simulation.obj1.1Y <- "12Jul2022"
+purpose.obj1.1Y <- "Obj1.1_model.validation_Target.YOY"
+purpose.obj1.1.labY <- "Target YOY"
+model.type.obj1.1Y <- "HS.only"
+
+date.of.simulation.obj1.1J <- "12Jul2022"
+purpose.obj1.1J <- "Obj1.1_model.validation_sample.all.juvenile.ages"
+purpose.obj1.1.labJ <- "Sample all juvenile ages"
+model.type.obj1.1J <- "HS.only"
+
+date.of.simulation.obj1.1A <- "13Jul2022"
+purpose.obj1.1A <- "Obj1.1_model.validation_sample.ALL.ages"
+purpose.obj1.1.labA <- "Sample all age classes"
+model.type.obj1.1A <- "HS + PO"
+
+
+#-------------Objective 1.2 --------------------#
+date.of.simulation.obj1.2Y <- "13Jul2022"
+purpose.obj1.2Y <- "Obj1.2_model.validation_Target.YOY"
+purpose.obj1.2.labY <- "Target YOY"
+model.type.obj1.2Y <- "HS.only"
+
+date.of.simulation.obj1.2J <- "13Jul2022"
+purpose.obj1.2J <- "Obj1.2_model.validation_sample.all.juvenile.ages"
+purpose.obj1.2.labJ <- "Sample all juvenile ages"
+model.type.obj1.2J <- "HS.only"
+
+date.of.simulation.obj1.2A <- "13Jul2022"
+purpose.obj1.2A <- "Obj1.2_model.validation_sample.ALL.ages"
+purpose.obj1.2.labA <- "Sample all age classes"
+model.type.obj1.2A <- "HS + PO"
+
+
+#-------------Objective 2.1 --------------------#
+date.of.simulation.obj2.1Y <- "13Jul2022"
+purpose.obj2.1Y <- "Obj2.1_lambda.trial_Target.YOY"
+purpose.obj2.1.labY <- "Target YOY"
+model.type.obj2.1Y <- "HS.only"
+
+date.of.simulation.obj2.1J <- "13Jul2022"
+purpose.obj2.1J <- "Obj2.1_lambda.trial_sample.all.juvenile.ages"
+purpose.obj2.1.labJ <- "Sample all juvenile ages"
+model.type.obj2.1J <- "HS.only"
+
+date.of.simulation.obj2.1A <- "13Jul2022"
+purpose.obj2.1A <- "Obj2.1_lambda.trial_sample.ALL.ages"
+purpose.obj2.1.labA <- "Sample all age classes"
+model.type.obj2.1A <- "HS + PO"
+
+
+#-------------Objective 2.2.1 --------------------#
+date.of.simulation.obj2.2.1Y <- "13Jul2022"
+purpose.obj2.2.1Y <- "Obj2.2.1_lambda.trial_Target.YOY"
+purpose.obj2.2.1.labY <- "Target YOY"
+model.type.obj2.2.1Y <- "HS.only"
+
+date.of.simulation.obj2.2.1J <- "13Jul2022"
+purpose.obj2.2.1J <- "Obj2.2.1_lambda.trial_sample.all.juvenile.ages"
+purpose.obj2.2.1.labJ <- "Sample all juvenile ages"
+model.type.obj2.2.1J <- "HS.only"
+
+date.of.simulation.obj2.2.1A <- "13Jul2022"
+purpose.obj2.2.1A <- "Obj2.2.1_lambda.trial_sample.ALL.ages"
+purpose.obj2.2.1.labA <- "Sample all age classes"
+model.type.obj2.2.1A <- "HS + PO"
+
+
+#-------------Objective 2.2.2 --------------------#
+date.of.simulation.obj2.2.2Y <- "14Jul2022"
+purpose.obj2.2.2Y <- "Obj2.2.2_lambda.trial_Target.YOY_change.est.yr"
+purpose.obj2.2.2.labY <- "Target YOY"
+model.type.obj2.2.2Y <- "HS.only"
+
+date.of.simulation.obj2.2.2J <- "14Jul2022"
+purpose.obj2.2.2J <- "Obj2.2.2_lambda.trial_sample.all.juvenile.ages"
+purpose.obj2.2.2.labJ <- "Sample all juvenile ages_change.est.yr"
+model.type.obj2.2.2J <- "HS.only"
+
+date.of.simulation.obj2.2.2A <- "14Jul2022"
+purpose.obj2.2.2A <- "Obj2.2.2_lambda.trial_sample.ALL.ages_change.est.yr"
+purpose.obj2.2.2.labA <- "Sample all age classes"
+model.type.obj2.2.2A <- "HS + PO"
+
+
+#---------------------Read in results files--------------------------#
+
+seeds <- "Seeds2022.04.15"
+# sim.samples.obj1 <- "1prop.sampled" #Label on file output
+# samples.obj1.lab <- "1 percent sampled" #Label for dataframe and figures
+
+#--------------------- Objective 1.1 ---------------------------------#
+obj1.1_files <- list.files(path = obj1.1_results_location,
+                            recursive = FALSE,
+                            pattern = "*Obj1.1_*",
+                            full.names = TRUE)
+
+obj1.1_results <- map_dfr(obj1.1_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose == purpose.obj1.1Y, "target YOY",
+                                  ifelse(purpose == purpose.obj1.1J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = NA,
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs)) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme))
+
+#--------------------- Objective 1.2 ---------------------------------#
+obj1.2_files <- list.files(path = obj1.2_results_location,
+                            recursive = FALSE,
+                            pattern = "*Obj1.2_*",
+                            full.names = TRUE)
+
+obj1.2_results <- map_dfr(obj1.2_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose == purpose.obj1.2Y, "target YOY",
+                                  ifelse(purpose == purpose.obj1.2J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = NA,
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs)) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme))
+  
+
+#--------------------- Objective 2.1 ---------------------------------#
+obj2.1_files <- list.files(path = obj2.1_results_location,
+                            recursive = FALSE,
+                            pattern = "*Obj2.1_*",
+                            full.names = TRUE)
+
+#obj1.2 has the same run as obj2.1, except lambda is neutral. Want to add these runs to the analysis, but need to change the truth, since it was calculated for the mean for objective 1.
+obj2.1_pop_size <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
+  dplyr::filter(year == 85) %>% 
+  dplyr::select(Male.adult.pop, Female.adult.pop, iteration)
+
+#Update the truth to correspond to the same year as the other trials
+obj1.2_results_update.truth <- obj1.2_results %>% inner_join(obj2.1_pop_size, by = "iteration") %>% 
+  mutate(all.truth = ifelse(parameter == "Nm", Male.adult.pop,
+                            ifelse(parameter == "Nf", Female.adult.pop, all.truth))) %>% 
+  dplyr::select(-c(Male.adult.pop, Female.adult.pop))
+  
+
+obj2.1_results <- map_dfr(obj2.1_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose == purpose.obj2.1Y, "target YOY",
+                                  ifelse(purpose == purpose.obj2.1J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = NA,
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs)) %>%
+  bind_rows(obj1.2_results_update.truth) %>% #Add in neutral growth scenario
+  mutate(population.growth = ifelse(female.fecundity > 3, "positive",
+                                    ifelse(female.fecundity < 2.8, "negative", "neutral"))) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme),
+         population.growth = factor(population.growth))
+
+
+#--------------------- Objective 2.2.1 ---------------------------------#
+obj2.2.1_files <- list.files(path = obj2.2.1_results_location,
+                            recursive = FALSE,
+                            pattern = "*Obj2.2.1_*",
+                            full.names = TRUE)
+
+obj2.2.1_results <- map_dfr(obj2.2.1_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose == purpose.obj2.2.1Y, "target YOY",
+                                  ifelse(purpose == purpose.obj2.2.1J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = "diffuse",
+         est.yr = 85,
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs),
+         population.growth = ifelse(female.fecundity > 3, "positive",
+                                    ifelse(female.fecundity < 2.8, "negative", "neutral"))) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme),
+         population.growth = factor(population.growth))
+
+
+#--------------------- Objective 2.2.2 ---------------------------------#
+obj2.2.2_files <- list.files(path = obj2.2.2_results_location,
+                            recursive = FALSE,
+                            pattern = "*Obj2.2.2_*",
+                            full.names = TRUE)
+
+obj2.2.2_results <- map_dfr(obj2.2.2_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose == purpose.obj2.2.2Y, "target YOY",
+                                  ifelse(purpose == purpose.obj2.2.2J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = "diffuse",
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs),
+         population.growth = ifelse(female.fecundity > 3, "positive",
+                                    ifelse(female.fecundity < 2.8, "negative", "neutral"))) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme),
+         population.growth = factor(population.growth)) %>% 
+  bind_rows(obj2.2.1_results)
+
+```
+
+
+
+
+```{r quick-results-analysis-and-filtering, echo = FALSE, include = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+#-------------Objective 1 --------------------#
+#See how many instances failed to converge so they can be removed later from the HPDI dataframes
+obj1.1_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+obj1.2_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+
+#Remove instances that failed to converge
+obj1.1_results <- obj1.1_results %>% dplyr::filter(Rhat < 1.01)
+obj1.2_results <- obj1.2_results %>% dplyr::filter(Rhat < 1.01)
+
+#Informed parameter for survival
+obj1.1_results %>% group_by(prop.sampled, parameter, sampling.scheme) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
+  dplyr::arrange(percent_in_interval)
+
+#Diffuse parameter for survival
+obj1.2_results %>% group_by(prop.sampled, parameter, sampling.scheme) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
+  dplyr::arrange(percent_in_interval)
+
+#Median relative bias by sample size
+#Informed parameter for survival
+ obj1.1_results %>% group_by(prop.sampled, parameter, sampling.scheme) %>% 
+   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
+   dplyr::arrange(desc(median.bias))
+
+#Diffuse parameter for survival
+  obj1.2_results %>% group_by(prop.sampled, parameter, sampling.scheme) %>% 
+   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
+   dplyr::arrange(desc(median.bias))
+
+  
+#-------------Objective 2 --------------------#
+#See how many instances failed to converge so they can be removed later from the HPDI dataframes
+obj2.1_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+obj2.2.1_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+obj2.2.2_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+
+#Remove instances that failed to converge
+obj2.1_results <- obj2.1_results %>% dplyr::filter(Rhat < 1.01)
+obj2.2.1_results <- obj2.2.1_results %>% dplyr::filter(Rhat < 1.01)
+obj2.2.2_results <- obj2.2.2_results %>% dplyr::filter(Rhat < 1.01)
+
+#No parameter for lambda; only positive and negative population simulations
+obj2.1_results %>% group_by(prop.sampled, parameter, sampling.scheme, population.growth) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
+  dplyr::arrange(percent_in_interval)
+
+#Diffuse prior for lambda, estimation year 5 years in the past
+obj2.2.1_results %>% group_by(prop.sampled, parameter, sampling.scheme, population.growth) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
+  dplyr::arrange(percent_in_interval)
+
+#Diffuse prior for lambda, estimation year 1 or 10 years in the past
+obj2.2.2_results %>% group_by(prop.sampled, parameter, sampling.scheme, population.growth, est.yr) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
+  dplyr::arrange(percent_in_interval)
+
+#Median relative bias by sample size
+#No parameter for lambda
+ obj2.1_results %>% group_by(prop.sampled, parameter, sampling.scheme, population.growth) %>% 
+   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
+   dplyr::arrange(desc(median.bias))
+
+ #Diffuse prior for lambda; estimating five years in the past
+ obj2.2.1_results %>% group_by(prop.sampled, parameter, sampling.scheme, population.growth) %>% 
+   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
+   dplyr::arrange(desc(median.bias))
+ 
+ #Diffuse prior for lambda; estimating variable years in the past
+  obj2.2.2_results %>% group_by(prop.sampled, parameter, sampling.scheme, population.growth, est.yr) %>% 
+   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
+   dplyr::arrange(desc(median.bias))
+```
+
+```{r Fig1-HPDI-and-Density-Plots, echo=FALSE, include=FALSE}
+#---------------Figure 1---------------------#
+#plot.colors <- c("aquamarine", "aquamarine4", "indianred1", "indianred4", "khaki4")
+plot.colors.fig1 <- c("aquamarine4", "indianred1", "indianred4")
+scales::show_col(plot.colors.fig1)
+#Relevel for better visualization
+# results.obj1.4viz$purpose.lab <- factor(results.obj1.4viz$purpose.lab, levels = c(purpose1.lab, purpose3.lab, purpose2.lab, purpose4.lab))
+
+#HPDI line plot
+# (fig1.p.Nf <- fig1.4viz %>% dplyr::filter(parameter == "Nf",
+#                                      purpose.lab != purpose.obj1.5.lab) %>% 
+#    ggplot(aes(x = interval.scale)) +
+#    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+#    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+#    geom_line(aes(y = interval.scale), size = 1.5) + 
+#    ggtitle("A) Nf") + 
+#    labs(x = "HPDI",
+#         y = "Percent in HPDI") +
+#    theme_bw() + 
+#    theme(legend.title = element_blank()) + 
+#   scale_color_manual(values = plot.colors.fig1) +
+# #  facet_wrap(~proportion_sampled) + 
+#   guides(color = guide_legend(nrow = 2)))
+# 
+# #HPDI line plot
+# (fig1.p.Nm <- fig1.4viz %>% dplyr::filter(parameter == "Nm",
+#                                      purpose.lab != purpose.obj1.5.lab) %>% 
+#   ggplot(aes(x = interval.scale)) +
+#   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+#   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+#   geom_line(aes(y = interval.scale), size = 1.5) + 
+#   ggtitle("B) Nm") + 
+#   labs(x = "HPDI",
+#        y = "Percent in HPDI") +
+#   theme_bw() + 
+#   theme(legend.title = element_blank()) + 
+#   scale_color_manual(values = plot.colors.fig1))
+
+#-------------------Density plots-------------------------#
+
+#Density plot for Nf
+(fig1.p2.Nf <- results.fig1.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("A) Nf") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.fig1) +
+    scale_color_manual(values = plot.colors.fig1) +
+    xlim(-100, 100))
+
+#Density plot for Nm
+(fig1.p2.Nm <- results.fig1.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("B) Nm") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig1) +
+  scale_color_manual(values = plot.colors.fig1) +
+  xlim(-100, 100))
+
+#Density plot for survival
+(fig1.p2.surv <- results.fig1.4viz %>% dplyr::filter(parameter == "survival") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("C) Survival") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig1) +
+  scale_color_manual(values = plot.colors.fig1) +
+  xlim(-25, 25))
+
+(fig1.p1.violin <- results.fig1.4viz %>% dplyr::filter(parameter == "Nf" | parameter == "Nm" | parameter == "survival") %>% 
+  ggplot(aes(x=factor(parameter), fill = factor(purpose.lab))) +
+  geom_violin(aes(y=cv), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="CV", title="D) CV") +
+  scale_fill_manual(values = plot.colors.fig1) +
+  font("title", size = 10, face = "bold")) +
+  theme(legend.title = element_blank())
+
+
+```
+
+\
+\
+\
+\
+```{r Fig2-make-HPDI-and-Density-Plots, echo=FALSE, include = FALSE}
+#---------------Figure 2-------------------------#
+plot.colors.fig2 <- c("maroon", "goldenrod4", "lightsteelblue2")
+scales::show_col(plot.colors.fig2)
+
+#plot HPDI line plot
+# (Fig2.p.Nf <- fig2.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+#    ggplot(aes(x = interval.scale)) +
+#    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+#    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+#    geom_line(aes(y = interval.scale), size = 1.5) + 
+#    ggtitle("A) Nf") + 
+#    labs(x = "HPDI",
+#         y = "Percent in HPDI") +
+#    theme_bw() + 
+#    theme(legend.title = element_blank()) + 
+#   scale_fill_manual(values = plot.colors.fig2) +
+#   scale_color_manual(values = plot.colors.fig2) +
+#   facet_wrap(~samples.lab) + 
+#   guides(color = guide_legend(nrow = 2)))
+# 
+# #HPDI line plot - Nm
+# (Fig2.p.Nm <- fig2.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+#   ggplot(aes(x = interval.scale)) +
+#   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+#   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+#   geom_line(aes(y = interval.scale), size = 1.5) + 
+#   ggtitle("B) Nm") + 
+#   labs(x = "HPDI",
+#        y = "Percent in HPDI") +
+#   theme_bw() + 
+#   theme(legend.title = element_blank()) + 
+#     scale_fill_manual(values = plot.colors.fig2) +
+#   scale_color_manual(values = plot.colors.fig2) +
+#   facet_wrap(~samples.lab))
+# 
+# #HPDI line plot - survival
+# (Fig2.p.surv <- fig2.4viz %>% dplyr::filter(parameter == "survival") %>% 
+#   ggplot(aes(x = interval.scale)) +
+#   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+#   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+#   geom_line(aes(y = interval.scale), size = 1.5) + 
+#   ggtitle("C) Survival") + 
+#   labs(x = "HPDI",
+#        y = "Percent in HPDI") +
+#   theme_bw() + 
+#   theme(legend.title = element_blank()) + 
+#   scale_fill_manual(values = plot.colors.fig2) +
+#   scale_color_manual(values = plot.colors.fig2) +
+#   facet_wrap(~samples.lab) +
+#   guides(color = guide_legend(nrow = 2)))
+
+#Density plot - Nf
+(fig2.p2.Nf <- results.fig2.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+    ggplot(aes(x = relative_bias, fill = purpose.lab)) +
+    geom_density(alpha = 0.6, aes(fill = purpose.lab)) + 
+    ggtitle("A) Nf") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.fig2) +
+    scale_color_manual(values = plot.colors.fig2) +
+    facet_wrap(~samples.lab) +
+    xlim(-100, 100))
+    
+
+#Density plot - Nm
+(fig2.p2.Nm <- results.fig2.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = relative_bias, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("B) Nm") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig2) +
+  scale_color_manual(values = plot.colors.fig2) +
+  facet_wrap(~samples.lab) +
+  xlim(-100, 100)) 
+
+
+
+#-------------------Density plots-------------------------#
+#Density plot - survival
+(fig2.p2.surv <- results.fig2.4viz %>% dplyr::filter(parameter == "survival") %>% 
+  ggplot(aes(x = relative_bias, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("C) Survival") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig2) +
+  scale_color_manual(values = plot.colors.fig2) +
+  facet_wrap(~samples.lab) +
+  xlim(-25, 25))
+
+
+(fig2.p3.violin <- results.fig2.4viz %>% dplyr::filter(parameter == "Nf" | parameter == "Nm" | parameter == "survival") %>% 
+  ggplot(aes(x=factor(parameter), fill = factor(purpose.lab))) +
+  geom_violin(aes(y=cv), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="CV", title="D) CV") +
+  scale_fill_manual(values = plot.colors.fig2) +
+  scale_y_log10() + 
+  font("title", size = 10, face = "bold") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  facet_wrap(~samples.lab) +
+  theme(legend.title = element_blank()))
+```
+
+
+
+## Results
+### Objective 1:  Model construction and validation
+_Model validation_  (first paragraph may be duplicative of Methods ...)
+To initially validate our model, we sampled 1% of the population over four years and targeted sampling to the young-of-year portion of the population only. We assumed a scenario where adult survival and population growth are known with a 10% and 1% CV respectively and compared these results with a data-limited scenario where survival and population growth rate were unknown (Fig 1). For the data-limited scenario, we compared two distinct methods of setting a diffuse prior on lambda: one where lambda was given a uniform prior bound between 0.95 and 1.05, and one where lambda was iteratively fixed to 0.95, 1.0, and 1.05 as per Hillary et. al. (2018). In the latter scenario, the MCMC chains from all three trials were combined and analyzed together, both in situations with stable population growth (Fig 1) and also in scenarios where the population was allowed to increase or decrease over time (Fig S1).
+
+Instances with informed priors on lambda and survival gave unbiased estimates for males and females, while instances with diffuse priors tended to have a slight negative skew for abundance (Fig 1A, B), which was worst in the scenario in which lambda was iteratively fixed. All scenarios showed a slight positive skew for survival (Fig 1C), which is expected under this sampling scheme that only includes four cohorts and therefore four years over which to estimate survival. The CVs on all parameters were smallest when we had ample prior data to inform survival and population growth (Fig 1D), as expected. In the data-limited scenario, the CV was slightly improved by using a uniform prior for population growth relative to iteratively fixing population growth to three values. Combined, these results demonstrate that our CKMR model can reliably estimate abundance when data are available to set informed priors on survival and population growth, and performs well in a data-limited scenario (though we'd recommend interpreting results in light of the credible intervals, rather than point estimates).
+
+\
+\
+\
+\
+
+
+```{r Fig1-print-lambda-plots2, echo=FALSE, out.width = "120%", fig.height = 7, fig.cap = "**Figure 1:** Model validation. **A-C** Density plot showing the relative bias of the posterior medians for female abundance (A), male abundance (B) and adult survival (C) after simulating 100 populations and fitting a CKMR model to samples from each. **D)** Violin plot showing CVs for each parameter and prior."}
+#Survival HPDI and relative bias for all four sample sizes
+ggarrange(fig1.p2.Nf, fig1.p2.Nm, fig1.p2.surv, fig1.p1.violin, common.legend = TRUE, nrow = 2, ncol = 2, legend = "none")
+```
+
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+
+### Objective 2: Assess model performance in stochastic populations with uncertain vital rates.
+_Sample size_  
+Following model validation, we sought to assess how bias and precision vary depending on sampling selectivity and intensity. The model produced unbiased estimates for female (Fig 2A) and male (Fig 2B) abundance in most scenarios, with spread decreasing with increased sample size. Interestingly, we note that bias is smallest when 1% or 1.5% of the population is sampled. These sampling intensities correspond to about 50-150 kin pairs detected (Fig S2), which is the recommended target for CKMR (Bravington et. al. 2016). When 0.5% of the population was sampled, we typically found fewer than 25 kin pairs, which can explain the large CV associated with parameter estimates. When 2% of the population is sampled, the posterior medians are more likely to be biased, which we expect arises from having a very high number of kin pairs relative to the population size (Fig S2).  Non-sparse sampling is expected to cause bias in parameter estimates with CKMR if the assumption of independence among samples is violated, as we expect is the case here. In such instances, downsampling to reduce the number of kin pairs to ~50-100 will improve bias at the expense of precision. Survival estimates (Fig 2C) tended to be positively biased under targeted sampling of young-of-year (red), but that bias disappeared when more age classes were included. Further, the addition of multiple cohorts  greatly reduced the CV for all parameter estimates relative to targeted sampling of young-of-year (Fig 2D). Taken together, these results suggest that CKMR can give reasonable estimates of abundance under all sampling scenarios, but estimates of survival are unlikely to be reliable if few cohorts are included. Including multiple cohorts in sampling efforts improves both bias and precision of CKMR parameter estimates, and allows for more reliable estimates of survival.
+
+
+
+
+```{r Fig2-print-plots, echo=FALSE, out.width = "250%", fig.height = 10, fig.cap = "**Figure 2:** Model performance under different sampling scenarios.**A, B, C** Percentage of times the true parameter value fell within the HPDI. Colored lines that are at or above the black line represent instances where the model captured the truth as often or more often than expected; colored lines that are below the black line represent instances where the model captured the truth less often than expected. **D, E, F:** Relative bias of the medians of the posterior distributions. **G, H:** Number of half-sibling pairs (HSPs) detected for each sex."}
+#Survival HPDI and relative bias for all four sample sizes
+ggarrange(fig2.p2.Nf, fig2.p2.Nm, fig2.p2.surv, fig2.p3.violin, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom")
+```
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+**Other figures:**
+<span style="color:orange"> **Figure 3:** Model performance when life history parameters are uncertain. A 3d figure that has the CV on the three major parameters (YOY/juvenile survival, Adult survival, and fecundity) as the axes and the relative bias of the median from the associated lambda values/simulations as the landscape. Include a slice through the plane that represents 0% relative bias and/or dotted lines indicating the precision/accuracy needed to attain a relative bias of 20% or less.
+</span>
+
+<span style="color:orange"> **Figure 4 (to be added): Parameter estimates for lemon shark data with credible intervals, with and without catch rate data**
+</span>
+
+
+  
+
+### Supplementary material
+
+
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+```{r FigS1-HPDI-and-Density-Plots, echo=FALSE, include=FALSE}
+#plot.colors <- c("aquamarine", "aquamarine4", "indianred1", "indianred4", "khaki4")
+plot.colors.figS1 <- c("indianred1", "indianred4")
+scales::show_col(plot.colors.figS1)
+#Relevel for better visualization
+# results.obj1.4viz$purpose.lab <- factor(results.obj1.4viz$purpose.lab, levels = c(purpose1.lab, purpose3.lab, purpose2.lab, purpose4.lab))
+
+#HPDI line plot
+# (figS1.p.Nf <- figS1.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+#    ggplot(aes(x = interval.scale)) +
+#    geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+#    geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+#    geom_line(aes(y = interval.scale), size = 1.5) + 
+#    ggtitle("A) Nf") + 
+#    labs(x = "HPDI",
+#         y = "Percent in HPDI") +
+#    theme_bw() + 
+#    theme(legend.title = element_blank()) + 
+#   scale_color_manual(values = plot.colors.figS1) +
+#    #facet_wrap(~proportion_sampled) + 
+#   guides(color = guide_legend(nrow = 2)))
+# 
+# #HPDI line plot
+# (figS1.p.Nm <- figS1.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+#   ggplot(aes(x = interval.scale)) +
+#   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+#   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+#   geom_line(aes(y = interval.scale), size = 1.5) + 
+#   ggtitle("B) Nm") + 
+#   labs(x = "HPDI",
+#        y = "Percent in HPDI") +
+#   theme_bw() + 
+#   theme(legend.title = element_blank()) + 
+#   scale_color_manual(values = plot.colors.figS1))
+
+#Density plot of relative bias of median
+(figS1.p2.Nf <- results.figS1.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("A) Nf") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.figS1) +
+    scale_color_manual(values = plot.colors.figS1) +
+    xlim(-100, 100))
+
+
+
+#-------------------Density plots-------------------------#
+#Density plot of relative bias of median
+(figS1.p2.Nm <- results.figS1.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("B) Nm") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.figS1) +
+  scale_color_manual(values = plot.colors.figS1) +
+  xlim(-100, 100))
+
+(figS1.p2.surv <- results.figS1.4viz %>% dplyr::filter(parameter == "survival") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("C) Survival") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.figS1) +
+  scale_color_manual(values = plot.colors.figS1) +
+  xlim(-25, 25))
+
+
+(figS1.p3.violin <- results.figS1.4viz %>% dplyr::filter(parameter == "Nf" | parameter == "Nm" | parameter == "survival") %>% 
+  ggplot(aes(x=factor(parameter), fill = factor(purpose.lab))) +
+  geom_violin(aes(y=cv), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="CV", title="D) CV") +
+  scale_fill_manual(values = plot.colors.figS1) +
+  font("title", size = 10, face = "bold")) +
+  theme(legend.title = element_blank())
+
+```
+
+```{r FigS2-prep-files, echo = FALSE, include = FALSE}
+####---------------------Density plots of kin detected----------------------------------------------####
+#Prep files
+
+results.S2.4viz <- results.obj2.all %>% mutate(POPs_detected = replace_na(POPs_detected, 0)) %>% 
+  mutate(kin_detected = HSPs_detected + POPs_detected)
+
+#Distribution of MHSPs
+(figS2.Nf.KinPairs <- results.S2.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+  ggplot(aes(x = kin_detected, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("A) Maternal kin (HSPs + POPs) detected") + 
+    labs(x = "Kin pairs") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.fig2) +
+    scale_color_manual(values = plot.colors.fig2) +
+    facet_wrap(~samples.lab) + 
+  scale_x_continuous(breaks = c(25, 50, 100, 150, 200, 250)))
+                     
+
+(figS2.Nm.KinPairs <- results.S2.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = kin_detected, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("B) Paternal Kin (HSPs + POPs) detected") + 
+    labs(x = "Kin pairs") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.fig2) +
+    scale_color_manual(values = plot.colors.fig2) +
+    facet_wrap(~samples.lab) + 
+    scale_x_continuous(breaks = c(25, 50, 100, 150, 200, 250)))
+```
+
+```{r FigS1-print-plots, echo=FALSE, out.width = "120%", fig.height = 7, fig.cap = "**Figure S1:** Model performance with diffuse priors with an increasing or declining population."}
+#Survival HPDI and relative bias for all four sample sizes
+ggarrange(figS1.p2.Nf, figS1.p2.Nm, figS1.p2.surv, figS1.p3.violin, common.legend = TRUE, nrow = 2, ncol = 2, legend = "none")
+```
+
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+
+```{r FigS2-print-plots, echo=FALSE, out.width = "120%", fig.height = 7, fig.cap = "**Figure S2:** Kin pairs detected by sampling scheme."}
+#Survival HPDI and relative bias for all four sample sizes
+ggarrange(figS2.Nf.KinPairs, figS2.Nm.KinPairs, nrow = 2, ncol = 1, common.legend = TRUE, legend = "bottom")
+```
+
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+
+```{r FigS3-print-plots, echo=FALSE, out.width = "120%", fig.cap = "**Figure S3:** Elasticity analysis of lemon shark vital rates, showing that population growth is most sensitive to juvenile survival and fecundity at younger mature age classes."}
+
+S3.E <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.3_life_history_sensitivity/elasticity_tidy_df")
+
+(S3.E %>% ggplot(aes(x = age, y = elasticity, group = parameter)) + 
+  geom_point(aes(colour = parameter)) +
+  theme_classic() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = -.15),
+        legend.title = element_blank()))
+    
+```
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+<span style="color:orange"> **Figure S4 (to be added): Mean correlation among parameter estimates.**
+</span>
+
+```{r FigSx-print-HSP-plots, echo=FALSE, include = FALSE, out.width = "120%", fig.height = 7}
+#-----------------------Examine expected vs observed kin pairs--------------------
+#Calculate % difference in expected vs observed kin
+# results.all2 <- results.S1.4viz %>% mutate(HS_exp_obs_diff = (HSPs_expected - HSPs_detected)/HSPs_expected)
+# 
+# 
+# 
+# #----------------Make scatter plot of expected vs observed 
+# #Purpose 1
+# (EO1 <- results.all2 %>% dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+#   ggplot(aes(x = HS_exp_obs_diff, y = relative_bias, fill = parameter, color = parameter)) +
+#   geom_point() +
+#   facet_wrap(~samples.lab) + 
+#   labs(title = "C)", x = "Percent difference (Exp - Obs)/Exp", y = "Relative bias") + 
+#   theme(legend.title = element_blank()))
+
+```
+
+```{r FigSx-print-plot2, echo=FALSE, out.width = "120%", fig.height = 7, fig.cap = "**Figure S2:** Kin pairs detected by sampling scheme and bias", include = FALSE}
+#EO1
+```
+
+
+
+
