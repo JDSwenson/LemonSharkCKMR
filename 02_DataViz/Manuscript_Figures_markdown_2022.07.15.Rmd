@@ -9,10 +9,16 @@ output:
 ---
 
 NEXT TO DO: 
-Fix purposes and make sure they mesh (they don't for obj2.2)
-Transfer new objective 2 trials from cluster to local computer (started running 7/15)
-Get plots together
+Fix purposes and make sure they mesh (they don't for obj2.2) - Think I just took care of this 07/16/2022
+Transfer new objective 2 trials from cluster to local computer (started running 7/15) - DONE
 
+Get plots together
+For Objective 2 (supplementary?): Multi-panel stacked (one column only) plot with 1.5% population sampled, 
+top: estimating in present year; three separate density plots corresponding to sampling schemes; group by population growth?
+middle: same as above, except estimating 5 yrs in the past
+bottomr: same as above, except estimating 10 yrs in the past
+
+Also, from objective 1, look at instances where the observed kin pairs matched the expected kin pairs, and compare year gaps (w/ histogram) between unbiased and biased estimates.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
@@ -66,9 +72,9 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
-PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
-Sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+PopSim.lambda.1 <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.annual.breeding <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+Sampling.scheme.YOY <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 date.of.PopSim <- "11Jul2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
@@ -126,34 +132,36 @@ model.type.obj2.1A <- "HS + PO"
 
 #-------------Objective 2.2.1 --------------------#
 date.of.simulation.obj2.2.1Y <- "13Jul2022"
-purpose.obj2.2.1Y <- "Obj2.2.1_lambda.trial_Target.YOY"
+purpose.obj2.2.1Y <- c("Obj2.2.1_lambda.trial_Target.YOY_stablePopSimLambda","Obj2.2.1_lambda.trial_Target.YOY_variablePopSimLambda")
 purpose.obj2.2.1.labY <- "Target YOY"
 model.type.obj2.2.1Y <- "HS.only"
 
 date.of.simulation.obj2.2.1J <- "13Jul2022"
-purpose.obj2.2.1J <- "Obj2.2.1_lambda.trial_sample.all.juvenile.ages"
+purpose.obj2.2.1J <- c("Obj2.2.1_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda", "Obj2.2.1_lambda.trial_sample.all.juvenile.ages_variablePopSimLambda")
 purpose.obj2.2.1.labJ <- "Sample all juvenile ages"
 model.type.obj2.2.1J <- "HS.only"
 
 date.of.simulation.obj2.2.1A <- "13Jul2022"
-purpose.obj2.2.1A <- "Obj2.2.1_lambda.trial_sample.ALL.ages"
+purpose.obj2.2.1A <- c("Obj2.2.1_lambda.trial_sample.ALL.ages_stablePopSimLambda", "Obj2.2.1_lambda.trial_sample.ALL.ages_variablePopSimLambda")
 purpose.obj2.2.1.labA <- "Sample all age classes"
 model.type.obj2.2.1A <- "HS + PO"
 
 
 #-------------Objective 2.2.2 --------------------#
+#Named some of these with the wrong purpose. The popsim variable files did not include "variablePopSim" in the purpose, but the stable popsim simulations did include "stablePopSim". Also, the Target.YOY files were not capitalized.
+
 date.of.simulation.obj2.2.2Y <- "14Jul2022"
-purpose.obj2.2.2Y <- "Obj2.2.2_lambda.trial_Target.YOY_change.est.yr"
+purpose.obj2.2.2Y <- c("Obj2.2.2_lambda.trial_target.YOY_change.est.yr", "Obj2.2.2_lambda.trial_target.YOY_stablePopSimLambda_change.est.yr")
 purpose.obj2.2.2.labY <- "Target YOY"
 model.type.obj2.2.2Y <- "HS.only"
 
 date.of.simulation.obj2.2.2J <- "14Jul2022"
-purpose.obj2.2.2J <- "Obj2.2.2_lambda.trial_sample.all.juvenile.ages"
-purpose.obj2.2.2.labJ <- "Sample all juvenile ages_change.est.yr"
+purpose.obj2.2.2J <- c("Obj2.2.2_lambda.trial_sample.all.juvenile.ages_change.est.yr", "Obj2.2.2_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda_change.est.yr")
+purpose.obj2.2.2.labJ <- "Sample all juvenile ages"
 model.type.obj2.2.2J <- "HS.only"
 
 date.of.simulation.obj2.2.2A <- "14Jul2022"
-purpose.obj2.2.2A <- "Obj2.2.2_lambda.trial_sample.ALL.ages_change.est.yr"
+purpose.obj2.2.2A <- c("Obj2.2.2_lambda.trial_sample.ALL.ages_change.est.yr", "Obj2.2.2_lambda.trial_sample.ALL.ages_stablePopSimLambda_change.est.yr")
 purpose.obj2.2.2.labA <- "Sample all age classes"
 model.type.obj2.2.2A <- "HS + PO"
 
@@ -204,7 +212,7 @@ obj2.1_files <- list.files(path = obj2.1_results_location,
                             full.names = TRUE)
 
 #obj1.2 has the same run as obj2.1, except lambda is neutral. Want to add these runs to the analysis, but need to change the truth, since it was calculated for the mean for objective 1.
-obj2.1_pop_size <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
+obj2.1_pop_size <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year == 85) %>% 
   dplyr::select(Male.adult.pop, Female.adult.pop, iteration)
 
@@ -351,6 +359,24 @@ obj2.2.2_results %>% group_by(prop.sampled, parameter, sampling.scheme, populati
    dplyr::arrange(desc(median.bias))
 ```
 
+Objective 1: What drives bias when kin pairs match expectations?
+```{r}
+obj1.2_results %>% dplyr::filter(HSPs_detected == HSPs_expected & sampling.scheme != "sample all age classes") %>% 
+  dplyr::arrange(iteration) %>% 
+  dplyr::select(parameter, prop.sampled, iteration, sampling.scheme, relative_bias) %>% 
+  View()
+
+#Interesting iterations: not bad bias
+#iteration 36 (not bad bias): all parameters, 1_prop_sampled, sample_all_juvenile_ages;
+#Nf, iteration_21, 1.0_prop_sampled, sample_all_juvenile_ages
+#survival: iteration_28, 2.0_prop_sampled, sample_all_juvenile_ages
+#Bad bias
+##iteration 85 all parameters: 0.5_prop_sampled, sample_all_juvenile_ages;
+#other bad biases: Nf, iteration 44, 1.0_prop_sampled, sample_all_juvenile_ages
+```
+
+
+JDS pick up here 07/16/2022
 ```{r Fig1-HPDI-and-Density-Plots, echo=FALSE, include=FALSE}
 #---------------Figure 1---------------------#
 #plot.colors <- c("aquamarine", "aquamarine4", "indianred1", "indianred4", "khaki4")
