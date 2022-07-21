@@ -1,0 +1,541 @@
+---
+title: "Results for CKMR manuscript 07/01/2022"
+output: 
+  html_document:
+    df_print: tibble
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+---
+
+Get plots together
+For Objective 2 (supplementary?): Multi-panel stacked (one column only) plot with 1.5% population sampled, 
+top: estimating in present year; three separate density plots corresponding to sampling schemes; group by population growth?
+middle: same as above, except estimating 5 yrs in the past
+bottomr: same as above, except estimating 10 yrs in the past
+
+Also, from objective 1, look at instances where the observed kin pairs matched the expected kin pairs, and compare year gaps (w/ histogram) between unbiased and biased estimates.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+#devtools::install_github("pconn/HierarchicalGOF/HierarchicalGOF")
+#install.packages("ggmcmc")
+library(tidyverse)
+library(ggpubr)
+library(RColorBrewer)
+library(coda)
+library(runjags)
+library(ggmcmc)
+library(viridis)
+library(scales)
+library(ggridges)
+
+rm(list=ls())
+today <- format(Sys.Date(), "%d%b%Y")
+
+```
+
+
+
+```{r set-file-locations and read in files, include = FALSE}
+#------------- Simulation parameters and labels  ----------------#
+scenario_1.1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
+scenario_1.1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
+scenario_1.1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/figures/"
+
+scenario_1.2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
+scenario_1.2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
+scenario_1.2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/figures/"
+
+scenario_2.1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
+scenario_2.1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+scenario_2.1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+
+scenario_2.2.1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
+scenario_2.2.1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+scenario_2.2.1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+
+scenario_2.2.2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
+scenario_2.2.2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+scenario_2.2.2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+
+results_prefix <- "CKMR_results"
+MCMC_prefix <- "CKMR_modelout"
+parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
+sample.prefix <- "sample_info/CKMR_sample.info"
+pop.size.prefix <- "pop_size/CKMR_pop.size"
+mom.comps.prefix <- "comparisons/mom.comps"
+dad.comps.prefix <- "comparisons/dad.comps"
+
+#----------------Set input file locations ------------------------------
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
+PopSim.lambda.1 <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.lambda.variable <- "lambda.variable"
+PopSim.annual.breeding <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+PopSim.biennial.breeding <- "biennial.breeding"
+Sampling.scheme.YOY <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "11Jul2022" # 11Jul2022
+inSeeds <- "Seeds2022.04.15"
+
+
+#-------------Objective 1.1 --------------------#
+date.of.simulation.obj1.1Y <- "12Jul2022"
+purpose.obj1.1Y <- "Obj1.1_model.validation_Target.YOY"
+file.scenario_1.1Y <- "scenario_1.1_model.validation_Target.YOY"
+purpose.obj1.1.labY <- "Target YOY"
+model.type.obj1.1Y <- "HS.only"
+
+date.of.simulation.obj1.1J <- "12Jul2022"
+purpose.obj1.1J <- "Obj1.1_model.validation_sample.all.juvenile.ages"
+file.scenario_1.1J <- "scenario_1.1_model.validation_sample.all.juvenile.ages"
+purpose.obj1.1.labJ <- "Sample all juvenile ages"
+model.type.obj1.1J <- "HS.only"
+
+date.of.simulation.obj1.1A <- "13Jul2022"
+purpose.obj1.1A <- "Obj1.1_model.validation_sample.ALL.ages"
+file.scenario_1.1A <- "scenario_1.1_model.validation_sample.ALL.ages"
+purpose.obj1.1.labA <- "Sample all age classes"
+model.type.obj1.1A <- "HS + PO"
+
+
+#-------------Objective 1.2 --------------------#
+date.of.simulation.obj1.2Y <- "13Jul2022"
+purpose.obj1.2Y <- "Obj1.2_model.validation_Target.YOY"
+file.scenario_1.2Y <- "scenario_1.2_model.validation_Target.YOY"
+purpose.obj1.2.labY <- "Target YOY"
+model.type.obj1.2Y <- "HS.only"
+
+date.of.simulation.obj1.2J <- "13Jul2022"
+purpose.obj1.2J <- "Obj1.2_model.validation_sample.all.juvenile.ages"
+file.scenario_1.2J <- "scenario_1.2_model.validation_sample.all.juvenile.ages"
+purpose.obj1.2.labJ <- "Sample all juvenile ages"
+model.type.obj1.2J <- "HS.only"
+
+date.of.simulation.obj1.2A <- "13Jul2022"
+purpose.obj1.2A <- "Obj1.2_model.validation_sample.ALL.ages"
+file.scenario_1.2A <- "scenario_1.2_model.validation_sample.ALL.ages"
+purpose.obj1.2.labA <- "Sample all age classes"
+model.type.obj1.2A <- "HS + PO"
+
+
+#-------------Objective 2.1 --------------------#
+date.of.simulation.obj2.1Y <- "13Jul2022"
+purpose.obj2.1Y <- "Obj2.1_lambda.trial_Target.YOY"
+file.scenario_2.1Y <- "scenario_2.1_lambda.trial_Target.YOY"
+purpose.obj2.1.labY <- "Target YOY"
+model.type.obj2.1Y <- "HS.only"
+
+date.of.simulation.obj2.1J <- "13Jul2022"
+purpose.obj2.1J <- "Obj2.1_lambda.trial_sample.all.juvenile.ages"
+file.scenario_2.1J <- "scenario_2.1_lambda.trial_sample.all.juvenile.ages"
+purpose.obj2.1.labJ <- "Sample all juvenile ages"
+model.type.obj2.1J <- "HS.only"
+
+date.of.simulation.obj2.1A <- "13Jul2022"
+purpose.obj2.1A <- "Obj2.1_lambda.trial_sample.ALL.ages"
+file.scenario_2.1A <- "scenario_2.1_lambda.trial_sample.ALL.ages"
+purpose.obj2.1.labA <- "Sample all age classes"
+model.type.obj2.1A <- "HS + PO"
+
+
+#-------------Objective 2.2.1 --------------------#
+date.of.simulation.obj2.2.1Y <- "13Jul2022"
+purpose.obj2.2.1Y <- c("Obj2.2.1_lambda.trial_Target.YOY_stablePopSimLambda","Obj2.2.1_lambda.trial_Target.YOY_variablePopSimLambda")
+file.scenario_2.2.1Y <- c("scenario_2.2.1_lambda.trial_Target.YOY_stablePopSimLambda","scenario_2.2.1_lambda.trial_Target.YOY_variablePopSimLambda")
+purpose.obj2.2.1.labY <- "Target YOY"
+model.type.obj2.2.1Y <- "HS.only"
+
+date.of.simulation.obj2.2.1J <- "13Jul2022"
+purpose.obj2.2.1J <- c("Obj2.2.1_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda", "Obj2.2.1_lambda.trial_sample.all.juvenile.ages_variablePopSimLambda")
+file.scenario_2.2.1J <- c("scenario_2.2.1_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda", "scenario_2.2.1_lambda.trial_sample.all.juvenile.ages_variablePopSimLambda")
+purpose.obj2.2.1.labJ <- "Sample all juvenile ages"
+model.type.obj2.2.1J <- "HS.only"
+
+date.of.simulation.obj2.2.1A <- "13Jul2022"
+purpose.obj2.2.1A <- c("Obj2.2.1_lambda.trial_sample.ALL.ages_stablePopSimLambda", "Obj2.2.1_lambda.trial_sample.ALL.ages_variablePopSimLambda")
+file.scenario_2.2.1A <- c("scenario_2.2.1_lambda.trial_sample.ALL.ages_stablePopSimLambda", "scenario_2.2.1_lambda.trial_sample.ALL.ages_variablePopSimLambda")
+purpose.obj2.2.1.labA <- "Sample all age classes"
+model.type.obj2.2.1A <- "HS + PO"
+
+
+#-------------Objective 2.2.2 --------------------#
+#Named some of these with the wrong purpose. The popsim variable files did not include "variablePopSim" in the purpose, but the stable popsim simulations did include "stablePopSim". Also, the Target.YOY files were not capitalized.
+
+date.of.simulation.obj2.2.2Y <- "14Jul2022"
+purpose.obj2.2.2Y <- c("Obj2.2.2_lambda.trial_target.YOY_change.est.yr", "Obj2.2.2_lambda.trial_target.YOY_stablePopSimLambda_change.est.yr")
+file.scenario_2.2.2Y <- c("scenario_2.2.2_lambda.trial_target.YOY_change.est.yr", "scenario_2.2.2_lambda.trial_target.YOY_stablePopSimLambda_change.est.yr")
+purpose.obj2.2.2.labY <- "Target YOY"
+model.type.obj2.2.2Y <- "HS.only"
+
+date.of.simulation.obj2.2.2J <- "14Jul2022"
+purpose.obj2.2.2J <- c("Obj2.2.2_lambda.trial_sample.all.juvenile.ages_change.est.yr", "Obj2.2.2_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda_change.est.yr")
+file.scenario_2.2.2J <- c("scenario_2.2.2_lambda.trial_sample.all.juvenile.ages_change.est.yr", "scenario_2.2.2_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda_change.est.yr")
+purpose.obj2.2.2.labJ <- "Sample all juvenile ages"
+model.type.obj2.2.2J <- "HS.only"
+
+date.of.simulation.obj2.2.2A <- "14Jul2022"
+purpose.obj2.2.2A <- c("Obj2.2.2_lambda.trial_sample.ALL.ages_change.est.yr", "Obj2.2.2_lambda.trial_sample.ALL.ages_stablePopSimLambda_change.est.yr")
+file.scenario_2.2.2A <- c("scenario_2.2.2_lambda.trial_sample.ALL.ages_change.est.yr", "scenario_2.2.2_lambda.trial_sample.ALL.ages_stablePopSimLambda_change.est.yr")
+purpose.obj2.2.2.labA <- "Sample all age classes"
+model.type.obj2.2.2A <- "HS + PO"
+
+
+#---------------------Objective 1: read in files--------------------------#
+#---------------------Truth files-----------------------------------------#
+seeds <- "Seeds2022.04.15"
+# sim.samples.obj1 <- "1prop.sampled" #Label on file output
+# samples.obj1.lab <- "1 percent sampled" #Label for dataframe and figures
+
+obj1.popsize <- pop_size.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY))
+
+
+#--------------------- Objective 1.1 ---------------------------------#
+#Files
+scenario_1.1_files <- list.files(path = scenario_1.1_results_location,
+                            recursive = FALSE,
+                            pattern = "*scenario_1.1_*",
+                            full.names = TRUE)
+
+#Results
+scenario_1.1_results <- map_dfr(scenario_1.1_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose == purpose.obj1.1Y, "target YOY",
+                                  ifelse(purpose == purpose.obj1.1J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "informed",
+         lambda.prior = NA,
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs)) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme))
+
+#--------------------- Objective 1.2 ---------------------------------#
+#Files
+scenario_1.2_files <- list.files(path = scenario_1.2_results_location,
+                            recursive = FALSE,
+                            pattern = "*scenario_1.2_*",
+                            full.names = TRUE)
+
+#Results
+scenario_1.2_results <- map_dfr(scenario_1.2_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose == purpose.obj1.2Y, "target YOY",
+                                  ifelse(purpose == purpose.obj1.2J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = NA,
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs)) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme))
+  
+
+obj1_results <- scenario_1.1_results %>% bind_rows(scenario_1.2_results)
+
+#--------------------- Objective 2.1 ---------------------------------#
+scenario_2.1_files <- list.files(path = scenario_2.1_results_location,
+                            recursive = FALSE,
+                            pattern = "*scenario_2.1_*",
+                            full.names = TRUE)
+
+#obj1.2 has the same run as obj2.1, except lambda is neutral. Want to add these runs to the analysis, but need to change the truth to the values tested below, since it was calculated for the mean for objective 1.
+obj2_lam.neutral_pop_size <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+  dplyr::filter(year %in% c(80, 85, 90)) %>% #Want to save the truth for all three estimation years because this dataframe will be used for both of the Obj2 objectives
+  dplyr::select(Male.adult.pop, Female.adult.pop, iteration, year) %>% 
+  mutate(population.growth = "neutral")
+
+
+obj2_lam.variable_pop_size <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda.variable, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+  dplyr::filter(year %in% c(80, 85, 90)) %>% #Want to save the truth for all three estimation years because this dataframe will be used for both of the Obj2 objectives
+  dplyr::select(Male.adult.pop, Female.adult.pop, iteration, year) %>% 
+  mutate(population.growth = ifelse(iteration <= 100, "negative", "positive"))
+
+#Combine truth for neutral and variable population growth scenarios
+obj2_truth <- obj2_lam.neutral_pop_size %>% bind_rows(obj2_lam.variable_pop_size) %>% 
+  dplyr::rename(est.yr = year)
+
+
+#Update the truth for the trials where simulation lambda was neutral to correspond to the appropriate year (85)
+scenario_2.1_neutral <- scenario_1.2_results
+  
+
+#Read in files for objective 2.1 - which only includes positive and negative growth - and add neutral growth to the dataframe
+#Checked 07/19/2022
+scenario_2.1_results <- map_dfr(scenario_2.1_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose == purpose.obj2.1Y, "target YOY",
+                                  ifelse(purpose == purpose.obj2.1J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = NA,
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs,)) %>%
+  bind_rows(scenario_2.1_neutral) %>% #Add in neutral growth scenario
+  mutate(population.growth = ifelse(female.fecundity > 3, "positive", #neutral is 2.9
+                                    ifelse(female.fecundity < 2.8, "negative", "neutral"))) %>% 
+  inner_join(obj2_truth, by = c("population.growth", "iteration")) %>% 
+  mutate(all.truth = ifelse(parameter == "Nm", Male.adult.pop,
+                            ifelse(parameter == "Nf", Female.adult.pop, all.truth))) %>% 
+  #dplyr::filter(year == 85) %>% 
+  dplyr::select(-c(Male.adult.pop, Female.adult.pop)) %>% 
+    mutate(sampling.scheme = factor(sampling.scheme),
+         population.growth = factor(population.growth))
+
+
+#--------------------- Objective 2.2.1 ---------------------------------#
+#Same scenario as 2.1, but add lambda to the model
+scenario_2.2.1_files <- list.files(path = scenario_2.2.1_results_location,
+                            recursive = FALSE,
+                            pattern = "*scenario_2.2.1_*",
+                            full.names = TRUE)
+
+scenario_2.2.1_results <- map_dfr(scenario_2.2.1_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj2.2.1Y, "target YOY",
+                                  ifelse(purpose %in% purpose.obj2.2.1J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = "diffuse",
+         est.yr = 85,
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs),
+         population.growth = ifelse(female.fecundity > 3, "positive",
+                                    ifelse(female.fecundity < 2.8, "negative", "neutral"))) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme),
+         population.growth = factor(population.growth))
+
+
+#--------------------- Objective 2.2.2 ---------------------------------#
+#Same scenario as 2.2.1, except estimate in different years
+scenario_2.2.2_files <- list.files(path = scenario_2.2.2_results_location,
+                            recursive = FALSE,
+                            pattern = "*scenario_2.2.2_*",
+                            full.names = TRUE)
+
+scenario_2.2.2_results <- map_dfr(scenario_2.2.2_files, read_csv) %>% 
+  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj2.2.2Y, "target YOY",
+                                  ifelse(purpose %in% purpose.obj2.2.2J, "sample all juvenile ages",
+                                         "sample all age classes")),
+         survival.prior = "diffuse",
+         lambda.prior = "diffuse",
+         cv = (sd/mean)*100,
+         prop.sampled = factor(sample.prop.juvs),
+         population.growth = ifelse(female.fecundity > 3, "positive",
+                                    ifelse(female.fecundity < 2.8, "negative", "neutral"))) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme),
+         population.growth = factor(population.growth))
+
+obj2_results <- scenario_2.2.2_results %>% bind_rows(scenario_2.2.1_results, scenario_2.1_results)
+
+```
+
+
+
+```{r quick-results-analysis-and-filtering, echo = FALSE, include = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+#-------------Objective 1 --------------------#
+#Check that all sampling schemes and population growth scenarios are represented
+obj1_results %>% group_by(sampling.scheme) %>% 
+  summarize(number = n())
+
+obj1_results %>% group_by(population.growth) %>% 
+  summarize(number = n())
+
+obj1_results %>% group_by(prop.sampled) %>% 
+  summarize(number = n())
+
+obj1_results %>% group_by(parameter) %>% 
+  summarize(number = n())
+
+obj1_results %>% group_by(survival.prior) %>% 
+  summarize(number = n())
+
+#-------------Objective 2 --------------------#
+#Check that all sampling schemes and population growth scenarios are represented
+obj2_results %>% group_by(sampling.scheme) %>% 
+  summarize(number = n())
+
+obj2_results %>% group_by(population.growth) %>% 
+  summarize(number = n())
+
+obj2_results %>% group_by(est.yr) %>% 
+  summarize(number = n())
+
+obj2_results %>% group_by(prop.sampled) %>% 
+  summarize(number = n())
+
+obj2_results %>% group_by(parameter) %>% 
+  summarize(number = n())
+
+obj2_results %>% group_by(purpose) %>% 
+  summarize(number = n())
+
+
+
+#See how many instances failed to converge so they can be removed later from the HPDI dataframes
+obj1_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+obj2_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+
+#Remove instances that failed to converge
+obj1_results <- obj1_results %>% dplyr::filter(Rhat < 1.01)
+
+#Check percent in interval; can change proportion sampled
+obj1_results %>% dplyr::filter(prop.sampled == 2) %>% 
+  group_by(parameter, sampling.scheme, survival.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
+  dplyr::arrange(percent_in_interval)
+
+#Median relative bias by sample size
+ obj1_results %>% dplyr::filter(prop.sampled == 1) %>% 
+   group_by(parameter, sampling.scheme, survival.prior) %>% 
+   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
+   dplyr::arrange(desc(median.bias))
+
+
+  
+#-------------Objective 2 --------------------#
+#See how many instances failed to converge so they can be removed later from the HPDI dataframes
+obj2_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+
+#Remove instances that failed to converge
+obj2_results <- obj2_results %>% dplyr::filter(Rhat < 1.01)
+
+#No parameter for lambda; only positive and negative population simulations
+obj2_results %>% dplyr::filter(prop.sampled == 1, est.yr == 90) %>% 
+  group_by(parameter, lambda.prior, sampling.scheme, population.growth) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100) %>%
+  dplyr::arrange(percent_in_interval)
+
+
+#Median relative bias by sample size
+#No parameter for lambda
+obj2_results %>% dplyr::filter(prop.sampled == 1, est.yr == 80) %>% 
+  group_by(parameter, lambda.prior, sampling.scheme, population.growth) %>% 
+   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
+   dplyr::arrange(desc(median.bias))
+```
+
+
+
+```{r Fig1-HPDI-and-Density-Plots, echo=FALSE, include=FALSE}
+#---------------Figure 1---------------------#
+#plot.colors <- c("aquamarine", "aquamarine4", "indianred1", "indianred4", "khaki4")
+plot.colors.fig1 <- c("aquamarine4", "indianred1", "indianred4")
+scales::show_col(plot.colors.fig1)
+#Relevel for better visualization
+
+obj1_results %>% group_by(survival.prior) %>% 
+  summarize(n())
+
+#-------------------Density plots-------------------------#
+obj1_results %>% dplyr::filter(survival.prior == "informed") %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = sampling.scheme)) + 
+  geom_density_ridges(alpha = 0.6) + 
+  theme_ridges() + 
+  facet_wrap(~prop.sampled) + 
+  theme(legend.title = element_blank()) + 
+  xlim(-100, 100)
+
+
+#Density plot for Nf
+(obj1.fig.Nf <- obj1_results %>% dplyr::filter(parameter == "Nf",
+                                              survival.prior == "diffuse") %>% 
+    ggplot(aes(x = relative_bias, color = sampling.scheme, fill = sampling.scheme)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("A) Nf") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.fig1) +
+    scale_color_manual(values = plot.colors.fig1) +
+    facet_wrap(~prop.sampled) +
+    xlim(-100, 100))
+
+#Density plot for Nm
+(obj1.fig.Nm <- obj1_results %>% dplyr::filter(parameter == "Nm",
+                                               survival.prior == "diffuse") %>% 
+  ggplot(aes(x = relative_bias, color = sampling.scheme, fill = sampling.scheme)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("B) Nm") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig1) +
+  scale_color_manual(values = plot.colors.fig1) +
+  facet_wrap(~prop.sampled) +
+  xlim(-100, 100))
+
+#Density plot for survival
+(fig1.p2.surv <- obj1_results %>% dplyr::filter(parameter == "survival") %>% 
+  ggplot(aes(x = relative_bias, color = sampling.scheme, fill = sampling.scheme)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("C) Survival") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig1) +
+  scale_color_manual(values = plot.colors.fig1) +
+  facet_wrap(~prop.sampled) +
+  xlim(-25, 25))
+
+(fig1.p1.violin <- obj1_results %>% 
+  ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
+  geom_violin(aes(y=cv), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="CV", title="D) CV") +
+  scale_fill_manual(values = plot.colors.fig1) +
+  font("title", size = 10, face = "bold")) +
+  facet_wrap(~prop.sampled) +
+  theme(legend.title = element_blank())
+
+
+```
+## Results
+### Objective 1:  Model construction and validation
+_Model validation_  (first paragraph may be duplicative of Methods ...)
+To initially validate our model, we sampled 1% of the population over four years and targeted sampling to the young-of-year portion of the population only. We assumed a scenario where adult survival and population growth are known with a 10% and 1% CV respectively and compared these results with a data-limited scenario where survival and population growth rate were unknown (Fig 1). For the data-limited scenario, we compared two distinct methods of setting a diffuse prior on lambda: one where lambda was given a uniform prior bound between 0.95 and 1.05, and one where lambda was iteratively fixed to 0.95, 1.0, and 1.05 as per Hillary et. al. (2018). In the latter scenario, the MCMC chains from all three trials were combined and analyzed together, both in situations with stable population growth (Fig 1) and also in scenarios where the population was allowed to increase or decrease over time (Fig S1).
+
+Instances with informed priors on lambda and survival gave unbiased estimates for males and females, while instances with diffuse priors tended to have a slight negative skew for abundance (Fig 1A, B), which was worst in the scenario in which lambda was iteratively fixed. All scenarios showed a slight positive skew for survival (Fig 1C), which is expected under this sampling scheme that only includes four cohorts and therefore four years over which to estimate survival. The CVs on all parameters were smallest when we had ample prior data to inform survival and population growth (Fig 1D), as expected. In the data-limited scenario, the CV was slightly improved by using a uniform prior for population growth relative to iteratively fixing population growth to three values. Combined, these results demonstrate that our CKMR model can reliably estimate abundance when data are available to set informed priors on survival and population growth, and performs well in a data-limited scenario (though we'd recommend interpreting results in light of the credible intervals, rather than point estimates).
+
+Objective 1: What drives bias when kin pairs match expectations?
+Inconclusive so far (07/19/2022). I should return to this later
+```{r}
+obj1_results %>% dplyr::filter(HSPs_detected == HSPs_expected & sampling.scheme != "sample all age classes" & survival.prior == "diffuse") %>% 
+  dplyr::arrange(iteration) %>% 
+  dplyr::select(parameter, prop.sampled, iteration, sampling.scheme, relative_bias, survival.prior, HSPs_expected, HSPs_detected) %>% 
+  View()
+
+mom_comps <- readRDS(paste0(obj1.2_results_location, mom.comps.prefix, "_", date.of.simulation.obj1.2J, "_", seeds, "_", purpose.obj1.2J)) %>% 
+  dplyr::filter(iteration == 36 & sample.prop.juvs == 1 | iteration == 85 & sample.prop.juvs == 0.5) %>% 
+  dplyr::filter(yes > 0) %>% 
+  mutate(iteration = factor(iteration))
+
+dad_comps <- readRDS(paste0(obj1.2_results_location, dad.comps.prefix, "_", date.of.simulation.obj1.2J, "_", seeds, "_", purpose.obj1.2J)) %>% 
+  dplyr::filter(iteration == 36 & sample.prop.juvs == 1 | iteration == 85 & sample.prop.juvs == 0.5) %>% 
+  dplyr::filter(yes > 0) %>% 
+  mutate(iteration = factor(iteration))
+
+plot.colors.fig1 <- c("aquamarine4", "indianred1", "indianred4")
+scales::show_col(plot.colors.fig1)
+
+#Split "yes" up into separate rows so we can make a histogram of mort years
+mom_comps %>% uncount(yes) %>% 
+  ggplot(aes(x = mort.yrs, fill = iteration)) +
+  geom_density(alpha = 0.6) +
+  scale_color_manual(values = plot.colors.fig1)
+
+dad_comps %>% uncount(yes) %>% 
+  ggplot(aes(x = mort.yrs, fill = iteration)) +
+  geom_density(alpha = 0.6) +
+  scale_color_manual(values = plot.colors.fig1)
+
+#Interesting iterations: not bad bias
+#iteration 36 (not bad bias): all parameters, 1_prop_sampled, sample_all_juvenile_ages;
+#Nf, iteration_21, 1.0_prop_sampled, sample_all_juvenile_ages
+#survival: iteration_28, 2.0_prop_sampled, sample_all_juvenile_ages
+#Bad bias
+##iteration 85 all parameters: 0.5_prop_sampled, sample_all_juvenile_ages;
+#other bad biases: Nf, iteration 44, 1.0_prop_sampled, sample_all_juvenile_ages
+
+
+```
