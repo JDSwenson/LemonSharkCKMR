@@ -16,21 +16,21 @@ library(coda)
 
 rm(list=ls())
 
-source("./Objective.2_population.growth/functions/Obj2.functions.R") #Changed name of script that includes pairwise comparison and other functions
+source("./Objective.3_intermittent.breeding/functions/Obj3.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.variable" # Can be lambda.1 or lambda.variable
-PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.breeding.schedule <- "biennial.breeding" #Can be annual.breeding or biennial.breeding
 Sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "11Jul2022" # 11Jul2022
+date.of.PopSim <- "19Jul2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.output/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/models/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -40,13 +40,14 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "Obj2.1_lambda.trial_sample.ALL.ages.R" #Copy name of script here
-primary_goal <- "Test model performance with changing population size" #Why am I running this simulation? Provide details
+script_name <- "scenario_3.1.1_SB_sample.ALL.ages.R" #Copy name of script here
+primary_goal <- "Test model performance with biennial breeding" #Why am I running this simulation? Provide details
 
-question1 <- "How does a base-case CKMR model perform with changing population size?"
+question1 <- "How does a base-case CKMR model perform with biennial breeding?"
 question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
-question3 <- ""
-purpose <- "Obj2.1_lambda.trial_sample.ALL.ages" #For naming output files
+question3 <- "How does the model perform with and without lambda?"
+
+purpose <- "scenario_3.1.1_SB_sample.ALL.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -64,7 +65,7 @@ estimated.parameters <- paste0(jags_params, collapse = ",")
 #save(rseeds, file = "rseeds_2022.04.15.rda")
 
 #Save paths and file labels as objects
-load("rseeds_2022.04.15.rda")
+rseeds <- readRDS("rseeds_2022.04.15.rda")
 outSeeds <- "Seeds2022.04.15"
 
 
@@ -74,7 +75,7 @@ outSeeds <- "Seeds2022.04.15"
 adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- 50 #set the maximum age allowed in the simulation
-mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 
 #---------------------- Read in sampling and other dataframes --------------------------
 samples.df <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
@@ -88,6 +89,7 @@ pop_size.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSi
 truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme))
 
 n_yrs <- max(pop_size.df$year)
+
 estimation.year <- n_yrs - 5
 
 #----------------------- MCMC & model parameters ----------------------#
@@ -150,7 +152,9 @@ model_settings.df <- tibble(script_name = script_name,
 
 ####-------------- Start simulation loop ----------------------
 (iterations <- max(samples.df$iteration))
-(sample.sizes <- samples.df %>% distinct(sample.prop) %>% pull(sample.prop)) #Subset for sample size of 1%
+(sample.sizes <- samples.df %>% 
+    distinct(sample.prop) %>% 
+    pull(sample.prop)) #Subset for sample size of 1.5%
 
 
 # Initialize arrays for saving results
@@ -166,7 +170,6 @@ model_settings.df <- tibble(script_name = script_name,
  (sim.samples.2 <- paste0(sample.sizes[2], "prop.sampled"))
  (sim.samples.3 <- paste0(sample.sizes[3], "prop.sampled"))
  (sim.samples.4 <- paste0(sample.sizes[4], "prop.sampled"))
-
 
  for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
@@ -292,18 +295,16 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.2_population.growth/functions/Obj2.1_run.JAGS_HS.only.R")
+      source("Objective.3_intermittent.breeding/functions/scenario_3.1.1_run.JAGS_HS.only.R")
 
-      #calculate truth
-      Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,                   
-                                                year >= ref.year.mom) %>% 
-        summarize(females = round(mean(Female.adult.pop), 0)) %>% 
-        pull(females)
+      #Calculate truth
+      Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
+                                                year == estimation.year) %>%
+        pull(Female.adult.pop)
       
       Nm.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
-                                                year >= ref.year.dad) %>% 
-        summarize(males = round(mean(Male.adult.pop), 0)) %>% 
-        pull(males)
+                                                year == estimation.year) %>%
+        pull(Male.adult.pop)      
       
     #Calculate expectations
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
@@ -332,7 +333,8 @@ model_settings.df <- tibble(script_name = script_name,
              HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
              POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs),
              POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO),
-             purpose = purpose)
+             purpose = purpose,
+             est.yr = estimation.year)
     
     results <- rbind(results, results.temp)
     
@@ -341,43 +343,48 @@ model_settings.df <- tibble(script_name = script_name,
     mom_comps.all <- mom_comps.all %>% mutate(iteration = iter,
                                               sample.prop.all = sample.size,
                                               sample.size.juvs = nrow(HS.samps.df),
-                                              seed = rseed)
+                                              seed = rseed,
+                                              est.yr = estimation.year)
     mom.comps.tibble <- rbind(mom.comps.tibble, mom_comps.all)
     
     dad_comps.all <- dad_comps.all %>% mutate(iteration = iter,
                                               sample.prop.all = sample.size,
                                               sample.size.juvs = nrow(HS.samps.df),
-                                              seed = rseed)
+                                              seed = rseed,
+                                              est.yr = estimation.year)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
     
   } # End if/else statement
   } # end loop over sample sizes
     
+   if(iter %% 100 == 0){
   #-----------------Save output files iteratively--------------------
-  
-#Results
-    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+
+  #Results
+    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_", estimation.year, "_est.yr_", "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
 #    #Model output for diagnostics
-     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
+     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose, "_", estimation.year, "_est.yr"))
 # 
-    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose, "_", estimation.year, "_est.yr"))
 #
-    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose, "_", estimation.year, "_est.yr"))
 #
-    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose, "_", estimation.year, "_est.yr"))
 # 
 #    #Save pairwise comparisons matrices
-    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
+    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_", estimation.year, "_est.yr"))
 #    
-    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
+    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_", estimation.year, "_est.yr"))
 
+   }
+   
       sim.end <- Sys.time()
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("\n Finished iteration ", iter, ". \n Took ", iter.time, " minutes \n\n"))
-   } # end loop over iterations
-  
+ }  # end loop over iterations
+
   
   
 ########## Save and check results ##########
@@ -450,9 +457,9 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
  saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
  
   saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
- # 
+ #
   saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
- # 
+ #
   saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose)) #Sample size 4
  
  #Save final pairwise comparison matrices

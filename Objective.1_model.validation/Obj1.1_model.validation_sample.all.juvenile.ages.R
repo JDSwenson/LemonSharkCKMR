@@ -23,7 +23,7 @@ PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
 Sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "11Jul2022"
+date.of.PopSim <- "19Jul2022"
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
@@ -64,7 +64,7 @@ estimated.parameters <- paste0(jags_params, collapse = ",")
 #save(rseeds, file = "rseeds_2022.04.15.rda")
 
 #Save paths and file labels as objects
-load("rseeds_2022.04.15.rda")
+rseeds <- readRDS("rseeds_2022.04.15.rda")
 outSeeds <- "Seeds2022.04.15"
 
 
@@ -96,7 +96,7 @@ nc <- 2      # number of chains
 
 #Survival prior info
 survival.prior.mean <- adult.survival
-survival.prior.cv <- 0.1
+survival.prior.cv <- 0.05
 survival.prior.sd <- survival.prior.mean * survival.prior.cv
 survival.prior.info <- "beta, w/ mean as truth and 10% CV"
 
@@ -278,6 +278,17 @@ model_settings.df <- tibble(script_name = script_name,
       set.seed(rseed)
     source("Objective.1_model.validation/functions/Obj1.1_run.JAGS_HS.only.R")
 
+      #Calculate truth
+      Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,                   
+                                                year >= ref.year.mom) %>% 
+        summarize(females = round(mean(Female.adult.pop), 0)) %>% 
+        pull(females)
+      
+      Nm.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
+                                                year >= ref.year.dad) %>% 
+        summarize(males = round(mean(Male.adult.pop), 0)) %>% 
+        pull(males)
+      
     #Calculate expectations
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
@@ -289,15 +300,6 @@ model_settings.df <- tibble(script_name = script_name,
     sampled.mothers <- unique(sample.df_all.info$mother.x)
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
-    Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,                   
-                                                     year >= ref.year.mom) %>% 
-      summarize(females = round(mean(Female.adult.pop), 0)) %>% 
-      pull(females)
-    
-    Nm.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
-                                              year >= ref.year.dad) %>% 
-      summarize(males = round(mean(Male.adult.pop), 0)) %>% 
-      pull(males)
     
     #Make truth equal to mean over years
     truth.iter <- truth.df %>% dplyr::filter(iteration == iter) %>% 
@@ -333,24 +335,27 @@ model_settings.df <- tibble(script_name = script_name,
   } # end loop over sample sizes
     
   #-----------------Save output files iteratively--------------------
-  
+   if(iter %% 100 == 0){
+     
 #Results
     write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
 #    #Model output for diagnostics
      saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
 # 
-#     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
 # # 
-#     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
 # #    
-#     saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
+     saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
 # 
 #    #Save pairwise comparisons matrices
     saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
 #    
     saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
 
+   }
+    
       sim.end <- Sys.time()
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)

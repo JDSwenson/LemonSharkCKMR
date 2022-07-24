@@ -16,11 +16,11 @@ library(coda)
 
 rm(list=ls())
 
-source("./Objective.1_model.validation/functions/Obj1.functions.R") #Changed name of script that includes pairwise comparison and other functions
+source("./Objective.2_population.growth/functions/Obj2.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.lambda <- "lambda.variable" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
 Sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 date.of.PopSim <- "19Jul2022" # 11Jul2022
@@ -28,9 +28,9 @@ inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/models/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -40,13 +40,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "Obj1.1_model.validation_sample.ALL.ages.R" #Copy name of script here
-primary_goal <- "Validate iniitial model" #Why am I running this simulation? Provide details
+script_name <- "scenario_2.1_lambda.trial_sample.ALL.ages.R" #Copy name of script here
+primary_goal <- "Test model performance with changing population size" #Why am I running this simulation? Provide details
 
-question1 <- "Does the model perform as expected in a simplified base-case scenario with an informed prior on survival?"
-question2 <- ""
+question1 <- "How does a base-case CKMR model perform with changing population size?"
+question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
 question3 <- ""
-purpose <- "Obj1.1_model.validation_sample.ALL.ages" #For naming output files
+purpose <- "scenario_2.1_lambda.trial_sample.ALL.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -97,10 +97,10 @@ nt <- 20     # thinning rate
 nc <- 2      # number of chains
 
 #Survival prior info
-survival.prior.mean <- adult.survival
-survival.prior.cv <- 0.05
-survival.prior.sd <- survival.prior.mean * survival.prior.cv
-survival.prior.info <- "beta, w/ mean as truth and 10% CV"
+survival.prior.mean <- NA
+survival.prior.cv <- NA
+survival.prior.sd <- NA
+survival.prior.info <- "Uniform: 0.5 - 0.95"
 
 #Lambda prior info
 lambda.prior.mean <- NA
@@ -292,7 +292,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.1_model.validation/functions/Obj1.1_run.JAGS_HS.only.R")
+    source("Objective.2_population.growth/functions/Obj2.1_run.JAGS_HS.only.R")
 
       #calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,                   
@@ -353,25 +353,27 @@ model_settings.df <- tibble(script_name = script_name,
   } # End if/else statement
   } # end loop over sample sizes
     
+   if(iter %% 100 == 0){
   #-----------------Save output files iteratively--------------------
-  if(iter %% 100 ==0){
+  
 #Results
     write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
 #    #Model output for diagnostics
      saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose))
 # 
-     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
-# # 
-     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
-# #    
-     saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
+    saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose))
+#
+    saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose))
+#
+    saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose))
 # 
 #    #Save pairwise comparisons matrices
     saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
 #    
     saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
-}
+
+   }
     
       sim.end <- Sys.time()
    

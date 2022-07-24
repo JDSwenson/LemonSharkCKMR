@@ -23,7 +23,7 @@ PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
 Sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "11Jul2022" # 11Jul2022
+date.of.PopSim <- "19Jul2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
@@ -64,7 +64,7 @@ estimated.parameters <- paste0(jags_params, collapse = ",")
 #save(rseeds, file = "rseeds_2022.04.15.rda")
 
 #Save paths and file labels as objects
-load("rseeds_2022.04.15.rda")
+rseeds <- readRDS("rseeds_2022.04.15.rda")
 outSeeds <- "Seeds2022.04.15"
 
 
@@ -353,6 +353,7 @@ model_settings.df <- tibble(script_name = script_name,
   } # End if/else statement
   } # end loop over sample sizes
     
+   if(iter %% 100 == 0){
   #-----------------Save output files iteratively--------------------
   
 #Results
@@ -372,6 +373,8 @@ model_settings.df <- tibble(script_name = script_name,
 #    
     saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose))
 
+   }
+    
       sim.end <- Sys.time()
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
