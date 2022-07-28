@@ -3,17 +3,19 @@
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda.1 <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.lambda.variable <- "lambda.variable"
+PopSim.lambda.extreme <- "lambda.extreme"
 PopSim.annual.breeding <- "annual.breeding" #Can be annual.breeding or biennial.breeding
 PopSim.biennial.breeding <- "biennial.breeding"
 Sampling.scheme.YOY <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 Sampling.scheme.juvs <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 Sampling.scheme.all <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "11Jul2022" # 11Jul2022
+date.of.PopSim.1 <- "19Jul2022" # 19Jul2022
+date.of.PopSim.2 <- "24Jul2022"
 inSeeds <- "Seeds2022.04.15"
 
 #---------------------------Objective 1 truth calculations----------------------#
 #Confirmed that the population size is the same for all sampling schemes
-obj1.popsize <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY))
+obj1.popsize <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY))
 
 #Confirmed that the comparisons are the same for scenarios 1.1 and 1.2
 #Need to calculate mean truth over years that comparisons span
@@ -88,22 +90,35 @@ for(i in 1:nrow(YOY.ref)){
 }
 
 
-
-
 #---------------------------Objective 2 truth calculations----------------------#
 #obj2.1 is variable lambda but no lambda parameter in the model; combine with obj1.2 with stable lambda
 #obj2.2.1 is variable lambda w/ lambda parameter in the model and estimating in year 85; combine with obj2.2.2 for estimates in year 80 and 90 as well.
 
 #Confirmed that the population size is the same for all sampling schemes
-obj2.popsize.neutral <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+obj2.popsize.neutral <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = "neutral")
 
-obj2.popsize.variable <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda.variable, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+obj2.popsize.variable <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.variable, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
-  dplyr::mutate(population.growth = ifelse(iteration <= 100, "negative", "positive"))
+  dplyr::mutate(population.growth = ifelse(iteration <= 500, "slight negative", "slight positive"))
+
+obj2.popsize.extreme <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.2, "_", inSeeds, "_", PopSim.lambda.extreme, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+  dplyr::filter(year %in% c(80, 85, 90)) %>% 
+  dplyr::mutate(population.growth = "extreme negative")
 
 
-obj2.truth.df <- rbind(obj2.popsize.neutral, obj2.popsize.variable) %>% 
+obj2.truth.df <- rbind(obj2.popsize.variable, obj2.popsize.extreme) %>% 
+  dplyr::rename(est.yr = year) %>% 
+  dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, population.growth)
+
+
+#---------------------------Objective 3 truth calculations----------------------#
+#Confirmed that the population size is the same for all sampling schemes
+obj3.popsize.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_", Sampling.scheme.YOY)) %>% 
+  dplyr::filter(year %in% c(80, 85, 90)) %>% 
+  dplyr::mutate(population.growth = "neutral")
+
+obj3.truth.df <- obj3.popsize.df %>%
   dplyr::rename(est.yr = year) %>% 
   dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, population.growth)
