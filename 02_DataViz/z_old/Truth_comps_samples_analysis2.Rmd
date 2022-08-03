@@ -1,0 +1,239 @@
+---
+title: "Results for CKMR manuscript 07/01/2022"
+output: 
+  html_document:
+    df_print: tibble
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+---
+
+Get plots together
+For Objective 2 (supplementary?): Multi-panel stacked (one column only) plot with 1.5% population sampled, 
+top: estimating in present year; three separate density plots corresponding to sampling schemes; group by population growth?
+middle: same as above, except estimating 5 yrs in the past
+bottomr: same as above, except estimating 10 yrs in the past
+
+Also, from objective 1, look at instances where the observed kin pairs matched the expected kin pairs, and compare year gaps (w/ histogram) between unbiased and biased estimates.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+#devtools::install_github("pconn/HierarchicalGOF/HierarchicalGOF")
+#install.packages("ggmcmc")
+library(tidyverse)
+library(ggpubr)
+library(RColorBrewer)
+library(coda)
+library(runjags)
+library(ggmcmc)
+library(viridis)
+library(scales)
+library(ggridges)
+
+rm(list=ls())
+today <- format(Sys.Date(), "%d%b%Y")
+
+```
+
+
+
+```{r set-file-locations and read in files, include = FALSE}
+#------------- Simulation parameters and labels  ----------------#
+#------------- Simulation parameters and labels  ----------------#
+objective_1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
+objective_1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
+objective_1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/figures/"
+
+objective_2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
+objective_2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+objective_2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+
+results_prefix <- "CKMR_results"
+MCMC_prefix <- "CKMR_modelout"
+parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
+sample.prefix <- "sample_info/CKMR_sample.info"
+pop.size.prefix <- "pop_size/CKMR_pop.size"
+mom.comps.prefix <- "comparisons/mom.comps"
+dad.comps.prefix <- "comparisons/dad.comps"
+
+
+#-------------Objective 1.1 --------------------#
+date.of.simulation.scenario_1.1Y <- "12Jul2022"
+purpose.obj1.1Y <- "Obj1.1_model.validation_Target.YOY"
+file.scenario_1.1Y <- "scenario_1.1_model.validation_Target.YOY"
+purpose.obj1.1.labY <- "Target YOY"
+model.type.obj1.1Y <- "HS.only"
+
+date.of.simulation.scenario_1.1J <- "12Jul2022"
+purpose.obj1.1J <- "Obj1.1_model.validation_sample.all.juvenile.ages"
+file.scenario_1.1J <- "scenario_1.1_model.validation_sample.all.juvenile.ages"
+purpose.obj1.1.labJ <- "Sample all juvenile ages"
+model.type.obj1.1J <- "HS.only"
+
+date.of.simulation.scenario_1.1A <- "13Jul2022"
+purpose.obj1.1A <- "Obj1.1_model.validation_sample.ALL.ages"
+file.scenario_1.1A <- "scenario_1.1_model.validation_sample.ALL.ages"
+purpose.obj1.1.labA <- "Sample all age classes"
+model.type.obj1.1A <- "HS + PO"
+
+
+#-------------Objective 1.2 --------------------#
+date.of.simulation.scenario_1.2Y <- "13Jul2022"
+purpose.obj1.2Y <- "Obj1.2_model.validation_Target.YOY"
+file.scenario_1.2Y <- "scenario_1.2_model.validation_Target.YOY"
+purpose.obj1.2.labY <- "Target YOY"
+model.type.obj1.2Y <- "HS.only"
+
+date.of.simulation.scenario_1.2J <- "13Jul2022"
+purpose.obj1.2J <- "Obj1.2_model.validation_sample.all.juvenile.ages"
+file.scenario_1.2J <- "scenario_1.2_model.validation_sample.all.juvenile.ages"
+purpose.obj1.2.labJ <- "Sample all juvenile ages"
+model.type.obj1.2J <- "HS.only"
+
+date.of.simulation.scenario_1.2A <- "13Jul2022"
+purpose.obj1.2A <- "Obj1.2_model.validation_sample.ALL.ages"
+file.scenario_1.2A <- "scenario_1.2_model.validation_sample.ALL.ages"
+purpose.obj1.2.labA <- "Sample all age classes"
+model.type.obj1.2A <- "HS + PO"
+
+
+#-------------Objective 2.1 --------------------#
+date.of.simulation.scenario_2.1Y <- "13Jul2022"
+purpose.obj2.1Y <- "Obj2.1_lambda.trial_Target.YOY"
+file.scenario_2.1Y <- "scenario_2.1_lambda.trial_Target.YOY"
+purpose.obj2.1.labY <- "Target YOY"
+model.type.obj2.1Y <- "HS.only"
+
+date.of.simulation.scenario_2.1J <- "13Jul2022"
+purpose.obj2.1J <- "Obj2.1_lambda.trial_sample.all.juvenile.ages"
+file.scenario_2.1J <- "scenario_2.1_lambda.trial_sample.all.juvenile.ages"
+purpose.obj2.1.labJ <- "Sample all juvenile ages"
+model.type.obj2.1J <- "HS.only"
+
+date.of.simulation.scenario_2.1A <- "13Jul2022"
+purpose.obj2.1A <- "Obj2.1_lambda.trial_sample.ALL.ages"
+file.scenario_2.1A <- "scenario_2.1_lambda.trial_sample.ALL.ages"
+purpose.obj2.1.labA <- "Sample all age classes"
+model.type.obj2.1A <- "HS + PO"
+
+
+#-------------Objective 2.2.1 --------------------#
+date.of.simulation.scenario_2.2.1Y <- "13Jul2022"
+purpose.obj2.2.1Y <- c("Obj2.2.1_lambda.trial_Target.YOY_stablePopSimLambda","Obj2.2.1_lambda.trial_Target.YOY_variablePopSimLambda")
+file.scenario_2.2.1Y <- c("scenario_2.2.1_lambda.trial_Target.YOY_stablePopSimLambda","scenario_2.2.1_lambda.trial_Target.YOY_variablePopSimLambda")
+purpose.obj2.2.1.labY <- "Target YOY"
+model.type.obj2.2.1Y <- "HS.only"
+
+date.of.simulation.scenario_2.2.1J <- "13Jul2022"
+purpose.obj2.2.1J <- c("Obj2.2.1_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda", "Obj2.2.1_lambda.trial_sample.all.juvenile.ages_variablePopSimLambda")
+file.scenario_2.2.1J <- c("scenario_2.2.1_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda", "scenario_2.2.1_lambda.trial_sample.all.juvenile.ages_variablePopSimLambda")
+purpose.obj2.2.1.labJ <- "Sample all juvenile ages"
+model.type.obj2.2.1J <- "HS.only"
+
+date.of.simulation.scenario_2.2.1A <- "13Jul2022"
+purpose.obj2.2.1A <- c("Obj2.2.1_lambda.trial_sample.ALL.ages_stablePopSimLambda", "Obj2.2.1_lambda.trial_sample.ALL.ages_variablePopSimLambda")
+file.scenario_2.2.1A <- c("scenario_2.2.1_lambda.trial_sample.ALL.ages_stablePopSimLambda", "scenario_2.2.1_lambda.trial_sample.ALL.ages_variablePopSimLambda")
+purpose.obj2.2.1.labA <- "Sample all age classes"
+model.type.obj2.2.1A <- "HS + PO"
+
+
+#-------------Objective 2.2.2 --------------------#
+#Named some of these with the wrong purpose. The popsim variable files did not include "variablePopSim" in the purpose, but the stable popsim simulations did include "stablePopSim". Also, the Target.YOY files were not capitalized.
+
+date.of.simulation.scenario_2.2.2Y <- "14Jul2022"
+purpose.obj2.2.2Y <- c("Obj2.2.2_lambda.trial_target.YOY_change.est.yr", "Obj2.2.2_lambda.trial_target.YOY_stablePopSimLambda_change.est.yr")
+file.scenario_2.2.2Y <- c("scenario_2.2.2_lambda.trial_target.YOY_change.est.yr", "scenario_2.2.2_lambda.trial_target.YOY_stablePopSimLambda_change.est.yr")
+purpose.obj2.2.2.labY <- "Target YOY"
+model.type.obj2.2.2Y <- "HS.only"
+
+date.of.simulation.scenario_2.2.2J <- "14Jul2022"
+purpose.obj2.2.2J <- c("Obj2.2.2_lambda.trial_sample.all.juvenile.ages_change.est.yr", "Obj2.2.2_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda_change.est.yr")
+file.scenario_2.2.2J <- c("scenario_2.2.2_lambda.trial_sample.all.juvenile.ages_change.est.yr", "scenario_2.2.2_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda_change.est.yr")
+purpose.obj2.2.2.labJ <- "Sample all juvenile ages"
+model.type.obj2.2.2J <- "HS.only"
+
+date.of.simulation.scenario_2.2.2A <- "14Jul2022"
+purpose.obj2.2.2A <- c("Obj2.2.2_lambda.trial_sample.ALL.ages_change.est.yr", "Obj2.2.2_lambda.trial_sample.ALL.ages_stablePopSimLambda_change.est.yr")
+file.scenario_2.2.2A <- c("scenario_2.2.2_lambda.trial_sample.ALL.ages_change.est.yr", "scenario_2.2.2_lambda.trial_sample.ALL.ages_stablePopSimLambda_change.est.yr")
+purpose.obj2.2.2.labA <- "Sample all age classes"
+model.type.obj2.2.2A <- "HS + PO"
+
+
+#----------------Set input file locations ------------------------------
+#Population simulation files
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
+PopSim.lambda.1 <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.lambda.variable <- "lambda.variable"
+PopSim.annual.breeding <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+PopSim.biennial.breeding <- "biennial.breeding"
+Sampling.scheme.YOY <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+Sampling.scheme.juvs <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+Sampling.scheme.all <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "11Jul2022" # 11Jul2022
+inSeeds <- "Seeds2022.04.15"
+
+#---------------------------Objective 1 truth calculations----------------------#
+#Confirmed that the population size is the same for all sampling schemes
+obj1.popsize <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY))
+
+#Confirmed that the comparisons are the same for scenarios 1.1 and 1.2
+#Need to calculate mean truth over years that comparisons span
+#YOY
+scenario_1.1_mom.comps.YOY <- readRDS(file = paste0(objective_1_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_1.1Y, "_", inSeeds, "_", file.scenario_1.1Y)) %>% 
+  dplyr::select(-BI)
+
+scenario_1.1_dad.comps.YOY <- readRDS(file = paste0(objective_1_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_1.1Y, "_", inSeeds, "_", file.scenario_1.1Y))
+
+obj1_all.comps.YOY <- rbind(scenario_1.1_mom.comps.YOY, scenario_1.1_dad.comps.YOY)
+
+#Juveniles
+scenario_1.1_mom.comps.juvs <- readRDS(file = paste0(objective_1_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_1.1J, "_", inSeeds, "_", file.scenario_1.1J)) %>% 
+  dplyr::select(-BI)
+
+scenario_1.1_dad.comps.juvs <- readRDS(file = paste0(objective_1_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_1.1J, "_", inSeeds, "_", file.scenario_1.1J))
+
+obj1_all.comps.juvs <- rbind(scenario_1.1_mom.comps.juvs, scenario_1.1_dad.comps.juvs)
+
+#All age classes
+scenario_1.1_mom.comps.all <- readRDS(file = paste0(objective_1_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_1.1A, "_", inSeeds, "_", file.scenario_1.1A)) %>% 
+  dplyr::select(-BI)
+
+scenario_1.1_dad.comps.all <- readRDS(file = paste0(objective_1_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_1.1A, "_", inSeeds, "_", file.scenario_1.1A))
+
+obj1_all.comps.all <- rbind(scenario_1.1_mom.comps.all, scenario_1.1_dad.comps.all)
+
+
+#----------------------Objective 2----------------------------#
+#Confirmed that the comparisons are the same for scenarios 1.1 and 1.2
+#Need to calculate mean truth over years that comparisons span
+#YOY
+scenario_1.1_mom.comps.YOY <- readRDS(file = paste0(objective_1_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_1.1Y, "_", inSeeds, "_", file.scenario_1.1Y)) %>% 
+  dplyr::select(-BI)
+
+scenario_1.1_dad.comps.YOY <- readRDS(file = paste0(objective_1_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_1.1Y, "_", inSeeds, "_", file.scenario_1.1Y))
+
+obj1_all.comps.YOY <- rbind(scenario_1.1_mom.comps.YOY, scenario_1.1_dad.comps.YOY)
+
+#Juveniles
+scenario_1.1_mom.comps.juvs <- readRDS(file = paste0(objective_1_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_1.1J, "_", inSeeds, "_", file.scenario_1.1J)) %>% 
+  dplyr::select(-BI)
+
+scenario_1.1_dad.comps.juvs <- readRDS(file = paste0(objective_1_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_1.1J, "_", inSeeds, "_", file.scenario_1.1J))
+
+obj1_all.comps.juvs <- rbind(scenario_1.1_mom.comps.juvs, scenario_1.1_dad.comps.juvs)
+
+#All age classes
+scenario_1.1_mom.comps.all <- readRDS(file = paste0(objective_1_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_1.1A, "_", inSeeds, "_", file.scenario_1.1A)) %>% 
+  dplyr::select(-BI)
+
+scenario_1.1_dad.comps.all <- readRDS(file = paste0(objective_1_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_1.1A, "_", inSeeds, "_", file.scenario_1.1A))
+
+obj1_all.comps.all <- rbind(scenario_1.1_mom.comps.all, scenario_1.1_dad.comps.all)
+
+```
+
+```{r}
+obj2_results
+
+
+```

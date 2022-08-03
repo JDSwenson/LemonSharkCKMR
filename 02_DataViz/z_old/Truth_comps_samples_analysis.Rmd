@@ -231,3 +231,9 @@ scenario_1.1_dad.comps.all <- readRDS(file = paste0(objective_1_results_location
 obj1_all.comps.all <- rbind(scenario_1.1_mom.comps.all, scenario_1.1_dad.comps.all)
 
 ```
+
+```{r}
+obj2_results %>% group_by(population.growth) %>% summarize(n())
+
+obj2_results %>% group_by(population.growth) %>% summarize(mean(mean.adult.lambda.last10))
+```
