@@ -259,7 +259,7 @@ iterations <- 500 #Number of iterations to loop over
       } else { #If indiscriminately sampling juveniles
         
         sample.df_temp.off <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
-          dplyr::filter(age.x < repro.age) %>% 
+          dplyr::filter(age.x < repro.age & age.x > 0) %>% 
           dplyr::slice_sample(n = sample.size.juvs)  #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
         
         #Sample reproductively mature adults only for parent-offspring analysis

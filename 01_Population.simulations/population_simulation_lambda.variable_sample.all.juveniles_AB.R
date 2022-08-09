@@ -16,8 +16,8 @@ library(coda)
 
 rm(list=ls())
 
-source("./01_MAIN_scripts/functions/Dovi_IBS_SB_test.assign.conformity.R")
-source("./01_MAIN_scripts/functions/pairwise_comparisons_HS.PO_SB.R")
+source("./01_Population.simulations/functions/Dovi_IBS_SB_test.assign.conformity.R")
+source("./01_Population.simulations/functions/pairwise_comparisons_HS.PO_SB.R")
 
 #----------------Set output file locations and labels ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
@@ -40,7 +40,7 @@ target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each
 HS.only <- "yes"
 
 #Save paths and file labels as objects
-load("rseeds_2022.04.15.rda")
+rseeds <- readRDS("rseeds_2022.04.15.rda")
 seeds <- "Seeds2022.04.15"
 
 
@@ -134,7 +134,7 @@ pop.sim.df <- tibble(script_name = script_name,
 
 ####-------------- Start simulation loop ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 200 #Number of iterations to loop over
+iterations <- 1000 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -188,13 +188,13 @@ iterations <- 200 #Number of iterations to loop over
    set.seed(rseeds[iter])
    rseed <- rseeds[iter]
 
-   if(iter <= 100){
+   if(iter <= 500){
      ff.shift <- ff-0.5
-   }else if(iter > 100){
+   }else if(iter > 500){
      ff.shift <- ff+0.5
    }
    
-   source("./01_MAIN_scripts/functions/Dovi_IBS_SB_test.assign.conformity.R")
+   source("./01_Population.simulations/functions/Dovi_IBS_SB_test.assign.conformity.R")
    
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -222,7 +222,7 @@ iterations <- 200 #Number of iterations to loop over
     mutate(seed = rseed, iteration = iter)
   
   #organize results and calculate summary statistics from the simulation
-  source("./01_MAIN_scripts/functions/query_results_PopSim.R")
+  source("./01_Population.simulations/functions/query_results_PopSim.R")
   
   #-----------------------Collect samples-------------------------
   #Loop over sample sizes stored in sample.vec  
@@ -272,7 +272,7 @@ iterations <- 200 #Number of iterations to loop over
       } else { #If indiscriminately sampling juveniles
         
         sample.df_temp.off <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
-          dplyr::filter(age.x < repro.age) %>% 
+          dplyr::filter(age.x < repro.age & age.x > 0) %>% 
           dplyr::slice_sample(n = sample.size.juvs)  #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
         
         #Sample reproductively mature adults only for parent-offspring analysis
@@ -294,7 +294,7 @@ iterations <- 200 #Number of iterations to loop over
     Total.adult.samples <- if(HS.only == "yes") 0 else sum(Adult.samples)
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("01_MAIN_scripts/functions/PopSim_truth.R")
+    source("01_Population.simulations/functions/PopSim_truth.R")
     
     #Save info for samples to examine in more detail
     sample.df_all.info <- sample.df_all.info %>% 
@@ -320,20 +320,20 @@ iterations <- 200 #Number of iterations to loop over
   #Save parents tibble
   parents.tibble_all <- bind_rows(parents.tibble_all, parents.tibble)
   
-  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
+#  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
   
   # Detailed info on population size
   pop.size.tibble_all <- bind_rows(pop.size.tibble_all, pop.size.tibble)
   
-  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
+#  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
 
   #True values
   truth.all <- bind_rows(truth.all, estimates)
   
-  saveRDS(truth.all, file = paste0(temp_location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
+#  saveRDS(truth.all, file = paste0(temp_location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
   
 # Detailed info on samples and parents to examine in more detail
-  saveRDS(sample.info, file = paste0(temp_location, sample_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter, "_", sampling.scheme))
+#  saveRDS(sample.info, file = paste0(temp_location, sample_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter, "_", sampling.scheme))
 
 
       sim.end <- Sys.time()
