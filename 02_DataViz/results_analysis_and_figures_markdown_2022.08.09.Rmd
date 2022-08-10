@@ -447,7 +447,7 @@ scenario_3.1.2_results <- map_dfr(scenario_3.1.2_files, read_csv) %>%
                                   ifelse(purpose %in% purpose.obj3.1J, "sample all juvenile ages",
                                          "sample all age classes")),
          survival.prior = "diffuse",
-         lambda.prior = "diffuse",
+         lambda.prior = "tight",
          cv = (sd/mean)*100,
          prop.sampled = factor(sample.prop.juvs,),
          population.growth = "neutral")
@@ -460,7 +460,8 @@ scenario_3.1_results.all <- scenario_3.1.1_results %>% bind_rows(scenario_3.1.2_
                             ifelse(parameter == "Nf", Female.adult.pop, all.truth))) %>% 
   #dplyr::filter(year == 85) %>% 
   dplyr::select(-c(Male.adult.pop, Female.adult.pop)) %>% 
-  dplyr::filter(prop.sampled == 1.5)
+  dplyr::filter(prop.sampled == 1.5) %>% 
+  mutate(non.conformists = "5% annual breeders")
 
 #Objective 3.2
 scenario_3.2.1_files <- list.files(path = objective_3_results_location,
@@ -489,7 +490,7 @@ scenario_3.2.2_results <- map_dfr(scenario_3.2.2_files, read_csv) %>%
                                   ifelse(purpose %in% purpose.obj3.2J, "sample all juvenile ages",
                                          "sample all age classes")),
          survival.prior = "diffuse",
-         lambda.prior = "diffuse",
+         lambda.prior = "tight",
          cv = (sd/mean)*100,
          prop.sampled = factor(sample.prop.juvs,),
          population.growth = "neutral")
@@ -501,7 +502,8 @@ scenario_3.2_results.all <- scenario_3.2.1_results %>% bind_rows(scenario_3.2.2_
   mutate(all.truth = ifelse(parameter == "Nm", Male.adult.pop,
                             ifelse(parameter == "Nf", Female.adult.pop, all.truth))) %>% 
   #dplyr::filter(year == 85) %>% 
-  dplyr::select(-c(Male.adult.pop, Female.adult.pop))
+  dplyr::select(-c(Male.adult.pop, Female.adult.pop)) %>% 
+  mutate(non.conformists = "5% annual breeders")
 
 
 #Objective 3.3
@@ -531,7 +533,7 @@ scenario_3.3.2_results <- map_dfr(scenario_3.3.2_files, read_csv) %>%
                                   ifelse(purpose %in% purpose.obj3.3J, "sample all juvenile ages",
                                          "sample all age classes")),
          survival.prior = "diffuse",
-         lambda.prior = "diffuse",
+         lambda.prior = "tight",
          cv = (sd/mean)*100,
          prop.sampled = factor(sample.prop.juvs,),
          population.growth = "neutral")
@@ -543,7 +545,8 @@ scenario_3.3_results.all <- scenario_3.3.1_results %>% bind_rows(scenario_3.3.2_
   mutate(all.truth = ifelse(parameter == "Nm", Male.adult.pop,
                             ifelse(parameter == "Nf", Female.adult.pop, all.truth))) %>% 
   #dplyr::filter(year == 85) %>% 
-  dplyr::select(-c(Male.adult.pop, Female.adult.pop, Num.mothers, Num.fathers))
+  dplyr::select(-c(Male.adult.pop, Female.adult.pop, Num.mothers, Num.fathers)) %>% 
+  mutate(non.conformists = "No annual breeders")
 
 
 
@@ -563,7 +566,6 @@ obj3_results <- scenario_3.1_results.all %>% bind_rows(scenario_3.2_results.all,
                              ifelse(est.yr == 85, "5 years past", "present"))) %>% 
   mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% 
   mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N"))
-
 ```
 
 
@@ -773,7 +775,7 @@ fig2.c <- scenario_2.2.2_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.s
                     name = "Sampling scheme")
   #geom_density(alpha = 0.6) +
   
-
+#Show model performance when there is an informed vs diffuse prior on lambda and "extreme" population decline
 fig2.d <- obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
                                          population.growth == "extreme negative",
                                          lambda.prior == "diffuse" | lambda.prior == "informed") %>% 
@@ -784,6 +786,7 @@ fig2.d <- obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
   labs(x="Relative bias", y="Estimation year", title="D)") +
 #  theme_ridges() + 
   #facet_wrap(~sampling.scheme) + 
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
   facet_wrap(~lambda.prior) +
   theme(legend.title = element_blank()) + 
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
@@ -856,12 +859,17 @@ obj3_results %>% dplyr::filter(prop.sampled == 1.5, lambda.prior == "diffuse", m
   dplyr::arrange(parameter, sampling.scheme)
 
 #3 adapted
-obj3_results %>% dplyr::filter(prop.sampled == 1.5, lambda.prior == "diffuse", model == "adapted") %>% 
-  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+obj3_results %>% dplyr::filter(prop.sampled == 1.5, lambda.prior == "tight", model == "adapted") %>% 
+  group_by(parameter, sampling.scheme, non.conformists) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
                    mean.bias = mean(relative_bias),
                    mean.cv = mean(cv)) %>%
-  dplyr::arrange(parameter, sampling.scheme)
+  dplyr::arrange(parameter, sampling.scheme) %>% 
+  View()
+
+obj3_results %>% dplyr::filter(lambda.prior == "tight", model == "adapted", iteration < 10, sampling.scheme == "target YOY", parameter == "psi") %>% 
+  dplyr::arrange(iteration, parameter) %>% 
+  View()
 
 ```
 

@@ -9,8 +9,9 @@ PopSim.biennial.breeding <- "biennial.breeding"
 Sampling.scheme.YOY <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 Sampling.scheme.juvs <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 Sampling.scheme.all <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim.1 <- "19Jul2022" # 19Jul2022
-date.of.PopSim.2 <- "24Jul2022"
+date.of.PopSim.1 <- "19Jul2022" #Stable or minor changes in lambda; both annual breeding and skipped-breeding w/ 5% non-conformists
+date.of.PopSim.2 <- "24Jul2022" #Extreme population decline
+date.of.PopSim.3 <- "28Jul2022" #Skipped-breeding with no non-conformists
 inSeeds <- "Seeds2022.04.15"
 
 #---------------------------Objective 1 truth calculations----------------------#
@@ -115,10 +116,23 @@ obj2.truth.df <- rbind(obj2.popsize.variable, obj2.popsize.extreme) %>%
 
 #---------------------------Objective 3 truth calculations----------------------#
 #Confirmed that the population size is the same for all sampling schemes
-obj3.popsize.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_", Sampling.scheme.YOY)) %>% 
+#With 5% non-conformists
+obj3.popsize.df.1 <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_", Sampling.scheme.YOY)) %>% 
+  dplyr::filter(year %in% c(80, 85, 90)) %>% 
+  dplyr::mutate(population.growth = "neutral") 
+
+#Add this when I revist calculating psi with Liz
+#%>% mutate(psi.truth = (-(Num.mothers/Female.adult.pop - 0.5)*2) - 1)
+
+obj3.truth.df.1 <- obj3.popsize.df.1 %>%
+  dplyr::rename(est.yr = year) %>% 
+  dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, Num.mothers, Num.fathers, population.growth)
+
+#With 0% non-conformists
+obj3.popsize.df.2 <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.3, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_NoNonConform_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = "neutral")
 
-obj3.truth.df <- obj3.popsize.df %>%
+obj3.truth.df.2 <- obj3.popsize.df.2 %>%
   dplyr::rename(est.yr = year) %>% 
-  dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, population.growth)
+  dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, Num.mothers, Num.fathers, population.growth)

@@ -16,21 +16,21 @@ library(coda)
 
 rm(list=ls())
 
-source("./Objective.2_population.growth/functions/Obj2.functions.R") #Changed name of script that includes pairwise comparison and other functions
+source("./Objective.3_intermittent.breeding/functions/Obj3.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.extreme" # Can be lambda.1 or lambda.variable
-PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
-Sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "24Jul2022" # 11Jul2022
+PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.breeding.schedule <- "biennial.breeding_NoNonConform" #Can be annual.breeding or biennial.breeding
+Sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "28Jul2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.output/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/models/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -40,23 +40,24 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "scenario_2.2.2_lambda.extreme_target.YOY_change.est.yr.R" #Copy name of script here
-primary_goal <- "Test model performance with changing population size" #Why am I running this simulation? Provide details
+script_name <- "scenario_3.3.3_SB_sample.ALL.ages.R" #Copy name of script here
+primary_goal <- "Test model performance with biennial breeding" #Why am I running this simulation? Provide details
 
-question1 <- "How does a base-case CKMR model perform with changing population size?"
+question1 <- "How does a base-case CKMR model perform with biennial breeding and zero non-conformists?"
 question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
-question3 <- "Does lambda become more important if we change the year of estimation?"
-purpose <- "scenario_2.2.2_lambda.extreme_target.YOY_change.est.yr" #For naming output files
+question3 <- "How does the model perform with and without lambda?"
+
+purpose <- "scenario_3.3.3_SB_sample.ALL.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- NA
 max.POPs <- NA
-HS.only <- "yes" #Do we only want to filter HS relationships?
+HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+fixed.parameters <- "psi" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
 jags_params = c("Nf", "Nm", "survival", "lambda")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
@@ -74,11 +75,12 @@ outSeeds <- "Seeds2022.04.15"
 adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- 50 #set the maximum age allowed in the simulation
-mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 
 #---------------------- Read in sampling and other dataframes --------------------------
 samples.df <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
-  rename(total.sample.size = sample.size.juvs)
+  mutate(sample.size = sample.size * 4) %>% 
+  dplyr::rename(total.sample.size = sample.size)
 
 samples.df %>% group_by(age.x) %>% summarize(n())
 
@@ -88,7 +90,7 @@ truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_"
 
 n_yrs <- max(pop_size.df$year)
 
-estimation.years <- c(n_yrs - 10, n_yrs - 5, n_yrs)
+estimation.year <- n_yrs - 5
 
 #----------------------- MCMC & model parameters ----------------------#
 ni <- 40000 # number of post-burn-in samples per chain
@@ -106,10 +108,10 @@ survival.prior.info <- "Uniform: 0.5 - 0.95"
 lambda.prior.mean <- NA
 lambda.prior.cv <- NA
 lambda.prior.sd <- NA
-lambda.prior.info <- "Uniform: 0.8 - 1.0"
+lambda.prior.info <- "Uniform: 0.95 - 1.05"
 
 #psi prior
-psi.prior.info <- NA
+psi.prior.info <- "Fixed"
 
 #abundance prior
 abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"
@@ -159,9 +161,9 @@ model_settings.df <- tibble(script_name = script_name,
 # Initialize arrays for saving results
  results <- NULL
  sims.list.1 <- NULL
- # sims.list.2 <- NULL
- # sims.list.3 <- NULL
- # sims.list.4 <- NULL
+ sims.list.2 <- NULL
+ sims.list.3 <- NULL
+ sims.list.4 <- NULL
  mom.comps.tibble <- NULL
  dad.comps.tibble <- NULL
 
@@ -170,10 +172,6 @@ model_settings.df <- tibble(script_name = script_name,
  (sim.samples.3 <- paste0(sample.sizes[3], "prop.sampled"))
  (sim.samples.4 <- paste0(sample.sizes[4], "prop.sampled"))
 
-for(est in 1:length(estimation.years)){
-  #Set estimation year to 10 years in the past, or 0
-  estimation.year <- estimation.years[est]
-  
  for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
    sim.start <- Sys.time()
@@ -287,18 +285,18 @@ for(est in 1:length(estimation.years)){
         pull(HSPs)
       
       #POPs detected
-      # mom.POPs <- mom_comps.all %>% dplyr::filter(type == "PO") %>% 
-      #   summarize(POPs = sum(yes)) %>% 
-      #   pull(POPs)
-      # 
-      # dad.POPs <- dad_comps.all %>% dplyr::filter(type == "PO") %>% 
-      #   summarize(POPs = sum(yes)) %>% 
-      #   pull(POPs)
+      mom.POPs <- mom_comps.all %>% dplyr::filter(type == "PO") %>% 
+        summarize(POPs = sum(yes)) %>% 
+        pull(POPs)
+      
+      dad.POPs <- dad_comps.all %>% dplyr::filter(type == "PO") %>% 
+        summarize(POPs = sum(yes)) %>% 
+        pull(POPs)
       
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.2_population.growth/functions/scenario_2.2.2_run.JAGS_HS.only.R")
+      source("Objective.3_intermittent.breeding/functions/scenario_3.3.3_run.JAGS_HS.only.R")
 
       #Calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
@@ -313,9 +311,9 @@ for(est in 1:length(estimation.years)){
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
     (mom.Exp.HS <- Exp[[1]])
-#    (mom.Exp.PO <- Exp[[2]])
+    (mom.Exp.PO <- Exp[[2]])
     (dad.Exp.HS <- Exp[[3]])
-#    (dad.Exp.PO <- Exp[[4]])
+    (dad.Exp.PO <- Exp[[4]])
     
     sampled.mothers <- unique(sample.df_all.info$mother.x)
     sampled.fathers <- unique(sample.df_all.info$father.x)
@@ -334,6 +332,8 @@ for(est in 1:length(estimation.years)){
       left_join(samples.iter, by = c("iteration", "seed")) %>% 
       mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs + dad.HSPs),
              HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
+             POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs + dad.POPs),
+             POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO + dad.Exp.PO),
              purpose = purpose,
              est.yr = estimation.year)
     
@@ -357,8 +357,8 @@ for(est in 1:length(estimation.years)){
     
   } # End if/else statement
   } # end loop over sample sizes
-   
-if(iter %% 100 == 0){
+    
+   if(iter %% 100 == 0){
   #-----------------Save output files iteratively--------------------
 
   #Results
@@ -377,15 +377,15 @@ if(iter %% 100 == 0){
     saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_", estimation.year, "_est.yr"))
 #    
     saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_", estimation.year, "_est.yr"))
-    
-}
-   sim.end <- Sys.time()
+
+   }
+   
+      sim.end <- Sys.time()
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("\n Finished iteration ", iter, ". \n Took ", iter.time, " minutes \n\n"))
  }  # end loop over iterations
-   } #End loop over estimation years
-  
+
   
   
 ########## Save and check results ##########
@@ -458,9 +458,9 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
  saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", purpose)) #Sample size 1
  
  #  saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", purpose)) #Sample size 2
- # # 
+ # #
  #  saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", purpose)) #Sample size 3
- # # 
+ # #
  #  saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", purpose)) #Sample size 4
  
  #Save final pairwise comparison matrices

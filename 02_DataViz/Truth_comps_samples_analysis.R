@@ -44,3 +44,10 @@ scenario_2.2.2_all.comps.all <- rbind(scenario_2.2.2_mom.comps.all, scenario_2.2
 
 #Make example pairwise comparison matrix
 scenario_2.2.2_mom.comps.all %>% dplyr::select(ref.year, all, yes, mort.yrs, type, parent, pop.growth.yrs, BI) %>% head(20) %>% write_csv(file = "example.pairwise.csv")
+
+
+#See how frequently lambda is estimated to be negative
+obj2_results %>% dplyr::filter(lambda.prior %in% c("diffuse", "informed"),
+                               parameter == "lambda") %>% 
+  group_by(lambda.prior, sampling.scheme) %>% 
+  dplyr::summarize(percent.correct = sum(mean < 1)/n())

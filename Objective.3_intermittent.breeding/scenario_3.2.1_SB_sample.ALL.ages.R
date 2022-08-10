@@ -111,7 +111,7 @@ lambda.prior.sd <- NA
 lambda.prior.info <- NA
 
 #psi prior
-psi.prior.info <- NA
+psi.prior.info <- "Uniform: 0.5 - 0.99"
 
 #abundance prior
 abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"

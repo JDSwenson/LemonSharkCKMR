@@ -1,8 +1,3 @@
-#To quickly navigate:
-#Search for DELETE for sections that can likely be deleted
-#Search for VARIABLES for variables that can probably be moved to top of script
-#Search for Troubleshoot for areas that may have issues
-#rm(list=ls())
 library(tidyverse)
 library(FSA) #Mainly for von bertalanffy growth function (vbFuns)
 
@@ -10,9 +5,6 @@ rm(list=ls())
 
 #Set path to data file
 input.file <- "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/data/Main_lemon_shark.csv"
-
-#Save von bertalanffy growth function
-vonBert <- vbFuns(param = "Typical")
 
 #Read in lemon shark data and specify column types with short string representation (c is character and d is double; D is date, but is difficult to work with)
 lemon_data <- read_csv(input.file, col_types = "ccdccccddccc")
@@ -108,6 +100,12 @@ age.length.density
 
 
 
-#Notes from chatting with Liz:
-#Length is row name; age is column name each cell counts the number of fish at that length/age
-#Then create a second matrix that divides each cell by the row sum (so percent of individuals at each length that are each age)
+#--------------------Lemon VonBert--------------------------------#
+#Using parameter values from Brown & Gruber 1988; they used the same VonBert parameterization as the one specified by "typical" in the below function
+#Save von bertalanffy growth function; NOTE that this uses PCL, not total length
+#Double-checked and the values-at-age/length are the same as the paper.
+#Average percent error (APE) was 3.4%
+ages <- 0:50
+vonBert <- vbFuns(param = "Typical")
+tmp <- growthFunShow("vonBertalanffy","Typical")
+plot(vonBert(t = ages, Linf = 317.65, K = 0.057, t0 = -2.302), pch = 19, type = "b", main = tmp, ylab = "Length", xlab = "Age")
