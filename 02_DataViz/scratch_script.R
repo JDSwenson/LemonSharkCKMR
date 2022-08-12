@@ -19,5 +19,3 @@ obj3_results %>% dplyr::filter(sampling.scheme == "sample all age classes") %>%
             sd(mean.adult.lambda))
 
 
-
-obj1_results %>% 
