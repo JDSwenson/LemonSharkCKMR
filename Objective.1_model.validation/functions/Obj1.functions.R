@@ -45,7 +45,7 @@ filter.samples <- function(samples){
 
     #The vector of years for which we need to split samples into potential parents and offspring i.e. offspring birth years.
   OffBirth.years <- NoFullSibs.df %>% 
-    dplyr::filter(age.x == 0) %>% 
+    dplyr::filter(age.x <= repro.age) %>% #CHANGE FROM age.x == 0 (not sure why it was that?)
     distinct(birth.year) %>% 
     arrange(birth.year) %>%
     pull() 
@@ -93,7 +93,7 @@ filter.samples <- function(samples){
   #Name list elements to correspond to sample year
   names(PO.samps.list) <- paste0("PO.samples.year_", c(OffBirth.years))
   #names(HS.samps.list) <- paste0("HS.samples.year_", c(OffBirth.years))
-  
+
   #Not sure if this is needed, but create dataframes of samples for PO and HS comparisons. Think only need this for half-sibs
 #  PO.samps.df <- bind_rows(PO.samps.list) #Confirmed that it's the correct number of rows
   HS.samps.df <- NoFullSibs.df %>% 

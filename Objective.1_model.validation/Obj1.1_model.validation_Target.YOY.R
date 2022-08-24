@@ -166,7 +166,7 @@ model_settings.df <- tibble(script_name = script_name,
  (sim.samples.4 <- paste0(sample.sizes[4], "prop.sampled"))
 
 
- for(iter in 98:iterations) {
+ for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
    sim.start <- Sys.time()
    #rseed <- sample(1:1000000,1)

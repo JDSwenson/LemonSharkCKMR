@@ -22,8 +22,8 @@ source("./Objective.2_population.growth/functions/Obj2.functions.R") #Changed na
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
-Sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "19Jul2022" # 11Jul2022
+Sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "08Aug2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
@@ -40,17 +40,17 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "scenario_2.2.1_lambda.trial_target.YOY_stablePopSimLambda_change.est.yr.R" #Copy name of script here
+script_name <- "scenario_2.2.1_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda_change.est.yr.R" #Copy name of script here
 primary_goal <- "Test model performance with changing population size" #Why am I running this simulation? Provide details
 
 question1 <- "How does a base-case CKMR model perform with changing population size?"
 question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
 question3 <- "Does lambda become more important if we change the year of estimation?"
-purpose <- "scenario_2.2.1_lambda.trial_target.YOY_stablePopSimLambda_change.est.yr" #For naming output files
+purpose <- "scenario_2.2.1_lambda.trial_sample.all.juvenile.ages_stablePopSimLambda_change.est.yr" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- NA
 max.POPs <- NA
@@ -106,7 +106,7 @@ survival.prior.info <- "Uniform: 0.5 - 0.95"
 lambda.prior.mean <- NA
 lambda.prior.cv <- NA
 lambda.prior.sd <- NA
-lambda.prior.info <- "Uniform: 0.95 - 1.05"
+lambda.prior.info <- "Uniform: 0.80 - 1.20"
 
 #psi prior
 psi.prior.info <- NA
@@ -136,8 +136,8 @@ model_settings.df <- tibble(script_name = script_name,
                             thinning_rate = nt,
                             posterior_samples = ni,
                             burn_in = nb,
-                            survival.prior.info = survival.prior.mean,
-                            lambda.prior.info = lambda.prior.mean,
+                            survival.prior.info = survival.prior.info,
+                            lambda.prior.info = lambda.prior.info,
                             psi.prior = psi.prior.info,
                             abundance.prior = abundance.prior.info
 )
@@ -379,7 +379,7 @@ if(iter %% 100 == 0){
 #    
     saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_", estimation.year, "_est.yr"))
 
- }
+ } #End if statement
   
   sim.end <- Sys.time()
   

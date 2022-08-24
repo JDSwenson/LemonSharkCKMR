@@ -45,7 +45,7 @@ filter.samples <- function(samples){
 
     #The vector of years for which we need to split samples into potential parents and offspring i.e. offspring birth years.
   OffBirth.years <- NoFullSibs.df %>% 
-    dplyr::filter(age.x == 0) %>% 
+    dplyr::filter(age.x <= repro.age) %>% #CHANGE FROM age.x == 0 (not sure why it was that?)
     distinct(birth.year) %>% 
     arrange(birth.year) %>%
     pull() 

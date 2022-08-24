@@ -106,7 +106,7 @@ survival.prior.info <- "Uniform: 0.5 - 0.95"
 lambda.prior.mean <- NA
 lambda.prior.cv <- NA
 lambda.prior.sd <- NA
-lambda.prior.info <- "Uniform: 0.8 - 1.0"
+lambda.prior.info <- "Uniform: 0.8 - 1.2"
 
 #psi prior
 psi.prior.info <- NA
@@ -136,8 +136,8 @@ model_settings.df <- tibble(script_name = script_name,
                             thinning_rate = nt,
                             posterior_samples = ni,
                             burn_in = nb,
-                            survival.prior.info = survival.prior.mean,
-                            lambda.prior.info = lambda.prior.mean,
+                            survival.prior.info = survival.prior.info,
+                            lambda.prior.info = lambda.prior.info,
                             psi.prior = psi.prior.info,
                             abundance.prior = abundance.prior.info
 )

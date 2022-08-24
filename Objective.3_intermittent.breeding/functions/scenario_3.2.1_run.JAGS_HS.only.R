@@ -174,7 +174,7 @@ jags_dims = c(
 MCMC.settings <- paste0("thin", jags_dims[names(jags_dims) == "nt"], "_draw", jags_dims[names(jags_dims) == "ni"], "_burn", jags_dims[names(jags_dims) == "nb"])
 
 #---------------- STEP 6: RUN JAGS ---------------#
-post = jagsUI::jags.basic(data = jags_data, #If using postpack from AFS workshop
+post = jagsUI::jags(data = jags_data, #If using postpack from AFS workshop
                           
                           #post = rjags::jags(data = jags_data, #If wanting to use other diagnostics
                           model.file = jags_file,
@@ -202,11 +202,11 @@ if(s == 1){
 #---------------- STEP 7: CONVERGENCE DIAGNOSTICS -----------------#
 # view convergence diagnostic summaries for all monitored nodes
 # 2.5, 50, and 97.5 are quantiles in model.summary
-model.summary <- data.frame(t(post_summ(post, jags_params, Rhat = T, neff = T))) %>% 
+model.summary <- data.frame(t(post_summ(post$samples, jags_params, Rhat = T, neff = T))) %>% 
   rownames_to_column(var = "parameter")
 
 #Calculate HPD intervals - 95%
-post.95 <- combine.mcmc(post) %>% 
+post.95 <- combine.mcmc(post$samples) %>% 
   HPDinterval() %>% 
   data.frame() %>% 
   rownames_to_column(var = "parameter")
