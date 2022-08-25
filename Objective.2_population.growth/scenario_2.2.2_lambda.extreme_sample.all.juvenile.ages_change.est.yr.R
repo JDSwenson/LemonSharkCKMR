@@ -106,7 +106,7 @@ survival.prior.info <- "Uniform: 0.5 - 0.95"
 lambda.prior.mean <- NA
 lambda.prior.cv <- NA
 lambda.prior.sd <- NA
-lambda.prior.info <- "Uniform: 0.80 - 1.0"
+lambda.prior.info <- "Uniform: 0.80 - 1.20"
 
 #psi prior
 psi.prior.info <- NA

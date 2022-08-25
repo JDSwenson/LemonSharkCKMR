@@ -40,13 +40,13 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "scenario_3.1.2_SB_sample.all.juvenile.ages.R" #Copy name of script here
+script_name <- "scenario_3.1.3_SB_sample.all.juvenile.ages.R" #Copy name of script here
 primary_goal <- "Test model performance with biennial breeding" #Why am I running this simulation? Provide details
 
 question1 <- "How does a base-case CKMR model perform with biennial breeding?"
 question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
 question3 <- "How does the model perform with and without lambda?"
-purpose <- "scenario_3.1.2_SB_sample.all.juvenile.ages" #For naming output files
+purpose <- "scenario_3.1.3_SB_sample.all.juvenile.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -294,7 +294,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.3_intermittent.breeding/functions/scenario_3.1.2_run.JAGS_HS.only.R")
+    source("Objective.3_intermittent.breeding/functions/scenario_3.1.3_run.JAGS_HS.only.R")
 
       #Calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,

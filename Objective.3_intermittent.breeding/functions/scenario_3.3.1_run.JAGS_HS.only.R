@@ -128,7 +128,7 @@ dad.yrs <- nrow(dad_comps.all)
     Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
 #   survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
-    psi ~ dunif(0.75, 1.0) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
+    psi ~ dunif(0, 1.0) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
     survival ~ dunif(0.5, 0.95) #Informative prior

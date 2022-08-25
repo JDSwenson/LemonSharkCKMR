@@ -697,7 +697,8 @@ misassign.ages <- function(samples, sd.vec){
 
   #Misassign ages from function specified above
   samples.miss <- samples.int %>% mutate(age.miss = rev.VonBert(t0 = -2.302, Linf = 317.65, K = 0.057, Lt = indv.length)) %>% 
-    mutate(birth.year.miss = capture.year - age.miss)
+    mutate(age.miss = ifelse(age.miss < 0, 0, age.miss)) %>% 
+    mutate(birth.year.miss = capture.year - age.miss)  
     
     return(samples.miss)
 }

@@ -22,8 +22,8 @@ source("./Objective.3_intermittent.breeding/functions/Obj3.functions.R") #Change
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "biennial.breeding_NoNonConform" #Can be annual.breeding or biennial.breeding
-Sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "08Aug2022" # 11Jul2022
+Sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "28Jul2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
@@ -40,17 +40,17 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "scenario_3.1.2_SB_sample.all.juvenile.ages.R" #Copy name of script here
+script_name <- "scenario_3.1.3_SB_target.YOY.R" #Copy name of script here
 primary_goal <- "Test model performance with biennial breeding" #Why am I running this simulation? Provide details
 
 question1 <- "How does a base-case CKMR model perform with biennial breeding?"
 question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
 question3 <- "How does the model perform with and without lambda?"
-purpose <- "scenario_3.1.2_SB_sample.all.juvenile.ages" #For naming output files
+purpose <- "scenario_3.1.3_SB_target.YOY" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- NA
 max.POPs <- NA
@@ -152,7 +152,6 @@ model_settings.df <- tibble(script_name = script_name,
 (iterations <- max(samples.df$iteration))
 (sample.sizes <- samples.df %>% 
     distinct(sample.prop) %>% 
-    #dplyr::filter(sample.prop == 1.5) %>% 
     pull(sample.prop)) #Subset for sample size of 1.5%
 
 
@@ -294,7 +293,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.3_intermittent.breeding/functions/scenario_3.1.2_run.JAGS_HS.only.R")
+    source("Objective.3_intermittent.breeding/functions/scenario_3.1.3_run.JAGS_HS.only.R")
 
       #Calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,

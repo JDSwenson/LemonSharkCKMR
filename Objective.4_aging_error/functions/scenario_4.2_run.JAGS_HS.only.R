@@ -6,7 +6,6 @@ ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
 #Mom
 #HS - even years
 mom_comps.HS_even <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "even")
-
 mom.mort.yrs_HS.even <- mom_comps.HS_even$mort.yrs
 mom.popGrowth.yrs_HS.even <- mom_comps.HS_even$pop.growth.yrs
 mom.n.comps_HS.even <- mom_comps.HS_even$all
@@ -17,7 +16,6 @@ mom.yrs_HS.even <- nrow(mom_comps.HS_even)
 #Mom
 #HS - odd years
 mom_comps.HS_odd <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "odd")
-
 mom.mort.yrs_HS.odd <- mom_comps.HS_odd$mort.yrs
 mom.popGrowth.yrs_HS.odd <- mom_comps.HS_odd$pop.growth.yrs
 mom.n.comps_HS.odd <- mom_comps.HS_odd$all
@@ -107,7 +105,8 @@ dad.yrs <- nrow(dad_comps.all)
         survival = runif(1, min=0.5, max=0.95),
         Nf = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
-        psi = runif(1, min=0.5, max=0.95)
+        lambda = 1,
+        psi = runif(1, min=0.50, max=1)
         
       )
     }
@@ -127,11 +126,12 @@ dad.yrs <- nrow(dad_comps.all)
     sd ~ dunif(1, 10000)
     Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
     Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
-#    survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
-    psi ~ dunif(0, 1.0) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
+    survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
+    lambda ~ dunif(0.95, 1.05)
+    psi ~ dunif(0, 1) #Percent of animals breeding bi-ennially; CHANGED from dunif(0,1)
     
     #PRIORS - informative
-    survival ~ dunif(0.5, 0.95) #Informative prior
+#    survival ~ dbeta(surv.alpha, surv.beta) #Informative prior
 #    surv ~ dnorm(adult.survival, 1/(survival.prior.sd^2));T(0.5, 0.99) #Informative prior
     
     
@@ -139,19 +139,19 @@ dad.yrs <- nrow(dad_comps.all)
     #Moms
     #HS - even years
     for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-      mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+      mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
     }
     
     #Moms
     #HS - odd years
     for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-      mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+      mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
     }
     
     #Dads
     #HS + PO
     for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-      dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/Nm, dad.n.comps[f]) # Sex-specific CKMR model equation
+      dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
     }
   }
   
