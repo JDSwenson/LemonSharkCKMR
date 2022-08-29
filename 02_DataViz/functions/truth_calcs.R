@@ -5,18 +5,20 @@ PopSim.lambda.1 <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.lambda.variable <- "lambda.variable"
 PopSim.lambda.extreme <- "lambda.extreme"
 PopSim.annual.breeding <- "annual.breeding" #Can be annual.breeding or biennial.breeding
-PopSim.biennial.breeding <- "biennial.breeding"
+PopSim.biennial.breeding <- "biennial.breeding_NoNonConform"
 Sampling.scheme.YOY <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 Sampling.scheme.juvs <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 Sampling.scheme.all <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim.1 <- "19Jul2022" #Stable or minor changes in lambda; both annual breeding and skipped-breeding w/ 5% non-conformists
-date.of.PopSim.2 <- "24Jul2022" #Extreme population decline
-date.of.PopSim.3 <- "28Jul2022" #Skipped-breeding with no non-conformists
+lambda_date.1 <- "19Jul2022" #Annual breeding; all ages and target YOY, both lambda.1 and lambda.variable
+lambda_date.2 <- "28Jul2022" #Biennial breeding w/o nonconformists; all ages and target YOY
+lambda_date.3 <- "08Aug2022" #Annual and biennial breeding w/o nonconformists: juvenile ages - lambda.1, lambda.variable, lambda.extreme
+lambda_date.4 <- "24Jul2022" #Annual breeding; all ages and target YOY, lambda.extreme
+
 inSeeds <- "Seeds2022.04.15"
 
 #---------------------------Objective 1 truth calculations----------------------#
 #Confirmed that the population size is the same for all sampling schemes
-obj1.popsize <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY))
+obj1.popsize <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1,"/pop.size_", lambda_date.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY))
 
 #Confirmed that the comparisons are the same for scenarios 1.1 and 1.2
 #Need to calculate mean truth over years that comparisons span
@@ -96,43 +98,34 @@ for(i in 1:nrow(YOY.ref)){
 #obj2.2.1 is variable lambda w/ lambda parameter in the model and estimating in year 85; combine with obj2.2.2 for estimates in year 80 and 90 as well.
 
 #Confirmed that the population size is the same for all sampling schemes
-obj2.popsize.neutral <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+obj2.popsize.neutral <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1, "/pop.size_", lambda_date.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
-  dplyr::mutate(population.growth = "neutral")
+  dplyr::mutate(population.growth = "stable")
 
-obj2.popsize.variable <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.variable, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+obj2.popsize.variable <- readRDS(file = paste0(PopSim.location, PopSim.lambda.variable, "/pop.size_", lambda_date.1, "_", inSeeds, "_", PopSim.lambda.variable, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = ifelse(iteration <= 500, "slight negative", "slight positive"))
 
-obj2.popsize.extreme <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.2, "_", inSeeds, "_", PopSim.lambda.extreme, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+obj2.popsize.extreme <- readRDS(file = paste0(PopSim.location, PopSim.lambda.extreme, "/pop.size_", lambda_date.4, "_", inSeeds, "_", PopSim.lambda.extreme, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = "extreme negative")
 
 
-obj2.truth.df <- rbind(obj2.popsize.variable, obj2.popsize.extreme) %>% 
+obj2.truth.df <- rbind(obj2.popsize.neutral, obj2.popsize.variable, obj2.popsize.extreme) %>% 
   dplyr::rename(est.yr = year) %>% 
   dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, population.growth)
 
 
 #---------------------------Objective 3 truth calculations----------------------#
 #Confirmed that the population size is the same for all sampling schemes
-#With 5% non-conformists
-obj3.popsize.df.1 <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_", Sampling.scheme.YOY)) %>% 
+#No non-conformists
+obj3.popsize.df <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1, "/pop.size_", lambda_date.2, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = "neutral") 
 
 #Add this when I revist calculating psi with Liz
 #%>% mutate(psi.truth = (-(Num.mothers/Female.adult.pop - 0.5)*2) - 1)
 
-obj3.truth.df.1 <- obj3.popsize.df.1 %>%
-  dplyr::rename(est.yr = year) %>% 
-  dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, Num.mothers, Num.fathers, population.growth)
-
-#With 0% non-conformists
-obj3.popsize.df.2 <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim.3, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_NoNonConform_", Sampling.scheme.YOY)) %>% 
-  dplyr::filter(year %in% c(80, 85, 90)) %>% 
-  dplyr::mutate(population.growth = "neutral")
-
-obj3.truth.df.2 <- obj3.popsize.df.2 %>%
+obj3.truth.df <- obj3.popsize.df %>%
   dplyr::rename(est.yr = year) %>% 
   dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, Num.mothers, Num.fathers, population.growth)
