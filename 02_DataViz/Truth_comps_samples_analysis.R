@@ -47,7 +47,8 @@ scenario_2.2.2_mom.comps.all %>% dplyr::select(ref.year, all, yes, mort.yrs, typ
 
 
 #See how frequently lambda is estimated to be negative
-obj2_results %>% dplyr::filter(lambda.prior %in% c("diffuse", "informed"),
+obj2_results %>% dplyr::filter(population.growth == "slight negative" | population.growth == "slight positive") %>% 
+  dplyr::filter(lambda.prior %in% c("diffuse"),
                                parameter == "lambda") %>% 
   group_by(lambda.prior, sampling.scheme) %>% 
-  dplyr::summarize(percent.correct = sum(mean < 1)/n())
+  dplyr::summarize(percent.correct = sum(mean < 1)/n() * 100)

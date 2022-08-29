@@ -11,40 +11,62 @@ library(ggridges)
 #rm(list=ls())
 #today <- format(Sys.Date(), "%d%b%Y")
 
+#----------------Set input file locations - same as truth_calcs script ------------------------------
+#Population simulation files
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
+PopSim.lambda.1 <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.lambda.variable <- "lambda.variable"
+PopSim.lambda.extreme <- "lambda.extreme"
+PopSim.annual.breeding <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+PopSim.biennial.breeding <- "biennial.breeding_NoNonConform"
+Sampling.scheme.YOY <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+Sampling.scheme.juvs <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+Sampling.scheme.all <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+lambda_date.1 <- "19Jul2022" #Annual breeding; all ages and target YOY, both lambda.1 and lambda.variable
+lambda_date.2 <- "28Jul2022" #Biennial breeding w/o nonconformists; all ages and target YOY
+lambda_date.3 <- "08Aug2022" #Annual and biennial breeding w/o nonconformists: juvenile ages - lambda.1, lambda.variable, lambda.extreme
+lambda_date.4 <- "24Jul2022" #Annual breeding; all ages and target YOY, lambda.extreme
+
+inSeeds <- "Seeds2022.04.15"
+
+date.of.comps_2.2.2 <- "16Aug2022"
+
 #----------------------Objective 2----------------------------#
-#Confirmed that the comparisons are the same for scenarios 1.1 and 1.2
-#Need to calculate mean truth over years that comparisons span
+#Confirmed that pairwise comparison matrices are the same with scenario 2.2.2 and 2.3.2
 #YOY
-scenario_2.2.2_mom.comps.YOY <- readRDS(file = paste0(objective_2_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_2.2Y, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_target.YOY_change.est.yr")) %>% 
+mom.comps_lambda.extreme_YOY <- readRDS(file = paste0(objective_2_results_location, "scenario_2.2.2/", mom.comps.prefix, "_", date.of.comps_2.2.2, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_target.YOY_change.est.yr")) %>% 
   dplyr::select(-BI)
 
-scenario_2.2.2_dad.comps.YOY <- readRDS(file = paste0(objective_2_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_2.2Y, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_target.YOY_change.est.yr"))
 
-scenario_2.2.2_all.comps.YOY <- rbind(scenario_2.2.2_mom.comps.YOY, scenario_2.2.2_dad.comps.YOY) %>% 
+dad.comps_lambda.extreme_YOY <- readRDS(file = paste0(objective_2_results_location, "scenario_2.2.2/", dad.comps.prefix, "_", date.of.comps_2.2.2, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_target.YOY_change.est.yr"))
+
+all.comps_lambda.extreme_YOY <- rbind(mom.comps_lambda.extreme_YOY, dad.comps_lambda.extreme_YOY) %>% 
   mutate(sampling.scheme = "target YOY") %>% 
   dplyr::filter(type == "HS")
 
 #Juveniles
-scenario_2.2.2_mom.comps.juvs <- readRDS(file = paste0(objective_2_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_2.2J, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_sample.all.juvenile.ages_change.est.yr")) %>% 
+mom.comps_lambda.extreme_juvs <- readRDS(file = paste0(objective_2_results_location, "scenario_2.2.2/", mom.comps.prefix, "_", date.of.comps_2.2.2, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_sample.all.juvenile.ages_change.est.yr")) %>% 
   dplyr::select(-BI)
 
-scenario_2.2.2_dad.comps.juvs <- readRDS(file = paste0(objective_2_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_2.2J, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_sample.all.juvenile.ages_change.est.yr"))
+dad.comps_lambda.extreme_juvs <- readRDS(file = paste0(objective_2_results_location, "scenario_2.2.2/", dad.comps.prefix, "_", date.of.comps_2.2.2, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_sample.all.juvenile.ages_change.est.yr"))
 
-scenario_2.2.2_all.comps.juvs <- rbind(scenario_2.2.2_mom.comps.juvs, scenario_2.2.2_dad.comps.juvs) %>%
-  mutate(sampling.scheme = "sample all juvenile ages")
-  
+all.comps_lambda.extreme_juvs <- rbind(mom.comps_lambda.extreme_juvs, dad.comps_lambda.extreme_juvs) %>% 
+  mutate(sampling.scheme = "sample all juvenile ages") %>% 
+  dplyr::filter(type == "HS")
+
 
 #All age classes
-scenario_2.2.2_mom.comps.all <- readRDS(file = paste0(objective_2_results_location, mom.comps.prefix, "_", date.of.simulation.scenario_2.2A, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_sample.ALL.ages_change.est.yr")) %>% 
+mom.comps_lambda.extreme_all.ages <- readRDS(file = paste0(objective_2_results_location, "scenario_2.2.2/", mom.comps.prefix, "_", date.of.comps_2.2.2, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_sample.ALL.ages_change.est.yr")) %>% 
   dplyr::select(-BI)
 
-scenario_2.2.2_dad.comps.all <- readRDS(file = paste0(objective_2_results_location, dad.comps.prefix, "_", date.of.simulation.scenario_2.2A, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_sample.ALL.ages_change.est.yr"))
+dad.comps_lambda.extreme_all.ages <- readRDS(file = paste0(objective_2_results_location, "scenario_2.2.2/", dad.comps.prefix, "_", date.of.comps_2.2.2, "_", inSeeds, "_scenario_2.2.2_lambda.extreme_sample.ALL.ages_change.est.yr"))
 
-scenario_2.2.2_all.comps.all <- rbind(scenario_2.2.2_mom.comps.all, scenario_2.2.2_dad.comps.all) %>% 
+all.comps_lambda.extreme_all.ages <- rbind(mom.comps_lambda.extreme_all.ages, dad.comps_lambda.extreme_all.ages) %>% 
   mutate(sampling.scheme = "sample all age classes")
 
+
 #All
-scenario_2.2.2_comps.all_temp <- bind_rows(scenario_2.2.2_all.comps.YOY, scenario_2.2.2_all.comps.juvs, scenario_2.2.2_all.comps.all) %>% 
+lambda.extreme_comps.all_temp <- bind_rows(all.comps_lambda.extreme_YOY, all.comps_lambda.extreme_juvs, all.comps_lambda.extreme_all.ages) %>% 
   mutate(population.growth = factor("extreme negative"),
          prop.sampled = factor(sample.prop.all),
          sampling.scheme = factor(sampling.scheme))
@@ -53,9 +75,9 @@ obj2_results4Join <- obj2_results %>% dplyr::filter(population.growth == "extrem
   dplyr::select(parameter, sampling.scheme, population.growth, iteration, est.yr, est.yr.lab, prop.sampled, relative_bias, in_interval)
 
 #Each estimation year has the same seed, so the comparisons should all be the same
-scenario_2.2.2_comps.all <- obj2_results4Join %>% inner_join(scenario_2.2.2_comps.all_temp, by = c("sampling.scheme", "population.growth", "iteration", "est.yr", "prop.sampled")) %>% 
-  mutate(ref.yrs = abs(ref.year - est.yr))
+lambda.extreme_comps.all <- obj2_results4Join %>% inner_join(lambda.extreme_comps.all_temp, by = c("sampling.scheme", "population.growth", "iteration", "est.yr", "prop.sampled")) %>% 
+  mutate(ref.yrs = ref.year - est.yr) #CHANGED FROM abs(ref.year - est.yr)
 
 ###Summarize and make dataframes for plotting
-scenario_2.2.2_comps4viz <- scenario_2.2.2_comps.all %>% dplyr::filter(yes != 0) %>% 
+lambda.extreme_comps4viz <- lambda.extreme_comps.all %>% dplyr::filter(yes != 0) %>% 
   uncount(yes)
