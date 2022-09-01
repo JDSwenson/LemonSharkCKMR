@@ -572,7 +572,7 @@ scenario_3.1.3_results <- map_dfr(scenario_3.1.3_files, read_csv) %>%
 
 scenario_3.1_results.all <- scenario_3.1.1_results %>% bind_rows(scenario_3.1.2_results, scenario_3.1.3_results) %>% 
   mutate(model = "base") %>% 
-  inner_join(obj3.truth.df.1, by = c("iteration", "seed", "est.yr", "population.growth")) %>% 
+  inner_join(obj3.truth.df, by = c("iteration", "seed", "est.yr", "population.growth")) %>% 
   mutate(all.truth = ifelse(parameter == "Nm", Male.adult.pop,
                             ifelse(parameter == "Nf", Female.adult.pop, all.truth))) %>% 
   #dplyr::filter(year == 85) %>% 
@@ -854,7 +854,7 @@ obj3_results %>% group_by(psi.prior) %>%
   summarize(number = n())
 
 
-#-------------Objective 3 --------------------#
+#-------------Objective 4 --------------------#
 #Check that all sampling schemes and population growth scenarios are represented
 obj4_results %>% group_by(sampling.scheme) %>% 
   summarize(number = n())
@@ -1258,6 +1258,213 @@ obj4_results %>% dplyr::filter(prop.sampled == 1.5, purpose %in% purpose_4.3_vec
 
 ```
 
+
+```{r age misassignment analysis}
+#Read in sample files from age misassignment simulations
+#Have to read in separately bc didn't save a column to distinguish each scenario from the others in the sample dataframes
+#Sample all ages
+s4.1_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.1_ageMiss_sample.ALL.ages") %>% 
+  mutate(lambda.prior = "diffuse")
+s4.2_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.2_ageMiss_sample.ALL.ages") %>% 
+  mutate(lambda.prior = "tight")
+s4.3_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.3_ageMiss_sample.ALL.ages") %>% 
+  mutate(lambda.prior = "none")
+
+#Sample all juveniles
+s4.1_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.1_ageMiss_sample.all.juvenile.ages") %>% 
+  dplyr::filter(age.x < 12) %>% 
+  mutate(lambda.prior = "diffuse")
+
+s4.2_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.2_ageMiss_sample.all.juvenile.ages") %>% 
+  dplyr::filter(age.x < 12) %>% 
+  mutate(lambda.prior = "tight")
+
+s4.3_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.3_ageMiss_sample.all.juvenile.ages") %>% 
+  dplyr::filter(age.x < 12) %>% 
+  mutate(lambda.prior = "none")
+
+#Target YOY
+s4.1_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.1_ageMiss_target.YOY") %>% 
+  dplyr::filter(age.x == 0) %>% 
+  mutate(lambda.prior = "diffuse")
+
+s4.2_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.2_ageMiss_target.YOY") %>% 
+  dplyr::filter(age.x == 0) %>% 
+  mutate(lambda.prior = "tight")
+
+s4.3_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/samples/samples.missassigned_24Aug2022_Seeds2022.04.15_scenario_4.3_ageMiss_target.YOY") %>% 
+  dplyr::filter(age.x == 0) %>% 
+  mutate(lambda.prior = "none")
+
+scenario_4.samps <- bind_rows(s4.1_target.YOY, s4.2_target.YOY, s4.3_target.YOY,
+                              s4.1_all.juvs, s4.2_all.juvs, s4.3_all.juvs,
+                              s4.1_all.ages, s4.2_all.ages, s4.3_all.ages) %>% 
+  mutate(yrs.off = age.miss - age.x) %>% 
+  mutate(age = factor(age.x))
+
+
+#-------------------Density plots of age misassignment-------------------------#
+#Graph 1: density ridgeline plot
+scenario_4.samps %>% dplyr::filter(lambda.prior == "none",
+                                   age.x < 25) %>% #There aren't many individuals older than 25
+  ggplot(aes(x = abs(yrs.off),
+             y = age, 
+             fill = sampling.scheme)) + 
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Years off", y="Age") +
+ # theme_ridges() + 
+  facet_wrap(~sampling.scheme) + 
+#  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
+#  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = plot.colors.fig3) +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05)))
+
+#Graph 2: real age on x axis, misassigned age on y axis
+scenario_4.samps %>% dplyr::filter(lambda.prior == "none") %>% #There aren't many individuals older than 25
+  ggplot(aes(x = yrs.off,
+             y = age.x,
+             fill = sampling.scheme)) + 
+  geom_jitter(alpha = 0.6) + 
+  labs(x="Years off", y="Age") +
+ # theme_ridges() + 
+  facet_wrap(~sampling.scheme) + 
+#  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
+#  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = plot.colors.fig3)
+
+
+
+#Lambda in model w/ wide prior
+#Correctly assigned ages: scenario_3.3.2
+scenario_4.1_ages.corr <- scenario_3.3.2_results %>% 
+  mutate(scenario = "ages correctly assigned")
+
+s.temp <- scenario_4.1_ages.corr %>% group_by(sampling.scheme) %>% 
+  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   median.bias = median(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+#Misassigned ages: scenario_4.1
+scenario_4.1_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "diffuse") %>% 
+  mutate(scenario = "ages misassigned")
+
+scenario_4.1_summ <- scenario_4.1_ages.miss %>% group_by(sampling.scheme) %>% 
+  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   median.bias = median(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme) %>% 
+  bind_rows(s.temp)
+
+scenario_4.1_summ %>% arrange(parameter, sampling.scheme, scenario) %>% 
+  View()
+
+#Lambda in model w/ tight prior
+#Correctly assigned ages: scenario_3.3.4
+scenario_4.2_ages.corr <- scenario_3.3.4_results %>% 
+  mutate(scenario = "ages correctly assigned")
+
+s.temp <- scenario_4.2_ages.corr %>% group_by(sampling.scheme) %>% 
+  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   median.bias = median(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+#Misassigned ages: scenario_4.2
+scenario_4.2_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "tight") %>% 
+  mutate(scenario = "ages misassigned")
+
+scenario_4.2_summ <- scenario_4.2_ages.miss %>% group_by(sampling.scheme) %>% 
+  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   median.bias = median(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme) %>% 
+  bind_rows(s.temp)
+
+scenario_4.2_summ %>% arrange(parameter, sampling.scheme, scenario) %>% 
+  View()
+
+
+#Lambda NOT in model
+#Correctly assigned ages: scenario_3.3.1
+scenario_4.3_ages.corr <- scenario_3.3.1_results %>% 
+  mutate(scenario = "ages correctly assigned")
+
+s.temp <- scenario_4.3_ages.corr %>% group_by(sampling.scheme) %>% 
+  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   median.bias = median(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+#Misassigned ages: scenario_4.3
+scenario_4.3_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "none") %>% 
+    mutate(scenario = "ages misassigned")
+
+scenario_4.3_summ <- scenario_4.3_ages.miss %>% group_by(sampling.scheme) %>% 
+  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   median.bias = median(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme) %>% 
+  bind_rows(s.temp)
+
+scenario_4.3_summ %>% arrange(parameter, sampling.scheme, scenario) %>% 
+  View()
+
+#Summary of results
+scenario_4.all_summ <- bind_rows(scenario_4.1_summ, scenario_4.3_summ, scenario_4.3_summ)
+
+#Prep dataframe for plotting
+scenario_4.all <- scenario_4.1_ages.corr %>% bind_rows(scenario_4.1_ages.miss, scenario_4.2_ages.corr, scenario_4.2_ages.miss, scenario_4.3_ages.corr, scenario_4.3_ages.miss) %>% 
+  mutate(lambda.prior_lab = ifelse(lambda.prior == "none", "No lambda",
+                                   ifelse(lambda.prior == "tight", "Tight prior on lambda", "Diffuse prior on lambda"))) %>% 
+  mutate(lambda.prior_lab = factor(lambda.prior_lab, levels = c("No lambda", "Tight prior on lambda", "Diffuse prior on lambda")))
+
+#--------------------------Visualization------------------------------#
+plot.colors.fig3 <- c("aquamarine4", "indianred1", "lightyellow2")
+scales::show_col(plot.colors.fig3)
+
+#Abundance
+scenario_4.all %>% dplyr::filter(parameter %in% c("Nf", "Nm")) %>% 
+ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="Relative bias") +
+  scale_fill_manual(values = plot.colors.fig3) +
+#  ggtitle("B)") +
+#  ylim(-100, 100) +
+  facet_grid(rows = vars(lambda.prior_lab), cols = vars(scenario), scales = "free") +
+  #facet_wrap(~prop.sampled.lab) +
+  theme(legend.title = element_blank())
+
+#Lambda and phi
+scenario_4.all %>% dplyr::filter(parameter %in% c("lambda", "survival")) %>% 
+ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="Relative bias") +
+  scale_fill_manual(values = plot.colors.fig3) +
+#  ggtitle("B)") +
+#  ylim(-100, 100) +
+  facet_grid(rows = vars(lambda.prior_lab), cols = vars(scenario), scales = "free") +
+  #facet_wrap(~prop.sampled.lab) +
+  theme(legend.title = element_blank())
+
+```
 
 
 ```{r Supplementary calculations}
