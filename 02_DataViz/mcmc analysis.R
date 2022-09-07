@@ -7,12 +7,12 @@ library(postpack)
 rm(list=ls())
 
 #############################################################################
-###############Load posterior samples - Objective 3##########################
+###############Load posterior samples - Objective 2##########################
 #############################################################################
 #Objective 3.1
-(scenario_3.1.1_post.all <- list.files(path = objective_3_MCMC_location,
+(scenario_3.1.1_post.all <- list.files(path = objective_2_MCMC_location,
                                        recursive = FALSE,
-                                       pattern = "*1.5prop.*scenario_3.1.1_*",
+                                       pattern = "**",
                                        full.names = TRUE))
 
 s3.1.1A <- readRDS(scenario_3.1.1_post.all[1])

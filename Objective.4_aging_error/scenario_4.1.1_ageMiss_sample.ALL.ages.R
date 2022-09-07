@@ -41,14 +41,14 @@ dad.comps.prefix <- "comparisons/dad.comps"
 samples.prefix <- "samples/samples.missassigned"
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "scenario_4.3_ageMiss_sample.ALL.ages.R" #Copy name of script here
+script_name <- "scenario_4.1.1_ageMiss_sample.ALL.ages.R" #Copy name of script here
 primary_goal <- "Test model performance when ages are misassigned" #Why am I running this simulation? Provide details
 
 question1 <- "How does our final CKMR model perform when ages are wrongly assigned"
 question2 <- ""
 question3 <- ""
 
-purpose <- "scenario_4.3_ageMiss_sample.ALL.ages" #For naming output files
+purpose <- "scenario_4.1.1_ageMiss_sample.ALL.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -59,7 +59,7 @@ max.POPs <- NA
 HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nf", "Nm", "survival", "psi")
+jags_params = c("Nf", "Nm", "survival", "psi", "lambda")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -77,6 +77,7 @@ adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+age.cv <- 0.05 #age misassignment cv
 
 #---------------------- Read in sampling and other dataframes --------------------------
 samples.df <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
@@ -188,11 +189,9 @@ model_settings.df <- tibble(script_name = script_name,
         first.capture <- noDups.list[[1]]
         later.capture <- noDups.list[[2]]
 
-        #Need a vector of length 0:max.age with the sd to assign to each age-length assignment
-        sd_length.at.age <- c(3, 9, 9, rep(10, times = 48)) #Try 10 so we don't misassign across too many ages
         
         set.seed(rseeds[iter])
-        samples.miss <- misassign.ages(later.capture, sd_length.at.age)
+        samples.miss <- misassign.ages(later.capture)
         
  
     #Remove full sibs
@@ -302,7 +301,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-    source("Objective.4_aging_error/functions/scenario_4.3_run.JAGS_HS.only.R")
+    source("Objective.4_aging_error/functions/scenario_4.1_run.JAGS_HS.only.R")
 
       #Calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
@@ -336,10 +335,10 @@ model_settings.df <- tibble(script_name = script_name,
     
       results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
         left_join(samples.iter, by = c("iteration", "seed")) %>% 
-        mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs),
-               HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS),
-               POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs),
-               POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO),
+        mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs, mom.HSPs + dad.HSPs),
+               HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS, mom.Exp.HS + dad.Exp.HS),
+               POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs, mom.POPs + dad.POPs),
+               POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO, mom.Exp.PO + dad.Exp.PO),
                purpose = purpose,
                est.yr = estimation.year)
     

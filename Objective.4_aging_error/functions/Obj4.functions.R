@@ -669,7 +669,7 @@ estBetaParams <- function(mu, var) {
 }
 
 
-misassign.ages <- function(samples, sd.vec){
+misassign.ages <- function(samples){
 
   #------------Use VonBertalanffy growth function to assign lengths to individuals from ages--------------
   #Set up growth function
@@ -679,6 +679,9 @@ misassign.ages <- function(samples, sd.vec){
   
   #Use parameters from Brown and Gruber 1988
   mean_length.at.age <- vonBert(t = ages, Linf = 317.65, K = 0.057, t0 = -2.302)
+  mean_length.subset <- mean_length.at.age[4:length(mean_length.at.age)]
+  
+  sd.vec <- c(3, 10, 9, age.cv*mean_length.subset) #Try 10 so we don't misassign across too many ages
   
   length.at.age_df <- tibble(mean.length = mean_length.at.age,
                              sd.length = sd.vec) %>% #Name as mean.1 and mean.2 to allow for join later

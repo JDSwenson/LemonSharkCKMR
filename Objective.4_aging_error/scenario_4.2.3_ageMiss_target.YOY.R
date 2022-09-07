@@ -23,7 +23,7 @@ source("./Objective.4_aging_error/functions/Obj4.functions.R") #Changed name of 
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "biennial.breeding_NoNonConform" #Can be annual.breeding or biennial.breeding
-Sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+Sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 date.of.PopSim <- "28Jul2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
@@ -42,25 +42,25 @@ samples.prefix <- "samples/samples.missassigned"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "scenario_4.1_ageMiss_sample.all.juvenile.ages.R" #Copy name of script here
+script_name <- "scenario_4.2.3_ageMiss_target.YOY.R" #Copy name of script here
 primary_goal <- "Test model performance when ages are misassigned" #Why am I running this simulation? Provide details
 
 question1 <- "How does our final CKMR model perform when ages are wrongly assigned"
 question2 <- ""
 question3 <- ""
 
-purpose <- "scenario_4.1_ageMiss_sample.all.juvenile.ages" #For naming output files
+purpose <- "scenario_4.2.3_ageMiss_target.YOY" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- NA
 max.POPs <- NA
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nf", "Nm", "survival", "psi", "lambda")
+jags_params = c("Nf", "Nm", "survival", "psi")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -78,6 +78,7 @@ adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+age.cv <- 0.10
 
 #---------------------- Read in sampling and other dataframes --------------------------
 samples.df <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
@@ -189,11 +190,9 @@ model_settings.df <- tibble(script_name = script_name,
         first.capture <- noDups.list[[1]]
         later.capture <- noDups.list[[2]]
     
-        #Need a vector of length 0:max.age with the sd to assign to each age-length assignment
-        sd_length.at.age <- c(3, 9, 9, rep(10, times = 48)) #Try 10 so we don't misassign across too many ages
-        
+
         set.seed(rseeds[iter])
-        samples.miss <- misassign.ages(later.capture, sd_length.at.age)
+        samples.miss <- misassign.ages(later.capture)
         
         #Remove full sibs
         filter1.out <- filter.samples(samples.miss) #Filter for full sibs
@@ -302,7 +301,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-      source("Objective.4_aging_error/functions/scenario_4.1_run.JAGS_HS.only.R")
+      source("Objective.4_aging_error/functions/scenario_4.3_run.JAGS_HS.only.R")
       
 
       #Calculate truth
@@ -337,8 +336,8 @@ model_settings.df <- tibble(script_name = script_name,
     
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
       left_join(samples.iter, by = c("iteration", "seed")) %>% 
-      mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs, mom.HSPs + dad.HSPs),
-             HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS, mom.Exp.HS + dad.Exp.HS),
+      mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs),
+             HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS),
              purpose = purpose,
              est.yr = estimation.year)
     

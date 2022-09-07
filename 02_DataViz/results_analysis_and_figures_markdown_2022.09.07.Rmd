@@ -969,47 +969,48 @@ plot.colors.fig2ab <- c("lightslateblue", "lightblue1", "indianred3")
 scales::show_col(plot.colors.fig2a)
 
 #-------------------Objective 2 Density plots-------------------------#
-(fig2.a <- obj2_results %>% dplyr::filter(parameter %in% c("Nf"),
-                                         population.growth != "extreme negative") %>% 
+(fig2.a <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
+    mutate(population.growth = factor(population.growth, levels = c("stable", "slight positive", "slight negative", "extreme negative"))) %>% 
   ggplot(aes(x = relative_bias,
              y = est.yr.lab, 
              fill = lambda.prior)) + 
   geom_density_ridges(alpha = 0.6) + 
-  labs(x="Relative bias", y="Estimation year", title="A) Slight annual population change (+/- 1% per year)") +
+  labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
   #facet_wrap(~sampling.scheme) + 
-  facet_wrap(~sampling.scheme, scales = "free_x") +
-  theme(strip.text.y = element_blank()) + 
-  #xlim(-100, 200) +
+  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme)) +
+  #theme(strip.text.y = element_blank()) + 
+  xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
   scale_fill_manual(values = plot.colors.fig2ab, 
                     name = "Lambda prior") +
-  scale_y_discrete(expand = expansion(mult = c(0.01, .05))))
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+    theme_bw())
 
 
 #plot.colors.fig2b <- c("lightblue1", "indianred3")
 #scales::show_col(plot.colors.fig2b)
 
-(fig2.b <- obj2_results %>% #dplyr::mutate(lambda.prior2 = ifelse(lambda.prior == "tight", "misspecified", as.character(lambda.prior))) %>%
-  dplyr::filter(parameter %in% c("Nf"),
-                population.growth == "extreme negative") %>% 
-  ggplot(aes(x = relative_bias,
-             y = est.yr.lab, 
-             fill = lambda.prior)) + 
-  geom_density_ridges(alpha = 0.6) + 
-  labs(x="Relative bias", y="Estimation year", title="B) Major population decline (-5-10% per year)") +
-#  theme_ridges() + 
-  #facet_wrap(~sampling.scheme) + 
-  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
-  facet_wrap(~sampling.scheme, scales = "free_x") +
-  # theme(legend.title = element_blank(),
-  #       axis.text.y = element_blank(),
-  #       axis.title.y = element_blank(),
-  #       axis.ticks.y = element_blank()) +
-#  xlim(-100, 200) +
-  scale_fill_manual(values = plot.colors.fig2ab,
-                    name = "Lambda prior") +
-  scale_y_discrete(expand = expansion(mult = c(0.01, .05))))
+# (fig2.b <- obj2_results %>% #dplyr::mutate(lambda.prior2 = ifelse(lambda.prior == "tight", "misspecified", as.character(lambda.prior))) %>%
+#   dplyr::filter(parameter %in% c("Nf"),
+#                 population.growth == "extreme negative") %>% 
+#   ggplot(aes(x = relative_bias,
+#              y = est.yr.lab, 
+#              fill = lambda.prior)) + 
+#   geom_density_ridges(alpha = 0.6) + 
+#   labs(x="Relative bias", y="Estimation year", title="B) Major population decline (-5-10% per year)") +
+# #  theme_ridges() + 
+#   #facet_wrap(~sampling.scheme) + 
+#   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+#   facet_wrap(~sampling.scheme, scales = "free_x") +
+#   # theme(legend.title = element_blank(),
+#   #       axis.text.y = element_blank(),
+#   #       axis.title.y = element_blank(),
+#   #       axis.ticks.y = element_blank()) +
+# #  xlim(-100, 200) +
+#   scale_fill_manual(values = plot.colors.fig2ab,
+#                     name = "Lambda prior") +
+#   scale_y_discrete(expand = expansion(mult = c(0.01, .05))))
 
 
 #Plot comparisons
@@ -1033,26 +1034,27 @@ source(file = "~/R/working_directory/LemonSharkCKMR/02_DataViz/functions/Truth_c
 #   scale_fill_manual(values = plot.colors.fig2a)
 
 #Very pretty histogram but not sure what to do with it ...
-(fig2.c <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
+(fig2.b <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
   geom_histogram(binwidth = 1,
                  alpha = 0.6,
                  position = "identity",
                  lwd = 0.75,
                  linetype = 1,
                  colour = "black") +
-  labs(x="Reference year gap", title="C)") +
+  labs(x="Reference year gap") +
   theme(legend.position = "none") +
   facet_grid(rows = vars(est.yr.lab), cols = vars(sampling.scheme)) +
 #  facet_wrap(~est.yr.lab) +
   scale_fill_manual(values = plot.colors.fig1,
-                    name = "Sampling scheme"))
+                    name = "Sampling scheme")) +
+  theme_bw()
   #geom_density(alpha = 0.6) +
   
 #Show model performance when there is an informed vs diffuse prior on lambda and "extreme" population decline
-plot.colors.fig2d <- c("red4", "dodgerblue4")
+plot.colors.fig2c <- c("red4", "dodgerblue4")
 scales::show_col(plot.colors.fig2d)
 
-(fig2.d <- obj2_lam.results_4viz %>% 
+(fig2.c <- obj2_lam.results_4viz %>% 
     dplyr::filter(lambda.prior == "diffuse (0.80 - 1.20)") %>% 
     mutate(perc.lab = paste0(percent, "%")) %>% 
   ggplot(aes(x = population.growth,
@@ -1067,7 +1069,7 @@ scales::show_col(plot.colors.fig2d)
               fontface = "bold",
             position = position_stack(vjust = 0.5)) +
   facet_wrap(~sampling.scheme) +
-    labs(x="\nPopulation growth", y="Percent", title="D)") +
+    labs(x="\nPopulation growth", y="Percent") +
     #This adjusts the x axis labels to stagger them. "points" is the unit by which to stagger, but could use others e.g. cm, in, etc.
     theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
 #  facet_wrap(~sampling.scheme) +
