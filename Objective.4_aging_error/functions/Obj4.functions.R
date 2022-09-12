@@ -361,7 +361,8 @@ HS.dad.pairwise.df <- dad_comps.HS %>%
 mom_comps.all <- bind_rows(HS.mom.pairwise.df, PO.mom.pairwise.df) %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) %>% 
   arrange(desc(ref.year), mort.yrs) %>% 
-  mutate(BI = ifelse(mort.yrs %% 2 == 0, "even", "odd"))
+  mutate(BI = ifelse(mort.yrs %% 2 == 0, "even", "odd")) %>% 
+  mutate(mom.oncycle = ifelse(BI == "even", 1, 0))
 
 dad_comps.all <- bind_rows(HS.dad.pairwise.df, PO.dad.pairwise.df) %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) %>% 

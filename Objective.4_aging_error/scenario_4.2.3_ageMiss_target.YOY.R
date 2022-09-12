@@ -40,6 +40,12 @@ mom.comps.prefix <- "comparisons/mom.comps"
 dad.comps.prefix <- "comparisons/dad.comps"
 samples.prefix <- "samples/samples.missassigned"
 
+jags_file <- paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HSPOP_noLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HS.only_wideLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HSPOP_wideLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HSPOP_narrowLambda_Skip_model.txt")
 
 #-------------------Set simulation settings and scenario info----------------------------
 script_name <- "scenario_4.2.3_ageMiss_target.YOY.R" #Copy name of script here
@@ -301,7 +307,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-      source("Objective.4_aging_error/functions/scenario_4.3_run.JAGS_HS.only.R")
+      source("Objective.4_aging_error/functions/Obj4_run.JAGS_HS.only.R")
       
 
       #Calculate truth

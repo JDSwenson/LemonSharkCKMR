@@ -966,7 +966,7 @@ ggarrange(fig1.a, fig1.b, fig1.c, fig1.d, common.legend = TRUE, nrow = 2, ncol =
 
 ```{r Obj2, echo=FALSE, out.width = "120%"}
 plot.colors.fig2ab <- c("lightslateblue", "lightblue1", "indianred3")
-scales::show_col(plot.colors.fig2a)
+scales::show_col(plot.colors.fig2ab)
 
 #-------------------Objective 2 Density plots-------------------------#
 (fig2.a <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
@@ -1074,7 +1074,7 @@ scales::show_col(plot.colors.fig2d)
     theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
 #  facet_wrap(~sampling.scheme) +
   #xlim(-100, 200) +
-  scale_fill_manual(values = plot.colors.fig2d))
+  scale_fill_manual(values = plot.colors.fig2c))
 
 #With patterns instead of x axis labels
 # (fig2.d <- obj2_lam.results_4viz %>% 
@@ -1112,25 +1112,50 @@ scales::show_col(plot.colors.fig2d)
 
 #---------Supplementary figures----------------------------#
 #Show model performance when there is an informed vs diffuse prior on lambda and "extreme" population decline
-(figS2.a <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
+plot.colors.figS1 <- c("lightblue1", "indianred3")
+scales::show_col(plot.colors.figS1)
+
+(figS1a <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
+                                         population.growth != "extreme negative",
+                                         lambda.prior != "none") %>% 
+  ggplot(aes(x = relative_bias,
+             y = est.yr.lab, 
+             fill = lambda.prior)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+  labs(x="Relative bias", y="Estimation year") +
+#  theme_ridges() + 
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
+#  facet_wrap(~sampling.scheme) +
+   theme(strip.text.y = element_blank()) +
+  #       axis.title.y = element_blank(),
+  #       axis.text.y = element_blank(),
+  #       axis.ticks.y = element_blank()) + 
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+  #xlim(-100, 200) +
+  scale_fill_manual(values = plot.colors.figS1))
+
+(figS1b <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
                                          population.growth == "extreme negative",
                                          lambda.prior != "none") %>% 
   ggplot(aes(x = relative_bias,
              y = est.yr.lab, 
              fill = lambda.prior)) + 
   geom_density_ridges(alpha = 0.6, scale = 0.9) + 
-  labs(x="Relative bias", y="Estimation year", title="D) Major population decline (5-10% per year)") +
+  labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
   facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
 #  facet_wrap(~sampling.scheme) +
-  # theme(legend.title = element_blank(), 
-  #       axis.title.y = element_blank(),
-  #       axis.text.y = element_blank(),
-  #       axis.ticks.y = element_blank()) + 
+  theme(legend.title = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
   #xlim(-100, 200) +
-  scale_fill_manual(values = plot.colors.fig2a))
+  scale_fill_manual(values = plot.colors.figS1))
+
+ggarrange(figS1a, figS1b, common.legend = TRUE, legend = "bottom")
 
 ```
 
