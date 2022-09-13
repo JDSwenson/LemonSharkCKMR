@@ -4,7 +4,7 @@ ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
 
 #Create vectors of data for JAGS
 #Mom
-#HS - even years
+#HS
 mom_comps.HS_even <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "even")
 mom.mort.yrs_HS.even <- mom_comps.HS_even$mort.yrs
 mom.popGrowth.yrs_HS.even <- mom_comps.HS_even$pop.growth.yrs

@@ -23,7 +23,7 @@ source("./Objective.4_aging_error/functions/Obj4.functions.R") #Changed name of 
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "biennial.breeding_NoNonConform" #Can be annual.breeding or biennial.breeding
-Sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+Sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
 date.of.PopSim <- "28Jul2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
@@ -40,24 +40,30 @@ mom.comps.prefix <- "comparisons/mom.comps"
 dad.comps.prefix <- "comparisons/dad.comps"
 samples.prefix <- "samples/samples.missassigned"
 
+#jags_file <- paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HSPOP_noLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HS.only_wideLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HSPOP_wideLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt")
+jags_file <- paste0(jags.model_location, "HSPOP_narrowLambda_Skip_model.txt")
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "scenario_4.1_ageMiss_target.YOY.R" #Copy name of script here
+script_name <- "scenario_4.2.2_ageMiss_sample.ALL.ages.R" #Copy name of script here
 primary_goal <- "Test model performance when ages are misassigned" #Why am I running this simulation? Provide details
 
 question1 <- "How does our final CKMR model perform when ages are wrongly assigned"
 question2 <- ""
 question3 <- ""
 
-purpose <- "scenario_4.1_ageMiss_target.YOY" #For naming output files
+purpose <- "scenario_4.2.2_ageMiss_sample.ALL.ages" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
-target.YOY <- "yes" #For juvenile samples, do we only want to target YOY for each year of sampling?
+target.YOY <- "no" #For juvenile samples, do we only want to target YOY for each year of sampling?
 down_sample <- "no" #Do we want to downsample to achieve close to max.HSPs?
 max.HSPs <- NA
 max.POPs <- NA
-HS.only <- "yes" #Do we only want to filter HS relationships?
+HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
 jags_params = c("Nf", "Nm", "survival", "psi", "lambda")
@@ -78,10 +84,12 @@ adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- 50 #set the maximum age allowed in the simulation
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+age.cv <- 0.10
 
 #---------------------- Read in sampling and other dataframes --------------------------
 samples.df <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
-  rename(total.sample.size = sample.size.juvs)
+  mutate(sample.size = sample.size * 4) %>% 
+  dplyr::rename(total.sample.size = sample.size)
 
 samples.df %>% group_by(age.x) %>% summarize(n())
 
@@ -109,14 +117,13 @@ survival.prior.info <- "Uniform: 0.5 - 0.95"
 lambda.prior.mean <- NA
 lambda.prior.cv <- NA
 lambda.prior.sd <- NA
-lambda.prior.info <- "Uniform: 0.80 - 1.20"
+lambda.prior.info <- "Uniform: 0.8 - 1.20"
 
 #psi prior
 psi.prior.info <- "Uniform: 0.75 - 1.0"
 
 #abundance prior
 abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"
-
 
 ####---------------Update and save simulation log-------------------####
 #Will want to change for Objective 2 to include CVs and misspecified parameter values#
@@ -188,16 +195,15 @@ model_settings.df <- tibble(script_name = script_name,
         noDups.list <- split.dups(sample.df_all.info)
         first.capture <- noDups.list[[1]]
         later.capture <- noDups.list[[2]]
-    
-        #Need a vector of length 0:max.age with the sd to assign to each age-length assignment
-        sd_length.at.age <- c(3, 9, 9, rep(10, times = 48)) #Try 10 so we don't misassign across too many ages
-        
+
+
         set.seed(rseeds[iter])
-        samples.miss <- misassign.ages(later.capture, sd_length.at.age)
+        samples.miss <- misassign.ages(later.capture)
         
-        #Remove full sibs
-        filter1.out <- filter.samples(samples.miss) #Filter for full sibs
-        PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
+ 
+    #Remove full sibs
+    filter1.out <- filter.samples(samples.miss) #Filter for full sibs
+    PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
     HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings
     NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample PO samples if needed
     
@@ -291,20 +297,19 @@ model_settings.df <- tibble(script_name = script_name,
         pull(HSPs)
       
       #POPs detected
-      # mom.POPs <- mom_comps.all %>% dplyr::filter(type == "PO") %>% 
-      #   summarize(POPs = sum(yes)) %>% 
-      #   pull(POPs)
-      # 
-      # dad.POPs <- dad_comps.all %>% dplyr::filter(type == "PO") %>% 
-      #   summarize(POPs = sum(yes)) %>% 
-      #   pull(POPs)
+      mom.POPs <- mom_comps.all %>% dplyr::filter(type == "PO") %>%
+        summarize(POPs = sum(yes)) %>%
+        pull(POPs)
+
+      dad.POPs <- dad_comps.all %>% dplyr::filter(type == "PO") %>%
+        summarize(POPs = sum(yes)) %>%
+        pull(POPs)
       
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-      source("Objective.4_aging_error/functions/scenario_4.1_run.JAGS_HS.only.R")
+      source("Objective.4_aging_error/functions/Obj4_run.JAGS_HS.PO.R")
       
-
       #Calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
                                                 year == estimation.year) %>%
@@ -318,9 +323,9 @@ model_settings.df <- tibble(script_name = script_name,
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
     (mom.Exp.HS <- Exp[[1]])
-#    (mom.Exp.PO <- Exp[[2]])
+    (mom.Exp.PO <- Exp[[2]])
     (dad.Exp.HS <- Exp[[3]])
-#    (dad.Exp.PO <- Exp[[4]])
+    (dad.Exp.PO <- Exp[[4]])
     
     sampled.mothers <- unique(sample.df_all.info$mother.x)
     sampled.fathers <- unique(sample.df_all.info$father.x)
@@ -335,12 +340,14 @@ model_settings.df <- tibble(script_name = script_name,
       samples.iter <- samples.df %>% dplyr::filter(iteration == iter, sample.prop == sample.size) %>% 
       distinct(seed, iteration, sample.prop.juvs = sample.prop, total.sample.size)
     
-    results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
-      left_join(samples.iter, by = c("iteration", "seed")) %>% 
-      mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs, mom.HSPs + dad.HSPs),
-             HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS, mom.Exp.HS + dad.Exp.HS),
-             purpose = purpose,
-             est.yr = estimation.year)
+      results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
+        left_join(samples.iter, by = c("iteration", "seed")) %>% 
+        mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs, mom.HSPs + dad.HSPs),
+               HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS, mom.Exp.HS + dad.Exp.HS),
+               POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs, mom.POPs + dad.POPs),
+               POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO, mom.Exp.PO + dad.Exp.PO),
+               purpose = purpose,
+               est.yr = estimation.year)
     
     results <- rbind(results, results.temp)
     
@@ -386,7 +393,6 @@ if(iter %% 100 == 0){
 
     #Save samples dataframe with misassigned ages
     saveRDS(samples.miss, file = paste0(temp_location, samples.prefix, "_", date.of.simulation, "_", outSeeds, "_", purpose, "_", estimation.year, "_est.yr"))
-    
     
  }
   

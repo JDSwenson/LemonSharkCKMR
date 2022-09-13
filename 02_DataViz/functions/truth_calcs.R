@@ -18,7 +18,7 @@ inSeeds <- "Seeds2022.04.15"
 
 #---------------------------Objective 1 truth calculations----------------------#
 #Confirmed that the population size is the same for all sampling schemes
-obj1.popsize <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1,"/pop.size_", lambda_date.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY))
+obj1.popsize <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1,"/annual_breeding/pop.size_", lambda_date.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY))
 
 #Confirmed that the comparisons are the same for scenarios 1.1 and 1.2
 #Need to calculate mean truth over years that comparisons span
@@ -98,7 +98,7 @@ for(i in 1:nrow(YOY.ref)){
 #obj2.2.1 is variable lambda w/ lambda parameter in the model and estimating in year 85; combine with obj2.2.2 for estimates in year 80 and 90 as well.
 
 #Confirmed that the population size is the same for all sampling schemes
-obj2.popsize.neutral <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1, "/pop.size_", lambda_date.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+obj2.popsize.neutral <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1, "/annual_breeding/pop.size_", lambda_date.1, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = "stable")
 
@@ -119,7 +119,7 @@ obj2.truth.df <- rbind(obj2.popsize.neutral, obj2.popsize.variable, obj2.popsize
 #---------------------------Objective 3 truth calculations----------------------#
 #Confirmed that the population size is the same for all sampling schemes
 #No non-conformists
-obj3.popsize.df <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1, "/pop.size_", lambda_date.2, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_", Sampling.scheme.YOY)) %>% 
+obj3.popsize.df <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1, "/biennial_breeding/pop.size_", lambda_date.2, "_", inSeeds, "_", PopSim.lambda.1, "_", PopSim.biennial.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = "neutral") 
 

@@ -23,6 +23,7 @@ library(ggmcmc)
 library(viridis)
 library(scales)
 library(ggridges)
+library(ggpattern)
 
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
@@ -412,7 +413,7 @@ scenario_2.2.1_results <- map_dfr(scenario_2.2.1_files, read_csv) %>%
                                   ifelse(purpose %in% purpose.obj2.2J, "sample all juvenile ages",
                                          "sample all age classes")),
          survival.prior = "diffuse",
-         lambda.prior = "diffuse",
+         lambda.prior = "diffuse (0.80 - 1.20)",
          cv = (sd/mean)*100,
          prop.sampled = factor(sample.prop.juvs),
          adult.survival.adj = 0.825,
@@ -428,7 +429,7 @@ scenario_2.2.2_results <- map_dfr(scenario_2.2.2_files, read_csv) %>%
                                   ifelse(purpose %in% purpose.obj2.2J, "sample all juvenile ages",
                                          "sample all age classes")),
          survival.prior = "diffuse",
-         lambda.prior = "diffuse",
+         lambda.prior = "diffuse (0.80 - 1.20)",
          cv = (sd/mean)*100,
          prop.sampled = factor(sample.prop.juvs,),
          population.growth = "extreme negative")
@@ -464,7 +465,7 @@ scenario_2.3.1_results <- map_dfr(scenario_2.3.1_files, read_csv) %>%
                                   ifelse(purpose %in% purpose.obj2.3J, "sample all juvenile ages",
                                          "sample all age classes")),
          survival.prior = "diffuse",
-         lambda.prior = "tight",
+         lambda.prior = "tight (0.95 - 1.05)",
          cv = (sd/mean)*100,
          prop.sampled = factor(sample.prop.juvs),
          adult.survival.adj = 0.825,
@@ -480,7 +481,7 @@ scenario_2.3.2_results <- map_dfr(scenario_2.3.2_files, read_csv) %>%
                                   ifelse(purpose %in% purpose.obj2.3J, "sample all juvenile ages",
                                          "sample all age classes")),
          survival.prior = "diffuse",
-         lambda.prior = "tight",
+         lambda.prior = "tight (0.95 - 1.05)",
          cv = (sd/mean)*100,
          prop.sampled = factor(sample.prop.juvs,),
          population.growth = "extreme negative")
@@ -505,7 +506,7 @@ obj2_results <- scenario_2.1_results.all %>% bind_rows(scenario_2.2_results.all,
   replace_na(list(lambda.prior = "none")) %>% 
   mutate(sampling.scheme = factor(sampling.scheme),
          population.growth = factor(population.growth),
-         lambda.prior = factor(lambda.prior, levels = c( "none", "diffuse", "tight"))) %>% 
+         lambda.prior = factor(lambda.prior, levels = c( "none", "diffuse (0.80 - 1.20)", "tight (0.95 - 1.05)"))) %>% 
   mutate(prop.sampled.lab = paste0(prop.sampled, " percent sampled")) %>% 
   mutate(est.yr.lab = ifelse(est.yr == 80, "10 years past",
                              ifelse(est.yr == 85, "5 years past", "present"))) %>% 
@@ -938,10 +939,11 @@ fig1.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
     ggtitle("C)") + 
     labs(x = "HSPs") +
     theme_bw() + 
-    theme(legend.title = element_blank(), axis.title.y = element_blank()) + 
+    theme(legend.title = element_blank()) + 
+    ylab("Density") +
     scale_fill_manual(values = plot.colors.fig1) +
     scale_color_manual(values = plot.colors.fig1) +
-    facet_wrap(~prop.sampled.lab) + 
+    facet_wrap(~prop.sampled.lab, scales = "free") + 
   scale_x_continuous(breaks = c(50, 100, 150, 200, 250, 300, 350))
 
 
@@ -955,7 +957,7 @@ fig1.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
     theme(legend.title = element_blank(), axis.title.y = element_blank()) + 
     scale_fill_manual(values = plot.colors.fig1) +
     scale_color_manual(values = plot.colors.fig1) +
-    facet_wrap(~prop.sampled.lab)
+    facet_wrap(~prop.sampled.lab, scales = "free")
 
 
 ggarrange(fig1.a, fig1.b, fig1.c, fig1.d, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom") #OK to ignore warnings; the first two are values > the x axis limit in 1A); the 7998 missing values are from plotting POPs
@@ -963,52 +965,52 @@ ggarrange(fig1.a, fig1.b, fig1.c, fig1.d, common.legend = TRUE, nrow = 2, ncol =
 
 
 ```{r Obj2, echo=FALSE, out.width = "120%"}
-plot.colors.fig2a <- c("lightslateblue", "lightblue1", "indianred3")
-scales::show_col(plot.colors.fig2a)
+plot.colors.fig2ab <- c("lightslateblue", "lightblue1", "indianred3")
+scales::show_col(plot.colors.fig2ab)
 
 #-------------------Objective 2 Density plots-------------------------#
-fig2.a <- obj2_results %>% dplyr::filter(parameter %in% c("Nf", "Nm"),
-                                         population.growth != "extreme negative") %>% 
+(fig2.a <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
+    mutate(population.growth = factor(population.growth, levels = c("stable", "slight positive", "slight negative", "extreme negative"))) %>% 
   ggplot(aes(x = relative_bias,
              y = est.yr.lab, 
              fill = lambda.prior)) + 
   geom_density_ridges(alpha = 0.6) + 
-  labs(x="Relative bias", y="Estimation year", title="A) Slight annual population change (+/- 1% per year)") +
+  labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
   #facet_wrap(~sampling.scheme) + 
-  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
-  theme(strip.text.y = element_blank()) + 
-  xlim(-100, 200) +
+  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme)) +
+  #theme(strip.text.y = element_blank()) + 
+  xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
-  scale_fill_manual(values = plot.colors.fig2a, 
+  scale_fill_manual(values = plot.colors.fig2ab, 
                     name = "Lambda prior") +
-  scale_y_discrete(expand = expansion(mult = c(0.01, .05)))
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+    theme_bw())
 
 
-plot.colors.fig2b <- c("lightblue1", "indianred3")
-scales::show_col(plot.colors.fig2b)
+#plot.colors.fig2b <- c("lightblue1", "indianred3")
+#scales::show_col(plot.colors.fig2b)
 
-fig2.b <- obj2_results %>% dplyr::mutate(lambda.prior2 = ifelse(lambda.prior == "tight", "misspecified", as.character(lambda.prior))) %>%
-  dplyr::filter(parameter %in% c("Nf", "Nm"),
-                population.growth == "extreme negative",
-                lambda.prior2 != "none") %>% 
-  ggplot(aes(x = relative_bias,
-             y = est.yr.lab, 
-             fill = lambda.prior2)) + 
-  geom_density_ridges(alpha = 0.6) + 
-  labs(x="Relative bias", y="Estimation year", title="B) Major population decline (5-10% per year)") +
-#  theme_ridges() + 
-  #facet_wrap(~sampling.scheme) + 
-  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
-  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
-  theme(legend.title = element_blank(),
-        axis.text.y = element_blank(),
-        axis.title.y = element_blank(),
-        axis.ticks.y = element_blank()) +
-  xlim(-100, 200) +
-  scale_fill_manual(values = plot.colors.fig2b,
-                    name = "Lambda prior") +
-  scale_y_discrete(expand = expansion(mult = c(0.01, .05)))
+# (fig2.b <- obj2_results %>% #dplyr::mutate(lambda.prior2 = ifelse(lambda.prior == "tight", "misspecified", as.character(lambda.prior))) %>%
+#   dplyr::filter(parameter %in% c("Nf"),
+#                 population.growth == "extreme negative") %>% 
+#   ggplot(aes(x = relative_bias,
+#              y = est.yr.lab, 
+#              fill = lambda.prior)) + 
+#   geom_density_ridges(alpha = 0.6) + 
+#   labs(x="Relative bias", y="Estimation year", title="B) Major population decline (-5-10% per year)") +
+# #  theme_ridges() + 
+#   #facet_wrap(~sampling.scheme) + 
+#   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+#   facet_wrap(~sampling.scheme, scales = "free_x") +
+#   # theme(legend.title = element_blank(),
+#   #       axis.text.y = element_blank(),
+#   #       axis.title.y = element_blank(),
+#   #       axis.ticks.y = element_blank()) +
+# #  xlim(-100, 200) +
+#   scale_fill_manual(values = plot.colors.fig2ab,
+#                     name = "Lambda prior") +
+#   scale_y_discrete(expand = expansion(mult = c(0.01, .05))))
 
 
 #Plot comparisons
@@ -1032,43 +1034,129 @@ source(file = "~/R/working_directory/LemonSharkCKMR/02_DataViz/functions/Truth_c
 #   scale_fill_manual(values = plot.colors.fig2a)
 
 #Very pretty histogram but not sure what to do with it ...
-fig2.c <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
+(fig2.b <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
   geom_histogram(binwidth = 1,
                  alpha = 0.6,
                  position = "identity",
                  lwd = 0.75,
                  linetype = 1,
                  colour = "black") +
-  labs(x="Reference year gap", title="C) Reference year gap") +
+  labs(x="Reference year gap") +
   theme(legend.position = "none") +
   facet_grid(rows = vars(est.yr.lab), cols = vars(sampling.scheme)) +
 #  facet_wrap(~est.yr.lab) +
   scale_fill_manual(values = plot.colors.fig1,
-                    name = "Sampling scheme")
+                    name = "Sampling scheme")) +
+  theme_bw()
   #geom_density(alpha = 0.6) +
   
 #Show model performance when there is an informed vs diffuse prior on lambda and "extreme" population decline
-fig2.d <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
-                                         population.growth == "extreme negative") %>% 
+plot.colors.fig2c <- c("red4", "dodgerblue4")
+scales::show_col(plot.colors.fig2d)
+
+(fig2.c <- obj2_lam.results_4viz %>% 
+    dplyr::filter(lambda.prior == "diffuse (0.80 - 1.20)") %>% 
+    mutate(perc.lab = paste0(percent, "%")) %>% 
+  ggplot(aes(x = population.growth,
+             y = percent, 
+             fill = status,
+             pattern = population.growth)) + 
+  geom_bar(position = "stack", 
+           stat = "identity", 
+           color = "black") +
+    geom_text(aes(label = perc.lab),
+                  size = 4, 
+              fontface = "bold",
+            position = position_stack(vjust = 0.5)) +
+  facet_wrap(~sampling.scheme) +
+    labs(x="\nPopulation growth", y="Percent") +
+    #This adjusts the x axis labels to stagger them. "points" is the unit by which to stagger, but could use others e.g. cm, in, etc.
+    theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
+#  facet_wrap(~sampling.scheme) +
+  #xlim(-100, 200) +
+  scale_fill_manual(values = plot.colors.fig2c))
+
+#With patterns instead of x axis labels
+# (fig2.d <- obj2_lam.results_4viz %>% 
+#   ggplot(aes(x = population.growth,
+#              y = percent, 
+#              fill = status,
+#              pattern = population.growth)) + 
+#   geom_bar_pattern(position = "stack", 
+#            stat = "identity", 
+#            color = "black",
+#            pattern_fill = "black",
+#                    pattern_angle = 45,
+#                    pattern_density = 0.1,
+#                    pattern_spacing = 0.025,
+#                    pattern_key_scale_factor = 0.6) +
+#   facet_grid(rows = vars(lambda.prior), cols = vars(sampling.scheme)) +
+# #  facet_wrap(~sampling.scheme) +
+#   #xlim(-100, 200) +
+#   scale_fill_manual(values = plot.colors.fig2a) +
+#     scale_pattern_manual(values = c(`extreme negative` = "stripe",
+#                                     `slight negative` = "circle",
+#                                     `slight positive` = "none")) +
+#     guides(pattern = guide_legend(override.aes = list(fill = "white")),
+#          fill = guide_legend(override.aes = list(pattern = "none")))) +
+#   theme(axis.text.x = element_blank(),
+#         axis.ticks.x = element_blank())
+
+
+(Fig2ab <- ggarrange(fig2.a, fig2.b, common.legend = TRUE, ncol = 1, nrow = 2, legend = "right"))
+
+#(Fig2cd <- ggarrange(fig2.c, fig2.d, common.legend = FALSE, legend = "bottom")) #Probably better to save 2c and 2d separately
+
+
+
+
+#---------Supplementary figures----------------------------#
+#Show model performance when there is an informed vs diffuse prior on lambda and "extreme" population decline
+plot.colors.figS1 <- c("lightblue1", "indianred3")
+scales::show_col(plot.colors.figS1)
+
+(figS1a <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
+                                         population.growth != "extreme negative",
+                                         lambda.prior != "none") %>% 
   ggplot(aes(x = relative_bias,
              y = est.yr.lab, 
              fill = lambda.prior)) + 
   geom_density_ridges(alpha = 0.6, scale = 0.9) + 
-  labs(x="Relative bias", y="Estimation year", title="D) Major population decline (5-10% per year)") +
+  labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
   facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
 #  facet_wrap(~sampling.scheme) +
-  theme(legend.title = element_blank(), 
-        axis.title.y = element_blank(),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank()) + 
+   theme(strip.text.y = element_blank()) +
+  #       axis.title.y = element_blank(),
+  #       axis.text.y = element_blank(),
+  #       axis.ticks.y = element_blank()) + 
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
   #xlim(-100, 200) +
-  scale_fill_manual(values = plot.colors.fig2a)
+  scale_fill_manual(values = plot.colors.figS1))
 
-(Fig2ab <- ggarrange(fig2.a, fig2.b, common.legend = TRUE))
-(Fig2cd <- ggarrange(fig2.c, fig2.d, common.legend = FALSE, legend = "bottom"))
+(figS1b <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
+                                         population.growth == "extreme negative",
+                                         lambda.prior != "none") %>% 
+  ggplot(aes(x = relative_bias,
+             y = est.yr.lab, 
+             fill = lambda.prior)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+  labs(x="Relative bias", y="Estimation year") +
+#  theme_ridges() + 
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
+#  facet_wrap(~sampling.scheme) +
+  theme(legend.title = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+  #xlim(-100, 200) +
+  scale_fill_manual(values = plot.colors.figS1))
+
+ggarrange(figS1a, figS1b, common.legend = TRUE, legend = "bottom")
+
 ```
 
 

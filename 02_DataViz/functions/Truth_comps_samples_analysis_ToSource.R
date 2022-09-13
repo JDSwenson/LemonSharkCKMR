@@ -80,4 +80,27 @@ lambda.extreme_comps.all <- obj2_results4Join %>% inner_join(lambda.extreme_comp
 
 ###Summarize and make dataframes for plotting
 lambda.extreme_comps4viz <- lambda.extreme_comps.all %>% dplyr::filter(yes != 0) %>% 
-  uncount(yes)
+  uncount(yes) %>% 
+  mutate(est.yr.lab = factor(est.yr.lab, levels = c("present", "5 years past", "10 years past")))
+
+
+#See how frequently lambda is estimated to be negative
+#Had to do some weird summarize/mutate wizardry to get the dataframe formatted correctly. Doesn't like ifelse statements in summarize.
+obj2_lam.results <- obj2_results %>% dplyr::filter(population.growth != "stable", 
+                               parameter == "lambda",
+                               est.yr == 80) %>% 
+  group_by(lambda.prior, population.growth, sampling.scheme) %>% 
+  dplyr::summarize(percent.correct = round(sum(mean < 1)/n() * 100), 0) %>% #This will be accurate for negative lambda but not positive
+  mutate(percent.correct = ifelse(population.growth == "slight positive", 100-percent.correct, percent.correct)) %>% #positive lambda is the inverse of the percent.correct column
+  mutate(percent.wrong = 100 - percent.correct)
+
+obj2.temp1 <- obj2_lam.results %>% dplyr::select(-c(percent.wrong)) %>% 
+  dplyr::rename(percent = percent.correct) %>% 
+  mutate(status = factor("correct"))
+
+obj2.temp2 <- obj2_lam.results %>% dplyr::select(-c(percent.correct)) %>% 
+  dplyr::rename(percent = percent.wrong) %>% 
+  mutate(status = factor("incorrect"))
+
+obj2_lam.results_4viz <- obj2.temp1 %>% bind_rows(obj2.temp2) %>% 
+  mutate(status = factor(status, levels = c("incorrect", "correct"))) #Reverse the order for better viz with the bar plot
