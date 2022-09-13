@@ -1,14 +1,13 @@
 #-------------- STEP 1: PREPARE DATA ----------------
-yrs <- c(estimation.year:n_yrs)
-ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
+# yrs <- c(estimation.year:n_yrs)
+# ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
 
 #Create vectors of data for JAGS
 #Mom
 #HS
-mom_comps.HS <- mom_comps.all %>% dplyr::filter(type == "HS")
-
+#mom_comps.HS <- mom_comps.all %>% dplyr::filter(type == "HS")
 mom.oncycle <- mom_comps.HS$mom.oncycle
-mom.mort.yrs_HS <- mom_comps.HS$mort.yrs
+mom.mort.yrs_HS <- mom_comps.HS$year_gap
 mom.popGrowth.yrs_HS <- mom_comps.HS$pop.growth.yrs
 mom.n.comps_HS <- mom_comps.HS$all
 mom.positives_HS <- mom_comps.HS$yes
@@ -16,11 +15,11 @@ mom.yrs_HS <- nrow(mom_comps.HS)
 
 
 #Dad
-dad.mort.yrs_HS <- dad_comps.all$mort.yrs
-dad.popGrowth.yrs_HS <- dad_comps.all$pop.growth.yrs
-dad.n.comps_HS <- dad_comps.all$all
-dad.positives_HS <- dad_comps.all$yes
-dad.yrs_HS <- nrow(dad_comps.all)
+dad.mort.yrs_HS <- dad_comps.HS$year_gap
+dad.popGrowth.yrs_HS <- dad_comps.HS$pop.growth.yrs
+dad.n.comps_HS <- dad_comps.HS$all
+dad.positives_HS <- dad_comps.HS$yes
+dad.yrs_HS <- nrow(dad_comps.HS)
 #dad.R0 <- dad_comps.all$R0
 
 #Set mean and sd (precision) for lambda
