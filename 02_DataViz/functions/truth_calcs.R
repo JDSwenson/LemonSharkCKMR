@@ -126,6 +126,97 @@ obj3.popsize.df <- readRDS(file = paste0(PopSim.location, PopSim.lambda.1, "/bie
 #Add this when I revist calculating psi with Liz
 #%>% mutate(psi.truth = (-(Num.mothers/Female.adult.pop - 0.5)*2) - 1)
 
-obj3.truth.df <- obj3.popsize.df %>%
+obj3.truth.df_psi1 <- obj3.popsize.df %>%
   dplyr::rename(est.yr = year) %>% 
   dplyr::select(est.yr, iteration, seed, Male.adult.pop, Female.adult.pop, Num.mothers, Num.fathers, population.growth)
+
+
+#----------------------------Calculate truth of psi-----------------------------#
+options(dplyr.summarise.inform = FALSE)
+
+#----------psi 0.5--------------------
+(psi_0.5_samplefiles <- list.files(path = paste0(PopSim.location, "lambda.1/biennial_breeding/plus_NonConformists/sample.info/"),
+                            recursive = FALSE,
+                            pattern = "*psi0.5_*",
+                            full.names = TRUE))
+
+psi_0.5 <- map_dfr(psi_0.5_samplefiles, readRDS) %>% 
+  mutate(sim.psi = 0.5) %>% 
+  dplyr::filter(sex == "F")
+
+#-----------psi 0.75----------------
+(psi_0.75_samplefiles <- list.files(path = paste0(PopSim.location, "lambda.1/biennial_breeding/plus_NonConformists/sample.info/"),
+                                   recursive = FALSE,
+                                   pattern = "*psi0.75_*",
+                                   full.names = TRUE))
+
+psi_0.75 <- map_dfr(psi_0.75_samplefiles, readRDS) %>% 
+  mutate(sim.psi = 0.75) %>% 
+  dplyr::filter(sex == "F")
+
+
+#-----------psi 0.9----------------
+(psi_0.9_samplefiles <- list.files(path = paste0(PopSim.location, "lambda.1/biennial_breeding/plus_NonConformists/sample.info/"),
+                                    recursive = FALSE,
+                                    pattern = "*psi0.9_*",
+                                    full.names = TRUE))
+
+psi_0.9 <- map_dfr(psi_0.9_samplefiles, readRDS) %>% 
+  mutate(sim.psi = 0.9) %>% 
+  dplyr::filter(sex == "F")
+
+psi.truth.temp =psi.truth.df_0.5 = psi.truth.df_0.75 = psi.truth.df_0.9 <- NULL
+
+for(iter in 1:max(psi_0.5$iteration)){
+#Calculate psi truth
+psi.df <- psi_0.5 %>% dplyr::filter(iteration == iter) %>% #Use all samples from this iteration to calculate the truth
+  distinct(indv.name, .keep_all = TRUE) %>% #Make sure we aren't using duplicated individuals
+  group_by(repro.strategy, sim.psi) %>%
+  summarize(number = n())
+
+(psi.truth.temp <- round(1 - psi.df[psi.df$repro.strategy == "non-conformist",3]/sum(psi.df$number), 3) %>% 
+    mutate(iteration = iter,
+           sim.psi = 0.5) %>% 
+  dplyr::rename(psi.truth = number))
+  
+psi.truth.df_0.5 <- bind_rows(psi.truth.df_0.5, psi.truth.temp)
+print(paste0("Finished iteration ", iter))
+}
+
+for(iter in 1:max(psi_0.75$iteration)){
+  #Calculate psi truth
+  psi.df <- psi_0.75 %>% dplyr::filter(iteration == iter) %>% #Use all samples from this iteration to calculate the truth
+    distinct(indv.name, .keep_all = TRUE) %>% #Make sure we aren't using duplicated individuals
+    group_by(repro.strategy, sim.psi) %>%
+    summarize(number = n())
+  
+  (psi.truth.temp <- round(1 - psi.df[psi.df$repro.strategy == "non-conformist",3]/sum(psi.df$number), 3) %>% 
+      mutate(iteration = iter,
+             sim.psi = 0.75) %>% 
+    dplyr::rename(psi.truth = number))
+  
+  psi.truth.df_0.75 <- bind_rows(psi.truth.df_0.75, psi.truth.temp)
+  print(paste0("Finished iteration ", iter))
+}
+
+for(iter in 1:max(psi_0.9$iteration)){
+  #Calculate psi truth
+  psi.df <- psi_0.9 %>% dplyr::filter(iteration == iter) %>% #Use all samples from this iteration to calculate the truth
+    distinct(indv.name, .keep_all = TRUE) %>% #Make sure we aren't using duplicated individuals
+    group_by(repro.strategy, sim.psi) %>%
+    summarize(number = n())
+  
+  (psi.truth.temp <- round(1 - psi.df[psi.df$repro.strategy == "non-conformist",3]/sum(psi.df$number), 3) %>%
+      mutate(iteration = iter,
+             sim.psi = 0.9) %>%
+    dplyr::rename(psi.truth = number))
+  
+  psi.truth.df_0.9 <- bind_rows(psi.truth.df_0.9, psi.truth.temp)
+  print(paste0("Finished iteration ", iter))
+  }
+
+#Add psi = 1 to make join easier
+psi.truth.df_1 <- tibble(psi.truth = 1, iteration = c(1:500), sim.psi = 1)
+  
+psi_all.truth <- bind_rows(psi.truth.df_0.5, psi.truth.df_0.75, psi.truth.df_0.9, psi.truth.df_1) %>% 
+  as_tibble()

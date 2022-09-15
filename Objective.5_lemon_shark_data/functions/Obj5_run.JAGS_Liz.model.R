@@ -1,25 +1,45 @@
 #-------------- STEP 1: PREPARE DATA ----------------
-# yrs <- c(estimation.year:n_yrs)
-# ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
+#yrs <- c(estimation.year:n_yrs)
+#ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
 
 #Create vectors of data for JAGS
 #Mom
-#HS
-#mom_comps.HS <- mom_comps.all %>% dplyr::filter(type == "HS")
-mom.oncycle <- mom_comps.HS$mom.oncycle
-mom.mort.yrs_HS <- mom_comps.HS$year_gap
-mom.popGrowth.yrs_HS <- mom_comps.HS$pop.growth.yrs
-mom.n.comps_HS <- mom_comps.HS$all
-mom.positives_HS <- mom_comps.HS$yes
-mom.yrs_HS <- nrow(mom_comps.HS)
+#HS - even years
+mom_comps.HS_even <- mom_comps.HS %>% dplyr::filter(BI == "even")
 
+mom.mort.yrs_HS.even <- mom_comps.HS_even$year_gap
+mom.popGrowth.yrs_HS.even <- mom_comps.HS_even$pop.growth.yrs
+mom.n.comps_HS.even <- mom_comps.HS_even$all
+mom.positives_HS.even <- mom_comps.HS_even$yes
+mom.yrs_HS.even <- nrow(mom_comps.HS_even)
+#mom.R0 <- mom_comps.all$R0
+
+#Mom
+#HS - odd years
+mom_comps.HS_odd <- mom_comps.HS %>% dplyr::filter(BI == "odd")
+
+mom.mort.yrs_HS.odd <- mom_comps.HS_odd$year_gap
+mom.popGrowth.yrs_HS.odd <- mom_comps.HS_odd$pop.growth.yrs
+mom.n.comps_HS.odd <- mom_comps.HS_odd$all
+mom.positives_HS.odd <- mom_comps.HS_odd$yes
+mom.yrs_HS.odd <- nrow(mom_comps.HS_odd)
+
+#Mom
+#PO
+# mom_comps.PO <- mom_comps.all %>% dplyr::filter(type == "PO")
+# 
+# mom.mort.yrs_PO <- mom_comps.PO$mort.yrs
+# mom.popGrowth.yrs_PO <- mom_comps.PO$pop.growth.yrs
+# mom.n.comps_PO <- mom_comps.PO$all
+# mom.positives_PO <- mom_comps.PO$yes
+# mom.yrs_PO <- nrow(mom_comps.PO)
 
 #Dad
-dad.mort.yrs_HS <- dad_comps.HS$year_gap
-dad.popGrowth.yrs_HS <- dad_comps.HS$pop.growth.yrs
-dad.n.comps_HS <- dad_comps.HS$all
-dad.positives_HS <- dad_comps.HS$yes
-dad.yrs_HS <- nrow(dad_comps.HS)
+dad.mort.yrs <- dad_comps.HS$year_gap
+dad.popGrowth.yrs <- dad_comps.HS$pop.growth.yrs
+dad.n.comps <- dad_comps.HS$all
+dad.positives <- dad_comps.HS$yes
+dad.yrs <- nrow(dad_comps.HS)
 #dad.R0 <- dad_comps.all$R0
 
 #Set mean and sd (precision) for lambda
@@ -34,22 +54,33 @@ dad.yrs_HS <- nrow(dad_comps.HS)
   #Define data
   jags_data = list(
     #Mom
-    #HS
-    mom.mort.yrs_HS = mom.mort.yrs_HS,
-    mom.oncycle = mom.oncycle,
-    mom.popGrowth.yrs_HS = mom.popGrowth.yrs_HS,
-    mom.n.comps_HS = mom.n.comps_HS,
-    mom.positives_HS = mom.positives_HS,
-    mom.yrs_HS = mom.yrs_HS,
-
+    #HS: even years
+    mom.mort.yrs_HS.even = mom.mort.yrs_HS.even,
+    mom.popGrowth.yrs_HS.even = mom.popGrowth.yrs_HS.even,
+    mom.n.comps_HS.even = mom.n.comps_HS.even,
+    mom.positives_HS.even = mom.positives_HS.even,
+    mom.yrs_HS.even = mom.yrs_HS.even,
+    #mom.R0 = mom.R0,
+    
+    #Mom
+    #HS: odd years
+    mom.mort.yrs_HS.odd = mom.mort.yrs_HS.odd,
+    mom.popGrowth.yrs_HS.odd = mom.popGrowth.yrs_HS.odd,
+    mom.n.comps_HS.odd = mom.n.comps_HS.odd,
+    mom.positives_HS.odd = mom.positives_HS.odd,
+    mom.yrs_HS.odd = mom.yrs_HS.odd,
+    #mom.R0 = mom.R0,
+    
     
     #Dad
-    dad.mort.yrs_HS = dad.mort.yrs_HS,
-    dad.popGrowth.yrs_HS = dad.popGrowth.yrs_HS,
-    dad.n.comps_HS = dad.n.comps_HS,
-    dad.positives_HS = dad.positives_HS,
-    dad.yrs_HS = dad.yrs_HS,
+    dad.mort.yrs = dad.mort.yrs,
+    dad.popGrowth.yrs = dad.popGrowth.yrs,
+    dad.n.comps = dad.n.comps,
+    dad.positives = dad.positives,
+    dad.yrs = dad.yrs,
+    #dad.R0 = dad.R0,
     
+
     #Lambda
     # lambda.prior.mean = lambda.prior.mean,
     # lam.tau = lam.tau,
@@ -76,8 +107,7 @@ dad.yrs_HS <- nrow(dad_comps.HS)
         survival = runif(1, min=0.5, max=0.95),
         Nf = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
-        lambda = 1,
-        psi = runif(1, min=0, max=1)
+        psi = runif(1, min=0.75, max=1.0)
         
       )
     }
