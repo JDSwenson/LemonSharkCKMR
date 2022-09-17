@@ -22,7 +22,7 @@ adult.ages <- length(ages) - (juv.ages + 1)
 (Sa <- exp(-Ma)) #Survival of adults
 (Sj <- exp(-Mj)) #Survival of juveniles
 
-Mx <- 0.1 #Extra mortality
+Mx <- 0 #Extra mortality - CHANGED FROM 0.1
 (Sa_new <- exp(-Ma - Mx))
 (Sj_new <- exp(-Mj - Mx))
 
@@ -30,7 +30,7 @@ Mx <- 0.1 #Extra mortality
 #mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 #non.conformists <- 0.05 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 #num.mates <- c(1:3) #vector of potential number of mates per mating
-f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
+f <- (1-adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
 # ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
 # ff
 # ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
@@ -59,6 +59,8 @@ A1_pre <- make_Leslie_matrix(Leslie_input)
 (lambda1 <- as_tibble(lambda1(A1_pre)) %>% 
   rename(lambda = value))
 
+(stable_age <-stable.stage(A1_pre))
+adult.prop <- sum(stable_age[repro.age:length(stable_age)])
 
 #If wanting to convert to a post-breeding census Leslie matrix
 A1_post <- pre_to_post(Amat = A1_pre, S0 = YOY.survival)

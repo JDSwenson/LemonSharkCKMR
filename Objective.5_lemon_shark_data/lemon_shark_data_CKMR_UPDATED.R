@@ -124,8 +124,16 @@ NoFullSibs.df <- juv_ref %>% distinct(mother.x, father.x, .keep_all = TRUE) %>%
 #--------------Half sibling pairwise comparison df--------------------------
 estimation.year <- 2000
 
-filtered.samples.HS.df <- NoFullSibs.df %>% dplyr::arrange(birth.year) %>% 
-  mutate(birth.year = as.numeric(birth.year))#Arrange so older sib always comes first in pairwise comparison matrix
+years <- c(min(NoFullSibs.df$birth.year):max(NoFullSibs.df$birth.year))
+
+results <- NULL
+
+for(i in min(years):max(years-4)){
+  for(j in min(years + 4): max(years)){
+  filtered.samples.HS.df <- NoFullSibs.df %>% dplyr::arrange(birth.year) %>% 
+  mutate(birth.year = as.numeric(birth.year)) %>%  #Arrange so older sib always comes first in pairwise comparison matrix
+  dplyr::filter(birth.year >= i & birth.year <= j)
+
 pairwise.df.HS <- data.frame(t(combn(filtered.samples.HS.df$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
 colnames(pairwise.df.HS) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
 
@@ -211,13 +219,13 @@ dad_comps.HS <- hsp.negs %>%
 
 #----------------------------Fit JAGS model to Lemon Shark Data------------------------------
 #--------------------Specify which JAGS model to use---------------------------------#
-jags_file <- paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HSPOP_noLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HS.only_wideLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HSPOP_wideLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HSPOP_narrowLambda_Skip_model.txt")
-#jags_file <- paste0(jags.model_location, "_LizModel_noLambda.txt")
+jags_file <- paste0(jags.model_location, "LizModel_noLambda.txt")
 
 
 #JAGS parameters
@@ -235,11 +243,16 @@ nc <- 2      # number of chains
 
 #----------------------------Fit JAGS model-------------------------------#
 #Ben's model
-source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_HS.only.R")
-#Liz's model
-#source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_Liz.model.R")
+#source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_HS.only.R")
 
-model.summary2
+#Liz's model
+source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_Liz.model.R")
+
+model.summary2 %>% mutate(min.year = i, max.year = j) %>% 
+  mutate(years_sampled = j - i)
+results <- bind_rows(results, model.summary2)
+}
+}
 
 
 
@@ -249,6 +262,8 @@ mother_ref %>%
   group_by(birth.year) %>% 
   summarize(min.moms = n()) %>% 
   dplyr::arrange(desc(min.moms)) %>% 
+  dplyr::arrange(birth.year) %>% 
+  View()
   dplyr::filter(birth.year == estimation.year)
 
 mother_ref %>% dplyr::filter(is.na(mother.x) == TRUE)

@@ -18,18 +18,26 @@ rm(list=ls())
 
 source("./Objective.3_intermittent.breeding/functions/Obj3.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/models/"
+
+#jags_file <- paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HSPOP_noLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HS.only_wideLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HSPOP_wideLambda_Skip_model.txt")
+#jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt")
+jags_file <- paste0(jags.model_location, "HSPOP_narrowLambda_Skip_model.txt")
+
 #----------------Set input file locations ------------------------------
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
-PopSim.breeding.schedule <- "biennial.breeding_NoNonConform" #Can be annual.breeding or biennial.breeding
+PopSim.breeding.schedule <- "biennial.breeding_psi0.9" #Can be annual.breeding or biennial.breeding
 Sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "28Jul2022" # 11Jul2022
+date.of.PopSim <- "29Aug2022" # 11Jul2022
 inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/models/"
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/"
 
 results_prefix <- "CKMR_results"
@@ -47,7 +55,7 @@ question1 <- "How does a base-case CKMR model perform with biennial breeding and
 question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
 question3 <- "How does the model perform with and without lambda?"
 
-purpose <- "scenario_3.3.3_SB_sample.ALL.ages" #For naming output files
+purpose <- "scenario_3.3.3_SB_sample.ALL.ages_psi0.9" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
 
@@ -57,8 +65,8 @@ max.HSPs <- NA
 max.POPs <- NA
 HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships? These two are mutually exclusive; cannot have "yes" for both
-fixed.parameters <- "psi" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
-jags_params = c("Nf", "Nm", "survival", "lambda")
+fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none" and the full model will run, estimating all parameters. If fixing specific parameters, then list them here, and manually change in the run.JAGS_HS.PO_SB.R script
+jags_params = c("Nf", "Nm", "survival", "lambda", "psi")
 estimated.parameters <- paste0(jags_params, collapse = ",")
 
 #rseeds <- sample(1:1000000,iterations)
@@ -117,32 +125,6 @@ psi.prior.info <- "Fixed"
 abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"
 
 
-####---------------Update and save simulation log-------------------####
-#Will want to change for Objective 2 to include CVs and misspecified parameter values#
-model_settings.df <- tibble(script_name = script_name,
-                            primary_goal = primary_goal,
-                            question1 = question1,
-                            question2 = question2,
-                            question3 = question3,
-                            purpose = purpose,
-                            date.of.simulation = date.of.simulation,
-                            target.YOY = target.YOY,
-                            down_sample = down_sample,
-                            max.HSPs = max.HSPs,
-                            max.POPs = max.POPs,
-                            HS.only = HS.only,
-                            PO.only = PO.only,
-                            fixed.parameters = fixed.parameters,
-                            estimated.parameters = estimated.parameters,
-                            seeds = outSeeds,
-                            thinning_rate = nt,
-                            posterior_samples = ni,
-                            burn_in = nb,
-                            survival.prior.info = survival.prior.mean,
-                            lambda.prior.info = lambda.prior.mean,
-                            psi.prior = psi.prior.info,
-                            abundance.prior = abundance.prior.info
-)
 
 #Save simulation settings in Simulation_log
  # model.log <- read_csv("model_settings.log.csv")
@@ -296,7 +278,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-      source("Objective.3_intermittent.breeding/functions/scenario_3.3.3_run.JAGS_HS.only.R")
+      source("Objective.3_intermittent.breeding/functions/obj3_runJags_HSPO_wLam.R")
 
       #Calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
@@ -330,10 +312,10 @@ model_settings.df <- tibble(script_name = script_name,
     
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
       left_join(samples.iter, by = c("iteration", "seed")) %>% 
-      mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs + dad.HSPs),
-             HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
-             POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs + dad.POPs),
-             POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO + dad.Exp.PO),
+      mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs),
+             HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS),
+             POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs + dad.POPs, mom.POPs),
+             POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO),
              purpose = purpose,
              est.yr = estimation.year)
     
