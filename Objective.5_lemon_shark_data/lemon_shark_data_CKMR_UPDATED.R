@@ -127,9 +127,19 @@ estimation.year <- 2000
 years <- c(min(NoFullSibs.df$birth.year):max(NoFullSibs.df$birth.year))
 
 results <- NULL
+post.samps_list <- list()
+rep = 0
 
-for(i in min(years):max(years-4)){
-  for(j in min(years + 4): max(years)){
+#Regular loop
+# for(i in min(years):max(years-1)){
+#   for(j in (i + 2): max(years)){
+
+#When an error and need to start at a certain number
+ for(i in 2012:max(years-1)){
+   for(j in (i + 2): max(years)){
+
+        rep = rep+1
+    
   filtered.samples.HS.df <- NoFullSibs.df %>% dplyr::arrange(birth.year) %>% 
   mutate(birth.year = as.numeric(birth.year)) %>%  #Arrange so older sib always comes first in pairwise comparison matrix
   dplyr::filter(birth.year >= i & birth.year <= j)
@@ -245,16 +255,29 @@ nc <- 2      # number of chains
 #Ben's model
 #source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_HS.only.R")
 
-#Liz's model
+if(sum(mom_comps.HS$yes) > 0 & sum(dad_comps.HS$yes) > 0){
+
+  #Liz's model
 source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_Liz.model.R")
 
-model.summary2 %>% mutate(min.year = i, max.year = j) %>% 
-  mutate(years_sampled = j - i)
-results <- bind_rows(results, model.summary2)
+results.temp <- model.summary2 %>% mutate(min.year = i, max.year = j) %>% 
+  mutate(years_sampled = j - i,
+         mom_HSPs = sum(mom_comps.HS$yes),
+         dad_HSPs = sum(dad_comps.HS$yes))
+  
+
+results <- bind_rows(results, results.temp)
+post.samps_list[[rep]] <- post
+names(post.samps_list)[[rep]] <- paste0("yrs_", i, "_to_", j)
+
+print(paste0("Finished comparison ", i, " to ", j))
+} else {next}
 }
 }
 
+write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.09.17_2.csv")
 
+#write_rds(post.samps_list, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/post_samples")
 
 #----------------Minimum number of moms and dads-------------------------------
 #Calculate minimum number of mothers per year

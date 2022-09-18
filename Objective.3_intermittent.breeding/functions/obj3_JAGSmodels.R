@@ -16,19 +16,19 @@ HS.only_noLambda_Skip_model = function(){
   #Moms
   #HS - even years
   for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
   for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
   }
   
   #Dads
   #HS + PO
   for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/Nm, dad.n.comps[f]) # Sex-specific CKMR model equation
+    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^mom.popGrowth.yrs_HS.even[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
 }
 
@@ -90,19 +90,19 @@ HS.only_wideLambda_Skip_model = function(){
   #Moms
   #HS - even years
   for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
   for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
   }
   
   #Dads
   #HS + PO
   for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/Nm, dad.n.comps[f]) # Sex-specific CKMR model equation
+    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
   
 }
@@ -124,25 +124,25 @@ HSPOP_wideLambda_Skip_model= function(){
   #Moms
   #HS - even years
   for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
   for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #PO
   for(k in 1:mom.yrs_PO){
-    mom.positives_PO[k] ~ dbin((survival^mom.mort.yrs_PO[k])/Nf, mom.n.comps_PO[k]) # Sex-specific CKMR model equation
+    mom.positives_PO[k] ~ dbin((survival^mom.mort.yrs_PO[k])/(Nf*(lambda^mom.popGrowth.yrs_PO[k])), mom.n.comps_PO[k]) # Sex-specific CKMR model equation
   }
   
   #Dads
   #HS + PO
   for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/Nm, dad.n.comps[f]) # Sex-specific CKMR model equation
+    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
 }
 ####
@@ -162,19 +162,19 @@ HS.only_narrowLambda_Skip_model = function(){
   #Moms
   #HS - even years
   for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
   for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
   }
   
   #Dads
   #HS + PO
   for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/Nm, dad.n.comps[f]) # Sex-specific CKMR model equation
+    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
   
 }
@@ -196,25 +196,25 @@ HSPOP_narrowLambda_Skip_model= function(){
   #Moms
   #HS - even years
   for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
   for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #PO
   for(k in 1:mom.yrs_PO){
-    mom.positives_PO[k] ~ dbin((survival^mom.mort.yrs_PO[k])/Nf, mom.n.comps_PO[k]) # Sex-specific CKMR model equation
+    mom.positives_PO[k] ~ dbin((survival^mom.mort.yrs_PO[k])/(Nf*(lambda^mom.popGrowth.yrs_PO[k])), mom.n.comps_PO[k]) # Sex-specific CKMR model equation
   }
   
   #Dads
   #HS + PO
   for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/Nm, dad.n.comps[f]) # Sex-specific CKMR model equation
+    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
 }
 
