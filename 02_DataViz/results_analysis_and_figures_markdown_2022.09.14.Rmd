@@ -580,33 +580,59 @@ ggsave("Figure_3a_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, p
 
 
 
-#-------------------Compare Ben and Liz models-------------------------#
 obj3_results.liz %>% dplyr::filter(model_used == "Liz_biennial",
                                    lambda.prior == "tight",
                                    parameter %in% c("lambda", "psi", "survival")) %>% group_by(psi.prior) %>% 
   summarize(n())
 
+#scatter plot of percent in HPDI
+fig3b <- obj3_results.liz %>% dplyr::filter(sim.psi == 1, 
+                                   parameter != "psi") %>% 
+  mutate(model_used = ifelse(model_used == "Liz_biennial", "Adapted", "Naive")) %>% 
+  group_by(model_used, parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme) %>% 
+  ggplot(aes(x = factor(parameter), y = percent_in_interval, color = sampling.scheme)) + 
+  geom_point() +
+  labs(x = "Parameter", y = "Percent in 95% HPDI") +
+#  facet_wrap(~model_used + lambda.prior)
+  facet_grid(rows = vars(lambda.prior), cols = vars(model_used)) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+ggsave("Figure_3b_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/figures/")
+
+
+#-----------------Supplementary figure -------------------
 #Abundance
-obj3_results.liz %>% dplyr::filter(model_used == "Liz_biennial",
-                                   lambda.prior == "tight",
-                                   !parameter %in% c("lambda", "psi", "survival")) %>% 
+figs2 <- obj3_results.liz %>% dplyr::filter(model_used == "Liz_biennial",
+                                   !parameter %in% c("lambda", "psi", "survival"),
+                                   psi.prior != "fixed") %>% 
+    mutate(lambda.prior = factor(lambda.prior, levels = c("none", "tight", "diffuse"))) %>% 
 ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
   geom_violin(aes(y=relative_bias), draw_quantiles = c(0.5)) +
   #ylim(-50, 160) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Parameter", y="Relative bias") +
+  labs(x="Sampling scheme", y="Relative bias") +
   scale_fill_manual(values = plot.colors.fig3) +
-  ggtitle("lambda prior=tight; psi prior=uniform") +
+  #ggtitle("lambda prior=tight; psi prior=uniform") +
   ylim(-100, 100) +
-  facet_grid(rows = vars(parameter), cols = vars(psi.prior)) +
+  facet_grid(rows = vars(parameter), cols = vars(lambda.prior)) +
 #  facet_wrap(~parameter, nrow = 2) +
   theme(legend.title = element_blank())
 
+figs2
+
+ggsave("Figure_s2_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/figures/")
+
 #other parameters
-obj3_results.liz %>% dplyr::filter(model_used == "Liz_biennial",
-                                   lambda.prior == "tight",
+figs3 <- obj3_results.liz %>% dplyr::filter(model_used == "Liz_biennial",
+                                   psi.prior != "fixed",
                                    parameter %in% c("lambda", "survival")) %>% 
+  mutate(lambda.prior = factor(lambda.prior, levels = c("none", "tight", "diffuse"))) %>% 
 ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
   geom_violin(aes(y=relative_bias), draw_quantiles = c(0.5)) +
   #ylim(-50, 160) +
@@ -614,14 +640,15 @@ ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
   labs(x="Parameter", y="Relative bias") +
   scale_fill_manual(values = plot.colors.fig3) +
-  ggtitle("lambda prior=none; psi prior=uniform") +
+  #ggtitle("lambda prior=none; psi prior=uniform") +
   #ylim(-100, 100) +
-  facet_grid(rows = vars(parameter), cols = vars(psi.prior), scales = "free") +
+  facet_grid(rows = vars(parameter), cols = vars(lambda.prior), scales = "free") +
 #  facet_wrap(~parameter, nrow = 2, scales = "free") +
   theme(legend.title = element_blank())
 
+figs3
 
-
+ggsave("Figure_s3_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/figures/")
 
 #-------------------Density plots of age misassignment-------------------------#
 #Graph 1: density ridgeline plot
@@ -647,7 +674,7 @@ obj4_samps %>% dplyr::filter(lambda.prior == "tight",
 
 
 #Graph 2: real age on x axis, misassigned age on y axis
-obj4_samps %>% dplyr::filter(lambda.prior == "none") %>% #There aren't many individuals older than 25
+figs3 <- obj4_samps %>% dplyr::filter(lambda.prior == "none") %>% #There aren't many individuals older than 25
   ggplot(aes(x = yrs.off,
              y = age.x,
              fill = sampling.scheme)) + 
@@ -660,41 +687,45 @@ obj4_samps %>% dplyr::filter(lambda.prior == "none") %>% #There aren't many indi
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
   scale_fill_manual(values = plot.colors.fig3)
 
+figs3
+
+ggsave("Figure_s3_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/figures/")
+
 #--------------------------Visualization------------------------------#
 plot.colors.fig3 <- c("aquamarine4", "indianred1", "lightyellow2")
 scales::show_col(plot.colors.fig3)
 
 #Abundance
-obj4_results.all %>% dplyr::filter(parameter %in% c("Nf", "Nm"),
-                                   lambda.prior == "none") %>% 
-ggplot(aes(x=factor(parameter), fill = miss.cv)) +
-  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
-  #ylim(-50, 160) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Parameter", y="Relative bias") +
-  scale_fill_manual(values = plot.colors.fig3) +
-  ggtitle("Age miss: lambda prior = none") +
-#  ylim(-100, 100) +
-  facet_grid(rows = vars(sampling.scheme), scales = "free") +
-  #facet_wrap(~prop.sampled.lab) +
-  guides(fill=guide_legend(title="Age assignment CV"))
-
-#Lambda and phi
-obj4_results.all %>% dplyr::filter(!parameter %in% c("Nf", "Nm", "psi"),
-                                   lambda.prior == "diffuse") %>% 
-ggplot(aes(x=factor(parameter), fill = miss.cv)) +
-  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
-  #ylim(-50, 160) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Parameter", y="Relative bias") +
-  scale_fill_manual(values = plot.colors.fig3) +
-  ggtitle("Age miss: lambda prior = diffuse") +
-#  ylim(-100, 100) +
-  facet_grid(rows = vars(sampling.scheme), scales = "free") +
-  #facet_wrap(~prop.sampled.lab) +
-  guides(fill=guide_legend(title="Age assignment CV"))
+# obj4_results.all %>% dplyr::filter(parameter %in% c("Nf", "Nm"),
+#                                    lambda.prior == "none") %>% 
+# ggplot(aes(x=factor(parameter), fill = miss.cv)) +
+#   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+#   #ylim(-50, 160) +
+#   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+#   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+#   labs(x="Parameter", y="Relative bias") +
+#   scale_fill_manual(values = plot.colors.fig3) +
+#   ggtitle("Age miss: lambda prior = none") +
+# #  ylim(-100, 100) +
+#   facet_grid(rows = vars(sampling.scheme)) +
+#   #facet_wrap(~prop.sampled.lab) +
+#   guides(fill=guide_legend(title="Age assignment CV"))
+# 
+# #Lambda and phi
+# obj4_results.all %>% dplyr::filter(!parameter %in% c("Nf", "Nm", "psi"),
+#                                    lambda.prior == "diffuse") %>% 
+# ggplot(aes(x=factor(parameter), fill = miss.cv)) +
+#   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+#   #ylim(-50, 160) +
+#   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+#   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+#   labs(x="Parameter", y="Relative bias") +
+#   scale_fill_manual(values = plot.colors.fig3) +
+#   ggtitle("Age miss: lambda prior = diffuse") +
+# #  ylim(-100, 100) +
+#   facet_grid(rows = vars(sampling.scheme), scales = "free") +
+#   #facet_wrap(~prop.sampled.lab) +
+#   guides(fill=guide_legend(title="Age assignment CV"))
 
 ```
 
@@ -751,7 +782,7 @@ obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 85, population.gro
   dplyr::arrange(parameter, sampling.scheme)
 
 #3 naive
-obj3_results %>% dplyr::filter(prop.sampled == 1.5, lambda.prior == "diffuse", model == "base") %>% 
+obj3_results.liz %>% dplyr::filter(prop.sampled == 1.5, lambda.prior == "diffuse", model == "base") %>% 
   group_by(parameter, sampling.scheme, lambda.prior) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
                    mean.bias = mean(relative_bias),

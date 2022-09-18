@@ -121,6 +121,9 @@ source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functi
 NoFullSibs.df <- juv_ref %>% distinct(mother.x, father.x, .keep_all = TRUE) %>%
   as_tibble() #If there is more than one individual with the same mother AND father, then only keep one.
 
+#Look at age distribution of sampled individuals
+NoFullSibs.df %>% mutate(age = capture.year - as.numeric(birth.year)) %>% group_by(age) %>% summarize(number = n())
+
 #--------------Half sibling pairwise comparison df--------------------------
 estimation.year <- 2000
 
