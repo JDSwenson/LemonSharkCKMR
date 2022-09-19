@@ -121,9 +121,6 @@ source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functi
 NoFullSibs.df <- juv_ref %>% distinct(mother.x, father.x, .keep_all = TRUE) %>%
   as_tibble() #If there is more than one individual with the same mother AND father, then only keep one.
 
-#Look at age distribution of sampled individuals
-NoFullSibs.df %>% mutate(age = capture.year - as.numeric(birth.year)) %>% group_by(age) %>% summarize(number = n())
-
 #--------------Half sibling pairwise comparison df--------------------------
 estimation.year <- 2000
 
@@ -133,13 +130,16 @@ results <- NULL
 post.samps_list <- list()
 rep = 0
 
-#Regular loop
-# for(i in min(years):max(years-1)){
-#   for(j in (i + 2): max(years)){
+#Regular loop over different periods of estimation
+  for(i in min(years):max(years-4)){ #Change to -1 if doing full loop
+    for(j in (i + 2): max(years)){
+ #   j= i + 4
 
-#When an error and need to start at a certain number
- for(i in 2012:max(years-1)){
-   for(j in (i + 2): max(years)){
+#    estimation.year = j
+    
+    #When an error and need to start at a certain number
+# for(i in 2012:max(years-1)){
+#   for(j in (i + 2): max(years)){
 
         rep = rep+1
     
@@ -238,12 +238,12 @@ dad_comps.HS <- hsp.negs %>%
 #jags_file <- paste0(jags.model_location, "HSPOP_wideLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HSPOP_narrowLambda_Skip_model.txt")
-jags_file <- paste0(jags.model_location, "LizModel_noLambda.txt")
-
+#jags_file <- paste0(jags.model_location, "LizModel_noLambda.txt")
+jags_file <- paste0(jags.model_location, "LizModel_Lambda.txt")
 
 #JAGS parameters
-#jags_params = c("Nf", "Nm", "survival", "psi", "lambda") #w lambda
-jags_params = c("Nf", "Nm", "survival", "psi") #w/o lambda
+jags_params = c("Nf", "Nm", "survival", "psi", "lambda") #w lambda
+#jags_params = c("Nf", "Nm", "survival", "psi") #w/o lambda
 mating.periodicity <- 2 #Will be translated to a
 
 #Adult.survival <- 0.85 #If wanting to fix survival, or give it a tighter prior
@@ -261,12 +261,13 @@ nc <- 2      # number of chains
 if(sum(mom_comps.HS$yes) > 0 & sum(dad_comps.HS$yes) > 0){
 
   #Liz's model
-source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_Liz.model.R")
+source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_Liz.model_wLambda.R")
 
 results.temp <- model.summary2 %>% mutate(min.year = i, max.year = j) %>% 
   mutate(years_sampled = j - i,
          mom_HSPs = sum(mom_comps.HS$yes),
-         dad_HSPs = sum(dad_comps.HS$yes))
+         dad_HSPs = sum(dad_comps.HS$yes),
+         estimation_year = estimation.year)
   
 
 results <- bind_rows(results, results.temp)
@@ -278,7 +279,7 @@ print(paste0("Finished comparison ", i, " to ", j))
 }
 }
 
-write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.09.17_2.csv")
+write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.09.18_wLambda.csv")
 
 #write_rds(post.samps_list, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/post_samples")
 

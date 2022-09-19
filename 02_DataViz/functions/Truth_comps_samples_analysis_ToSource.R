@@ -87,10 +87,9 @@ lambda.extreme_comps4viz <- lambda.extreme_comps.all %>% dplyr::filter(yes != 0)
 #See how frequently lambda is estimated to be negative
 #Had to do some weird summarize/mutate wizardry to get the dataframe formatted correctly. Doesn't like ifelse statements in summarize.
 obj2_lam.results <- obj2_results %>% dplyr::filter(population.growth != "stable", 
-                               parameter == "lambda",
-                               est.yr == 80) %>% 
-  group_by(lambda.prior, population.growth, sampling.scheme) %>% 
-  dplyr::summarize(percent.correct = round(sum(mean < 1)/n() * 100), 0) %>% #This will be accurate for negative lambda but not positive
+                               parameter == "lambda") %>% 
+  group_by(lambda.prior, population.growth, sampling.scheme, est.yr) %>% 
+  dplyr::summarize(percent.correct = round(sum(mean < 1)/n() * 100, 0)) %>% #This will be accurate for negative lambda but not positive
   mutate(percent.correct = ifelse(population.growth == "slight positive", 100-percent.correct, percent.correct)) %>% #positive lambda is the inverse of the percent.correct column
   mutate(percent.wrong = 100 - percent.correct)
 
