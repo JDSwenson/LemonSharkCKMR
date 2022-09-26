@@ -1,3 +1,17 @@
+#Population simulations
+born90 <- loopy.list[[90]] %>% dplyr::filter(birth.year == 90)
+born89 <- loopy.list[[89]] %>% dplyr::filter(birth.year == 89)
+born88 <- loopy.list[[89]] %>% dplyr::filter(birth.year == 88)
+born87 <- loopy.list[[88]] %>% dplyr::filter(birth.year == 87)
+
+sum(born90$mother.x %in% born89$mother.x == T)
+sum(born90$mother.x %in% born88$mother.x == T)
+sum(born90$mother.x %in% born87$mother.x == T)
+
+
+
+
+#Results
 obj1_results %>% dplyr::filter(sampling.scheme == "sample all age classes") %>% 
   group_by(parameter, prop.sampled.lab) %>% 
   summarize(mean(POPs_detected))
