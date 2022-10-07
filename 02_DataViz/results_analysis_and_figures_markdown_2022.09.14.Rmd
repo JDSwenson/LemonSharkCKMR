@@ -123,7 +123,7 @@ obj4_results <- read_csv(file = paste0(objective_4_results_location, "obj4_colla
            miss.cv = factor(miss.cv))
 
 #Objective 4 results with correct ages in same df
-obj4_results.all <- read_rds(file = paste0(objective_4_results_location, "obj4.all_results_w_agesCorr")) %>% 
+obj4_results.all <- read_rds(file = paste0(objective_4_results_location, "obj4.all_results_forPlotting")) %>% 
   mutate(prop.sampled = factor(sample.prop.juvs),
            sampling.scheme = factor(sampling.scheme),
            lambda.prior = factor(lambda.prior, levels = c("none", "diffuse", "tight")),
@@ -131,7 +131,7 @@ obj4_results.all <- read_rds(file = paste0(objective_4_results_location, "obj4.a
   mutate(miss.cv = factor(miss.cv))
 
 #Samples from objective 4 including yrs off
-obj4_samps <- read_csv(file = paste0(objective_4_results_location, "sceanrio_4.samps.csv")) %>% 
+obj4_samps <- read_csv(file = paste0(objective_4_results_location, "scenario_4.samps.csv")) %>% 
     mutate(age = factor(age.x))
 
 #Summary of bias and percent in HPDI for misasigned and correctly assigned ages
@@ -212,28 +212,68 @@ obj2_results %>% group_by(parameter) %>%
 
 #-------------Objective 3 liz --------------------
 #Check that all sampling schemes and population growth scenarios are represented
+
+#Should be equal (sample all ages with 800 less)
 obj3_results.liz %>% group_by(sampling.scheme) %>% 
   summarize(number = n())
 
+#Should all be neutral. Total number should equal:
+#For Nm, Nf, and abundance, should have should have 1500 rows x3 for each parameter for each scenario i.e. 4500 for every 3.x. So, 500 x 3 sampling schemes = 1500 x 3 sub scenarios (3.x.x) = 4500 x 6 scenarios = 27000 (-200 for scenarios 3.1.2 and 3.1.2) for each of these parameters.
+#For lambda, there should be 500 x 3 sampling schems = 1500 x 2 sub-scenarios (bc one doesn't include lambda) = 3000 x 6 scenarios = 18000 (- 200 for scenarios 3.1.2 and 3.1.3)
+#For psi, should have 500 x 3 sampling schemes = 1500 x 3 sub-scenarios = 4500 x 4 scenarios (not included in scenario 3.1.x or 3.6.x) = 18,000
+obj3_results.liz %>% group_by(parameter) %>% 
+  summarize(number = n())
+
+#Total = 116200
 obj3_results.liz %>% group_by(population.growth) %>% 
   summarize(number = n())
 
+#Should all be 85
 obj3_results.liz %>% group_by(est.yr) %>% 
   summarize(number = n())
 
+#Should all be 1.5
 obj3_results.liz %>% group_by(prop.sampled) %>% 
   summarize(number = n())
 
-obj3_results.liz %>% group_by(parameter) %>% 
-  summarize(number = n())
+#Fixed psi for scenarios 3.1.x, 3.2.x and 3.6.x, which have variable numbers of parameters. 
+#3.1.1: 500 x 3 parameters = 1500 x 3 sampling schemes = 4500 +
+#3.1.2: 500 x 4 parameters = 2000 x 2 sampling schemes = 4000 + 
+#3.1.2 continued (for sample all age classes scenario with fewer runs): 400 x 4 parameters = 1600 x 1 sampling scheme = 1600 +
+#Same for 3.1.3 (juvenile sampling schemes): 4000 + 
+#Same for 3.1.3 (sample all ages): 1600 +
+#3.2.1: 500 x 4 parameters = 2000 x 3 sampling schemes = 6000 +
+#3.2.2: 500 x 5 parameters = 2500 x 3 sampling schemes = 7500 +
+#repeat for 3.2.3: 7500 +
+#3.6.1: 500 x 3 parameters = 1500 x 3 sampling schemes = 4500 +
+#3.6.2: 500 x 4 parameters = 2000 x 3 sampling schemes = 6000 +
+#Repeat for 3.6.3: 6000
+#Total for sim.psi = 1: 53200
 
 obj3_results.liz %>% group_by(sim.psi) %>% 
   summarize(number = n())
 
+#There should be 800 less for "none" than for "fixed" because we are missing 100 iterations x 4 parameters for the sample all ages scenario for the naive model
+#For uniform, scenarios 3.2.x - 3.5.x all include psi. That's 4 scenarios. So ...
+#500 x 4 parameters for scenarios 3.x.1 = 2000 x 3 sampling schemes = 6000 x 4 scenarios = 24000 + 
+#500 x 5 parameters for scenarios 3.x.2 = 2500 x 3 sampling schemes = 7500 x 4 scenarios = 30000 + 
+#Same for scenario 3.x.3: 30000 =
+#84000 uniform
 obj3_results.liz %>% group_by(psi.prior) %>% 
   summarize(number = n())
 
+#For diffuse and tight:
+#3.1.2: 500 x 4 parameters = 2000 x 2 sampling schemes = 4000 + 
+#3.1.2 continued (for sample all age classes scenario with fewer runs): 400 x 4 parameters = 1600 x 1 sampling scheme = 1600 +
+#3.6.2: 500 x 4 parameters = 2000 x 3 sampling schemes = 6000 +
+#3.x.2: 500 x 5 parameters = 2500 x 3 sampling schemes = 7500 x 4 scenarios = 30000
+#Total for diffuse and tight: 41600
 
+#For none:
+#3.1.1: 500 x 3 parameters = 1500 x 3 sampling schemes = 4500 +
+#3.6.1: 500 x 3 parameters = 1500 x 3 sampling schemes = 4500 +
+#3.x.1: 500 x 4 parameters = 2000 x 3 sampling schemes = 6000 x 4 scenarios = 24000
+#Total for none: 33000
 obj3_results.liz %>% group_by(lambda.prior) %>% 
   summarize(number = n())
 
@@ -267,6 +307,7 @@ obj2_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
 #obj3_results.ben %>% dplyr::filter(Rhat > 1.01) %>% nrow()
 obj3_results.liz %>% dplyr::filter(Rhat > 1.01) %>% nrow()
 obj4_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+obj4_results.all %>% dplyr::filter(Rhat > 1.01) %>% nrow()
 
 #Remove instances that failed to converge
 obj1_results <- obj1_results %>% dplyr::filter(Rhat < 1.01)
@@ -274,6 +315,7 @@ obj2_results <- obj2_results %>% dplyr::filter(Rhat < 1.01)
 #obj3_results.ben <- obj3_results.ben %>% dplyr::filter(Rhat < 1.01)
 obj3_results.liz <- obj3_results.liz %>% dplyr::filter(Rhat < 1.01)
 obj4_results <- obj4_results %>% dplyr::filter(Rhat < 1.01)
+obj4_results.all <- obj4_results.all %>% dplyr::filter(Rhat < 1.01)
 ```
 
 
@@ -309,7 +351,7 @@ fig1.a <- obj1_results %>% dplyr::filter(survival.prior == "informed",
 
 fig1.a
 
-ggsave("Figure_1a_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
+#ggsave("Figure_1a_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
 
 fig1.b <- obj1_results %>% dplyr::filter(survival.prior == "informed",
                                parameter != "survival") %>% 
@@ -328,7 +370,7 @@ ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
 
 fig1.b
 
-ggsave("Figure_1b_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
+#ggsave("Figure_1b_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
 
 
 fig1.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
@@ -348,7 +390,7 @@ fig1.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
 
 fig1.c
 
-ggsave("Figure_1c_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
+#ggsave("Figure_1c_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
 
 
 fig1.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
@@ -368,12 +410,12 @@ fig1.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
 
 fig1.d
 
-ggsave("Figure_1d_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
+#ggsave("Figure_1d_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
 
 
 ggarrange(fig1.a, fig1.b, fig1.c, fig1.d, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom") #OK to ignore warnings; the first two are values > the x axis limit in 1A); the 7998 missing values are from plotting POPs
 
-ggsave("Figure_1ALL_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
+#ggsave("Figure_1ALL_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/figures/")
 
 
 ```
@@ -403,7 +445,7 @@ scales::show_col(plot.colors.fig2.1)
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
     theme_bw())
 
-ggsave("Figure_2a_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/figures/")
+#ggsave("Figure_2a_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/figures/")
 
 #Plot comparisons
 source(file = "~/R/working_directory/LemonSharkCKMR/02_DataViz/functions/Truth_comps_samples_analysis_ToSource.R")
@@ -453,7 +495,7 @@ scales::show_col(plot.colors.fig2.2)
   #xlim(-100, 200) +
   scale_fill_manual(values = plot.colors.fig2.2))
 
-ggsave("Figure_2b_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/figures//")
+#ggsave("Figure_2b_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/figures//")
 
 #With patterns instead of x axis labels
 # (fig2.d <- obj2_lam.results_4viz %>% 
@@ -511,7 +553,7 @@ scales::show_col(plot.colors.figS1)
   #xlim(-100, 200) +
   scale_fill_manual(values = plot.colors.figS1))
 
-ggsave("Figure_S1a_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/figures//")
+#ggsave("Figure_S1a_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/figures//")
 
 (figS1b <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
                                          population.growth == "extreme negative",
@@ -535,7 +577,7 @@ ggsave("Figure_S1a_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, 
 
 ggarrange(figS1a, figS1b, common.legend = TRUE, legend = "bottom")
 
-ggsave("Figure_S1_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/figures//")
+#ggsave("Figure_S1_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/figures//")
 
 #--------------------------------Figure S2-------------------------------------
 (figs2.a <- obj2_lam.results_4viz %>% 
@@ -588,7 +630,7 @@ ggsave("Figure_S1_2022.09.17", plot = last_plot(), device = "tiff", dpi = 300, p
 
 ggarrange(figs2.a, figs2.b, common.legend = TRUE, nrow = 2)
 
-ggsave("Figure_S2_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_S2_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 ```
 
 
@@ -604,7 +646,8 @@ scales::show_col(plot.colors.fig3)
 #NOTE TO SELF 09/18/2022 - can replace with facet_grid and group by lambda prior once these trials finish if the results are different
 fig3a <- obj3_results.liz %>% dplyr::filter(sim.psi == 1, 
                                    parameter != "psi",
-                                   lambda.prior == "none") %>% 
+                                   lambda.prior == "none",
+                                   psi.prior != "fixed") %>% 
   mutate(model_used = ifelse(model_used == "Liz_biennial", "Adapted", "Naive")) %>% 
   group_by(model_used, parameter, sampling.scheme, lambda.prior) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
@@ -622,7 +665,7 @@ fig3a <- obj3_results.liz %>% dplyr::filter(sim.psi == 1,
 
 fig3a
 
-ggsave("Figure_3a_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_3a_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 
@@ -640,10 +683,12 @@ o3.p_adapted <- obj3_results.liz %>% dplyr::filter(model_used != "annual",
 
 
 o4.p_miss <- obj4_results %>% dplyr::filter(lambda.prior == "none") %>% 
-  mutate(model_type = ifelse(miss.cv == 0.05, "adapted - 5% aging error CV", "adapted - 10% aging error CV"))
+  mutate(model_type = ifelse(miss.cv == 0.05, "adapted - 5% aging error CV",
+                             ifelse(miss.cv == 0.10, "adapted - 10% aging error CV",
+                                    "adapted - 20% aging error CV")))
 
 o3.p_all <- bind_rows(o3.p_naive, o3.p_adapted, o4.p_miss) %>% 
-  mutate(model_type = factor(model_type, levels = c("naive", "adapted - ages correct", "adapted - 5% aging error CV", "adapted - 10% aging error CV")))
+  mutate(model_type = factor(model_type, levels = c("naive", "adapted - ages correct", "adapted - 5% aging error CV", "adapted - 10% aging error CV", "adapted - 20% aging error CV")))
 
 #Plot results - Figure 3
 o3.p_all %>% dplyr::filter(parameter == "Nf") %>% 
@@ -659,10 +704,12 @@ o3.p_all %>% dplyr::filter(parameter == "Nf") %>%
 #  facet_grid(rows = vars(sampling.scheme), scales = "free") +
   #facet_wrap(~prop.sampled.lab) +
   guides(fill=guide_legend(title="Sampling scheme")) +
-  theme(legend.position = "top")
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank())
 
 
-ggsave("Figure_3b_2022.09.17.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_3b_2022.09.26.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 
@@ -682,7 +729,7 @@ figs3.a <- obj3_results.liz %>% dplyr::filter(model_used == "Liz_biennial",
                                    !parameter %in% c("lambda", "psi", "survival"),
                                    psi.prior != "fixed") %>% 
     mutate(lambda.prior = factor(lambda.prior, levels = c("none", "tight", "diffuse"))) %>% 
-ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
+ggplot(aes(x=factor(lambda.prior), fill = factor(sim.psi))) +
   geom_violin(aes(y=relative_bias), draw_quantiles = c(0.5)) +
   #ylim(-50, 160) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
@@ -691,7 +738,7 @@ ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
   scale_fill_manual(values = plot.colors.figs3) +
   #ggtitle("lambda prior=tight; psi prior=uniform") +
   ylim(-100, 100) +
-  facet_grid(rows = vars(parameter), cols = vars(lambda.prior)) +
+  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
 #  facet_wrap(~parameter, nrow = 2) +
   theme(legend.title = element_blank(),
         axis.title.x = element_blank()) +
@@ -699,14 +746,14 @@ ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
 
 figs3.a
 
-ggsave("Figure_s3a_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_s3a_2022.09.26.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #other parameters
 figs3.b <- obj3_results.liz %>% dplyr::filter(model_used == "Liz_biennial",
                                    psi.prior != "fixed",
                                    parameter %in% c("lambda", "survival")) %>% 
   mutate(lambda.prior = factor(lambda.prior, levels = c("none", "tight", "diffuse"))) %>% 
-ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
+ggplot(aes(x=factor(lambda.prior), fill = factor(sim.psi))) +
   geom_violin(aes(y=relative_bias), draw_quantiles = c(0.5)) +
   #ylim(-50, 160) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
@@ -715,14 +762,41 @@ ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
   scale_fill_manual(values = plot.colors.figs3) +
   #ggtitle("lambda prior=none; psi prior=uniform") +
   #ylim(-100, 100) +
-  facet_grid(rows = vars(parameter), cols = vars(lambda.prior), scales = "free") +
+  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme), scales = "free") +
 #  facet_wrap(~parameter, nrow = 2, scales = "free") +
   theme(legend.title = element_blank(),
         axis.title.x = element_blank()) +
       theme(axis.text.x = element_text(vjust = grid::unit(c(-2, 0, -2), "points")))
 figs3.b
 
-ggsave("Figure_s3b_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_s3b_2022.09.26.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+
+
+
+figs4 <- obj3_results.liz %>% dplyr::filter(model_used == "Liz_biennial",
+                                              psi.prior != "fixed",
+                                              parameter %in% c("psi"),
+                                            lambda.prior == "none") %>% 
+  mutate(lambda.prior = factor(lambda.prior, levels = c("none", "tight", "diffuse"))) %>% 
+  ggplot(aes(x=factor(sampling.scheme), fill = factor(sim.psi))) +
+  geom_boxplot(aes(y=relative_bias), draw_quantiles = c(0.5)) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="Relative bias") +
+  scale_fill_manual(values = plot.colors.figs3) +
+  #ggtitle("lambda prior=none; psi prior=uniform") +
+  #ylim(-100, 100) +
+#  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme), scales = "free") +
+  #  facet_wrap(~parameter, nrow = 2, scales = "free") +
+  theme(legend.title = element_blank(),
+        axis.title.x = element_blank()) +
+  theme(axis.text.x = element_text(vjust = grid::unit(c(-2, 0, -2), "points")))
+
+figs4
+
+ggsave("Figure_s4_2022.09.26.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #-------------------Density plots of age misassignment-------------------------#
 #Graph 1: density ridgeline plot
@@ -768,29 +842,32 @@ figs4.b
 
 ggarrange(figs4.a, figs4.b)
 
-ggsave("Figure_s4b_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Figure_s4b_2022.09.26.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 #--------------------Supplementary Obj4---------------------------
+plot.colors.figs5 <- c("pink", "salmon", "tomato3", "indianred4")
+scales::show_col(plot.colors.figs5)
+
 figs5 <- obj4_results.all %>% dplyr::filter(parameter %in% c("lambda", "survival")) %>% 
   mutate(lambda.prior = factor(lambda.prior, levels = c("none", "tight", "diffuse"))) %>% 
-ggplot(aes(x=factor(sampling.scheme), fill = factor(miss.cv))) +
+ggplot(aes(x=factor(lambda.prior), fill = factor(miss.cv))) +
   geom_violin(aes(y=relative_bias), draw_quantiles = c(0.5)) +
   #ylim(-50, 160) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
   labs(x="Sampling scheme", y="Relative bias") +
-  scale_fill_manual(values = plot.colors.figs3) +
+  scale_fill_manual(values = plot.colors.figs5) +
   #ggtitle("lambda prior=tight; psi prior=uniform") +
   #ylim(-100, 100) +
-  facet_grid(rows = vars(parameter), cols = vars(lambda.prior), scales = "free") +
+  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme), scales = "free") +
 #  facet_wrap(~parameter, nrow = 2) +
   theme(legend.title = element_blank(),
         axis.title.x = element_blank()) +
       theme(axis.text.x = element_text(vjust = grid::unit(c(-2, 0, -2), "points")))
 figs5
 
-ggsave("Figure_s5_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Figure_s5_2022.09.26.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 ```
 
 
