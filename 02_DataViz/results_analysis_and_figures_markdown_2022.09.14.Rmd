@@ -148,6 +148,10 @@ obj4.all_summ <- read_rds(file = paste0(objective_4_results_location, "obj4.all_
 obj1_results %>% group_by(sampling.scheme) %>% 
   summarize(number = n())
 
+#Average number of samples per sampling scheme
+obj1_results %>% group_by(sampling.scheme) %>% 
+  summarize(mean.samps = mean(total.sample.size))
+
 #Should all be lambda.1
 obj1_results %>% group_by(population.growth) %>% 
   summarize(number = n())

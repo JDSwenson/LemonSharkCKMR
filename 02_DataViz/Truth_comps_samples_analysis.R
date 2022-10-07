@@ -11,6 +11,42 @@ library(ggridges)
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
 
+#----------------------Objective 1----------------------------#
+#----------------Set input file locations ------------------------------
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
+PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+Sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "19Jul2022" # 11Jul2022
+inSeeds <- "Seeds2022.04.15"
+
+obj1_samples.df_A <- readRDS(file = paste0(PopSim.location, PopSim.lambda, "/annual_breeding/sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
+  mutate(sample.size = sample.size * 4) %>% 
+  dplyr::rename(total.sample.size = sample.size)
+
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
+PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+Sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "08Aug2022" # 11Jul2022
+inSeeds <- "Seeds2022.04.15"
+
+obj1_samples.df_J <- readRDS(file = paste0(PopSim.location, PopSim.lambda, "/annual_breeding/sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
+  dplyr::rename(total.sample.size = sample.size.juvs)
+
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
+PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+Sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "19Jul2022" # 11Jul2022
+inSeeds <- "Seeds2022.04.15"
+
+obj1_samples.df_Y <- readRDS(file = paste0(PopSim.location, PopSim.lambda, "/annual_breeding/sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", Sampling.scheme)) %>% 
+  dplyr::rename(total.sample.size = sample.size.juvs)
+
+obj1_samples.df_Y %>% group_by(sample.prop) %>% 
+  summarize(mean.samps = mean(total.sample.size))
+
 #----------------------Objective 2----------------------------#
 #Confirmed that the comparisons are the same for scenarios 1.1 and 1.2
 #Need to calculate mean truth over years that comparisons span
