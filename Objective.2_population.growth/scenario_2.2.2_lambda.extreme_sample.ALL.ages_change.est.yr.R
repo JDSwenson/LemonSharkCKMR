@@ -40,12 +40,12 @@ dad.comps.prefix <- "comparisons/dad.comps"
 
 
 #-------------------Set simulation settings and scenario info----------------------------
-script_name <- "scenario_2.2.2_lambda.extreme_sample.ALL.ages_change.est.yr.R" #Copy name of script here
-primary_goal <- "Test model performance with changing population size" #Why am I running this simulation? Provide details
-
-question1 <- "How does a base-case CKMR model perform with changing population size?"
-question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
-question3 <- "Does lambda become more important if we change the year of estimation?"
+# script_name <- "scenario_2.2.2_lambda.extreme_sample.ALL.ages_change.est.yr.R" #Copy name of script here
+# primary_goal <- "Test model performance with changing population size" #Why am I running this simulation? Provide details
+# 
+# question1 <- "How does a base-case CKMR model perform with changing population size?"
+# question2 <- "Do we need to account for this in a CKMR model for elasmobranchs?"
+# question3 <- "Does lambda become more important if we change the year of estimation?"
 purpose <- "scenario_2.2.2_lambda.extreme_sample.ALL.ages_change.est.yr" #For naming output files
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
@@ -118,30 +118,30 @@ abundance.prior.info <- "diffuse Normal w diffuse Uniform hyperprior"
 
 ####---------------Update and save simulation log-------------------####
 #Will want to change for Objective 2 to include CVs and misspecified parameter values#
-model_settings.df <- tibble(script_name = script_name,
-                            primary_goal = primary_goal,
-                            question1 = question1,
-                            question2 = question2,
-                            question3 = question3,
-                            purpose = purpose,
-                            date.of.simulation = date.of.simulation,
-                            target.YOY = target.YOY,
-                            down_sample = down_sample,
-                            max.HSPs = max.HSPs,
-                            max.POPs = max.POPs,
-                            HS.only = HS.only,
-                            PO.only = PO.only,
-                            fixed.parameters = fixed.parameters,
-                            estimated.parameters = estimated.parameters,
-                            seeds = outSeeds,
-                            thinning_rate = nt,
-                            posterior_samples = ni,
-                            burn_in = nb,
-                            survival.prior.info = survival.prior.mean,
-                            lambda.prior.info = lambda.prior.mean,
-                            psi.prior = psi.prior.info,
-                            abundance.prior = abundance.prior.info
-)
+# model_settings.df <- tibble(script_name = script_name,
+#                             primary_goal = primary_goal,
+#                             question1 = question1,
+#                             question2 = question2,
+#                             question3 = question3,
+#                             purpose = purpose,
+#                             date.of.simulation = date.of.simulation,
+#                             target.YOY = target.YOY,
+#                             down_sample = down_sample,
+#                             max.HSPs = max.HSPs,
+#                             max.POPs = max.POPs,
+#                             HS.only = HS.only,
+#                             PO.only = PO.only,
+#                             fixed.parameters = fixed.parameters,
+#                             estimated.parameters = estimated.parameters,
+#                             seeds = outSeeds,
+#                             thinning_rate = nt,
+#                             posterior_samples = ni,
+#                             burn_in = nb,
+#                             survival.prior.info = survival.prior.mean,
+#                             lambda.prior.info = lambda.prior.mean,
+#                             psi.prior = psi.prior.info,
+#                             abundance.prior = abundance.prior.info
+# )
 
 #Save simulation settings in Simulation_log
  # model.log <- read_csv("model_settings.log.csv")
