@@ -31,6 +31,38 @@ truth.all %>% View()
 pop.size.tibble_all %>% View()
 
 
+#Check age distribution
+g1 <- loopy.list[[10]] %>% gghistogram(x = "age.x", binwidth = 1)
+g2 <- loopy.list[[20]] %>% gghistogram(x = "age.x", binwidth = 1)
+g3 <- loopy.list[[30]] %>% gghistogram(x = "age.x", binwidth = 1)
+g4 <- loopy.list[[70]] %>% gghistogram(x = "age.x", binwidth = 1)
+g5 <- loopy.list[[80]] %>% gghistogram(x = "age.x", binwidth = 1)
+g6 <- loopy.list[[90]] %>% gghistogram(x = "age.x", binwidth = 1)
+
+ggarrange(g1, g2, g3, g4, g5, g6, common.legend = TRUE)
+
+
+#Check that females breed, on average, with two males (they do)
+loopy.list[[80]] %>% dplyr::filter(age.x == 0) %>% 
+  distinct(mother.x, father.x, .keep_all = TRUE) %>% 
+  group_by(mother.x) %>% 
+  summarize(num.fathers = n()) %>% 
+  summarize(mean = mean(num.fathers, na.rm = TRUE))
+
+#Check that all males and females breed for the first time at age 12 (they do)
+yr = 80
+pt.temp <- parents.tibble_all %>% dplyr::filter(year == yr) %>% 
+  pull(parent)
+
+loopy.list[[yr]] %>% dplyr::filter(indv.name %in% pt.temp) %>% 
+  arrange(age.x) %>% 
+  head()
+
+sample.df_all.info %>% group_by(age.x) %>% 
+  summarize(num = n()) %>% 
+  arrange(age.x)
+
+
 length(s1.2)
 length(s2.2)
 length(s3.2)

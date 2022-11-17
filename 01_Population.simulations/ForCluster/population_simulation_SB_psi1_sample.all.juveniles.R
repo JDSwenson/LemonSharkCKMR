@@ -99,10 +99,10 @@ population.growth <- "lambda.1"
 
 #################### Sampling scheme ######################
 #============================== target YOY ==============================
-sampling.scheme <- "target.YOY"
+#sampling.scheme <- "target.YOY"
 
 #============================== sample all juveniles ==============================
-# sampling.scheme <- "sample.all.juvenile.ages"
+ sampling.scheme <- "sample.all.juvenile.ages"
 
 #============================== sample all ages ==============================
 #sampling.scheme <- "sample.ALL.ages"

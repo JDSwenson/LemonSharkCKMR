@@ -55,8 +55,8 @@ ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity
 ff
 
 #============================== psi 1 ==============================
- breeding.schedule <- "biennial.breeding_psi1"
- non.conformists <- 0
+ # breeding.schedule <- "biennial.breeding_psi1"
+ # non.conformists <- 0
 
 #============================== psi 0.90 ==============================
 # breeding.schedule <- "biennial.breeding_psi0.90"
@@ -65,10 +65,10 @@ ff
 # ff
 
 #============================== psi 0.75 ==============================
-# breeding.schedule <- "biennial.breeding_psi0.75"
-# non.conformists <- 0.25 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
-# ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-# ff
+breeding.schedule <- "biennial.breeding_psi0.75"
+non.conformists <- 0.25 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
+ff
 
 #============================== psi 0.50 ==============================
 # breeding.schedule <- "biennial.breeding_psi0.50"
@@ -99,13 +99,13 @@ population.growth <- "lambda.1"
 
 #################### Sampling scheme ######################
 #============================== target YOY ==============================
-sampling.scheme <- "target.YOY"
+#sampling.scheme <- "target.YOY"
 
 #============================== sample all juveniles ==============================
-# sampling.scheme <- "sample.all.juvenile.ages"
+#sampling.scheme <- "sample.all.juvenile.ages"
 
 #============================== sample all ages ==============================
-#sampling.scheme <- "sample.ALL.ages"
+sampling.scheme <- "sample.ALL.ages"
  
 #-------------------Set date and load seeds----------------------------
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name

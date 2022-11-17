@@ -99,13 +99,13 @@ population.growth <- "lambda.1"
 
 #################### Sampling scheme ######################
 #============================== target YOY ==============================
-sampling.scheme <- "target.YOY"
+#sampling.scheme <- "target.YOY"
 
 #============================== sample all juveniles ==============================
 # sampling.scheme <- "sample.all.juvenile.ages"
 
 #============================== sample all ages ==============================
-#sampling.scheme <- "sample.ALL.ages"
+sampling.scheme <- "sample.ALL.ages"
  
 #-------------------Set date and load seeds----------------------------
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
