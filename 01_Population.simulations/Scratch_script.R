@@ -1,3 +1,36 @@
+init.pop2 %>% dplyr::filter(sex == "F" & age.x >= repro.age) %>% 
+  group_by(repro.strategy) %>% 
+  summarize(num = n())
+  
+
+data1.temp %>% dplyr::filter(sex == "F", 
+                        age.x == repro.age,
+                        is.na(repro.strategy) == TRUE,
+                        is.na(repro.cycle) == TRUE)
+
+
+data1.temp %>% dplyr::filter(sex == "F",
+                             age.x == repro.age)
+
+
+loopy.list[[90]] %>% dplyr::filter(sex == "F") %>% 
+  dplyr::select(birth.year, repro.cycle)
+
+
+parents.tibble_all %>% arrange(num.off) %>% 
+  group_by(parent.sex, year) %>% 
+  summarize(mean.off = mean(num.off)) %>% 
+  View()
+
+pop.size.tibble_all %>% dplyr::filter(iteration == 2) %>% 
+  View()
+
+
+truth.all %>% View()
+
+pop.size.tibble_all %>% View()
+
+
 length(s1.2)
 length(s2.2)
 length(s3.2)
