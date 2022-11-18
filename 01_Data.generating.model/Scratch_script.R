@@ -1,3 +1,5 @@
+data1 %>% dplyr::filter(sex == "F" & age.x >= repro.age)
+
 init.pop2 %>% dplyr::filter(sex == "F" & age.x >= repro.age) %>% 
   group_by(repro.strategy) %>% 
   summarize(num = n())

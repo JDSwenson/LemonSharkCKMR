@@ -1,5 +1,3 @@
-#Note that mating periodicity only applies to females, even though males are assigned it as well. And the repro.cycle column determines which year the animal breeds in, not the frequency. So females can have a 1 or 2 for biennial breeding. And males can be anything, but it doesn't actually come into play.
-
 simulate.pop <- function(init.pop.size, init.prop.female, Nages, mating.periodicity, repro.age, YOY.survival, juvenile.survival, Adult.survival, max.age, num.mates, ff, burn.in, Num.years){
 ####---------Set up initial population-----####
 
@@ -150,6 +148,13 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
     ff <- ff.shift
   }
   
+  #Re-assign survival to produce substantial population decline.
+  if(population.growth == "lambda.extreme" & v >= n_yrs-10){
+    Adult.survival <- Sa
+    juvenile.survival <- Sj
+  }
+  
+  
   data1 <- loopy.pop[loopy.pop$Survival =="S", -9] #Bring in the data from the previous iteration, but only include those that survive (and leave the column of survival out)
   data1$age.x <- data1$age.x+1 # increase each individuals age by one for the new year - happy birthday survivors!
   
@@ -216,13 +221,14 @@ data1 <- data1 %>% mutate(repro.cycle = ifelse(sex == "F" &
       
       if(nrow(inter.df2)==0){next} #if there were no offspring from this mating pair, skips to the next mating pair (if you dont include this you will get an error in the loop)
       inter.df2$indv.name <- baby.names # add the baby names to the data frame
+      #inter.df2$Survival <- NA
       inter.df <- rbind(inter.df, inter.df2) #add the new borns from this mating pair to the other from the same mother
-    } # end loop over mates
+        } # end loop over mates
     
     YOY.df <- rbind(YOY.df,inter.df) #add all of the offspring from each mother to a data frame of all the YOY for the year
   } # end loop over mothers
   
-  loopy.pop <- rbind(data1, YOY.df) #Combine the YOY data with the other individuals present this year. YOY go at the bottom.
+  loopy.pop <- bind_rows(data1, YOY.df) #Combine the YOY data with the other individuals present this year. YOY go at the bottom. Use "bind_rows" bc there are different numbers of columns.
   
   #Assign a column with whether or not an individual this year will survive to next year. The survival is randomly drawn based on the life stage and the probabilities defined in the parameter section.
   
@@ -247,11 +253,7 @@ data1 <- data1 %>% mutate(repro.cycle = ifelse(sex == "F" &
                                                     replace=T), "M")))
   
   #assign(paste("year.end.pop.", v, sep=""),loopy.pop) # save the current year's population data as an object
-  
-  if(mating.periodicity == 1){
-    loopy.pop <- loopy.pop %>% dplyr::select(-c(repro.cycle, repro.strategy))
-  }
-  
+
   loopy.list[[v]] <- loopy.pop # Save the current year's population data as a list element, where the index corresponds to the year
   
   moms.temp <- YOY.df %>% group_by(mother.x) %>% 
