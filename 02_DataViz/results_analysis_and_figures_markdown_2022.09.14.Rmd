@@ -659,17 +659,20 @@ fig3a <- obj3_results.liz %>% dplyr::filter(sim.psi == 1,
                    mean.cv = mean(cv)) %>%
   dplyr::arrange(parameter, sampling.scheme) %>% 
   dplyr::mutate(model_used.lab = factor(model_used, levels = c("Naive", "Adapted"))) %>% 
-  ggplot(aes(x = factor(parameter), y = percent_in_interval, color = sampling.scheme)) + 
-  geom_point(size = 3) +
+  ggplot(aes(x = factor(parameter), y = percent_in_interval, group = sampling.scheme)) + 
+  geom_point(size = 4, shape = 22, aes(color = "black", 
+                           fill = sampling.scheme)) +
   labs(x = "Parameter", y = "Percent in 95% HPDI") +
   facet_wrap(~model_used.lab) +
+  scale_fill_manual(values = plot.colors.fig3) +
+  scale_color_manual(values = "black") +
 #  facet_grid(rows = vars(lambda.prior), cols = vars(model_used)) +
   theme_bw() +
-  theme(legend.position = "bottom")
+  theme(legend.position = "none")
 
 fig3a
 
-#ggsave("Figure_3a_2022.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_3a_2022.10.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 
