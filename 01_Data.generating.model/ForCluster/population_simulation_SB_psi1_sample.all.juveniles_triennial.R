@@ -51,23 +51,23 @@ f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity 
 # non.conformists <- 0
 
 #------------------------------ Biennial ------------------------------
-mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+mating.periodicity <- 3 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 
 #============================== psi 1 ==============================
-#  breeding.schedule <- "biennial.breeding_psi1"
-#  non.conformists <- 0
+  breeding.schedule <- "triennial.breeding_psi1"
+  non.conformists <- 0
 
 #============================== psi 0.90 ==============================
 # breeding.schedule <- "biennial.breeding_psi0.90"
 # non.conformists <- 0.10 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 
 #============================== psi 0.75 ==============================
-# breeding.schedule <- "biennial.breeding_psi0.75"
-# non.conformists <- 0.25 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+ #breeding.schedule <- "biennial.breeding_psi0.75"
+ #non.conformists <- 0.25 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 
 #============================== psi 0.50 ==============================
-breeding.schedule <- "biennial.breeding_psi0.50"
-non.conformists <- 0.50 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+#breeding.schedule <- "biennial.breeding_psi0.50"
+#non.conformists <- 0.50 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 
 
 # Adjust fecundity ==============================================================

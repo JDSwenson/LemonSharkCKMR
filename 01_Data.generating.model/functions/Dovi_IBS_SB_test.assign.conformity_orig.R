@@ -177,7 +177,7 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
       sex <- NA # create a place holder for the biological sex of each offspring
       repro.cycle <- sample(1:mating.periodicity, size = 1) # assign the newborn to an eventual breeding cycle group
 
-      inter.df2 <- cbind.data.frame(indv.name, birth.year, age.x, mother.x, father.x, sex, repro.cycle, repro.strategy) # Create a row with the attributes of each YOY (at this point only one from each mating pair)
+      inter.df2 <- cbind.data.frame(indv.name, birth.year, age.x, mother.x, father.x, sex, repro.cycle) # Create a row with the attributes of each YOY (at this point only one from each mating pair)
       inter.df2 <- inter.df2[rep(seq_len(nrow(inter.df2)), num.offspring), ] # Create the random number of offspring from each pairing that we set above
       inter.df2$sex <- sample(c('F','M'), size = nrow(inter.df2), prob = birth.sex.ratio, replace = T) #Assign biological sex to each new born based on the sex ratio set in the parameter section
       baby.names <- vector() # Create a blank vector for random baby names
@@ -192,15 +192,17 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
       inter.df <- rbind(inter.df, inter.df2) #add the new borns from this mating pair to the other from the same mother
     } # end loop over mates
     
-    YOY.df <- rbind(YOY.df,inter.df) %>%  #add all of the offspring from each mother to a data frame of all the YOY for the year
-      mutate(repro.strategy = ifelse(sex == "F", 
-                                    sample(c("conformist", "non-conformist"), 
-                                           n(),
-                                           prob = c(1 - non.conformists, non.conformists),
-                                           replace = TRUE), 
-                                    "conformist")) #If they're a female, assign conformity/non-conformity at the specified probability
+    YOY.df <- rbind(YOY.df,inter.df)
     
   } # end loop over mothers
+  
+  YOY.df <- YOY.df %>%  #add all of the offspring from each mother to a data frame of all the YOY for the year
+    mutate(repro.strategy = ifelse(sex == "F", 
+                                   sample(c("conformist", "non-conformist"), 
+                                          n(),
+                                          prob = c(1 - non.conformists, non.conformists),
+                                          replace = TRUE), 
+                                   "conformist")) #If they're a female, assign conformity/non-conformity at the specified probability
   
   loopy.pop <- rbind(data1, YOY.df) #Combine the YOY data with the other individuals present this year. YOY go at the bottom.
   

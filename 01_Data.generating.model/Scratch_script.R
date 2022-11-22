@@ -1,3 +1,47 @@
+#Check proportion of conformists and non-conformists that are breeding each year
+for(i in 1:length(loopy.list)){
+Newmoms.vec <- loopy.list[[i]] %>% dplyr::filter(age.x == 0) %>% pull(mother.x)
+
+Pot.conf.moms <- loopy.list[[i]] %>% dplyr::filter(sex == "F", 
+                                                    age.x == repro.age,
+                                                    repro.strategy == "conformist")
+
+
+Newmoms.conf.df <- loopy.list[[i]] %>% dplyr::filter(indv.name %in% Newmoms.vec, 
+                                                 age.x == repro.age,
+                                                 repro.strategy == "conformist")
+
+Pot.Nonconf.moms <- loopy.list[[i]] %>% dplyr::filter(sex == "F", 
+                                                   age.x == repro.age,
+                                                   repro.strategy == "non-conformist")
+
+
+Newmoms.Nonconf.df <- loopy.list[[i]] %>% dplyr::filter(indv.name %in% Newmoms.vec, 
+                                                     age.x == repro.age,
+                                                     repro.strategy == "non-conformist")
+
+moms.all.df <- loopy.list[[i]] %>% dplyr::filter(indv.name %in% Newmoms.vec)
+
+moms.all <- moms.all.df %>% group_by(repro.strategy) %>% 
+  summarize(n = n()) %>% 
+  mutate(perc.conf = round(n/sum(n) * 100, 0)) %>% 
+  dplyr::filter(repro.strategy == "conformist") %>% 
+  pull(perc.conf)
+
+
+print(paste0("Year ", i, " prop conformists moms: ", round((nrow(Newmoms.conf.df)/nrow(Pot.conf.moms))*100), "%"))
+print(paste0("Year ", i, " prop non-conformists moms: ", round((nrow(Newmoms.Nonconf.df)/nrow(Pot.Nonconf.moms))*100), "%"))
+print(paste0("Year ", i, " percent conformist all moms: ", moms.all, "%"))
+}
+
+
+
+Newmoms.df %>% gghistogram(x = "age.x", color = "repro.strategy", fill = "repro.strategy")
+
+
+
+
+
 data1 %>% dplyr::filter(sex == "F" & age.x >= repro.age)
 
 init.pop2 %>% dplyr::filter(sex == "F" & age.x >= repro.age) %>% 
@@ -22,7 +66,8 @@ loopy.list[[90]] %>% dplyr::filter(sex == "F") %>%
 parents.tibble_all %>% arrange(num.off) %>% 
   group_by(parent.sex, year) %>% 
   summarize(mean.off = mean(num.off)) %>% 
-  View()
+  dplyr::filter(parent.sex == "mother") %>% 
+  summarize(mean(mean.off))
 
 pop.size.tibble_all %>% dplyr::filter(iteration == 2) %>% 
   View()

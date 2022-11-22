@@ -14,8 +14,6 @@ library(coda)
 
 rm(list=ls())
 
-source("./Objective.1_model.validation/functions/Obj1.functions.R") #Changed name of script that includes pairwise comparison and other functions
-
 ######################### Specify common output prefixes #########################
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -23,22 +21,24 @@ jags.model.prefix <- "CKMR.JAGS_"
 mom.comps.prefix <- "comparisons/mom.comps"
 dad.comps.prefix <- "comparisons/dad.comps"
 
-######################### Specify common settings #########################
+######################### Specify other common settings #########################
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Nov2022/" #Location of population simulation output files
+temp_location <- "~/R/working_directory/temp_results/" #Location to save temporary files in case run gets killed
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/JAGS_models/" #Location of JAGS models
+
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
+
+inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
 
 
 ########################## Objective 1 #########################
 #------------------------- Set input file locations ------------------------- 
-PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
-inSeeds <- "Seeds2022.04.15"
 
 #------------------------- Set output file locations ------------------------- 
-temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/models/"
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
 outSeeds <- "Seeds2022.04.15"
 
@@ -52,77 +52,255 @@ survival.prior.mean <- adult.survival
 survival.prior.cv <- 0.05
 survival.prior.sd <- survival.prior.mean * survival.prior.cv
 scenario <- "objective_1_model.validation" #For naming output files
+model <- "annual.model" #For naming output files
+
+source("./Objective.1_model.validation/functions/Obj1.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
 #------------------------- Target YOY -------------------------#
 sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "19Jul2022"
+date.of.PopSim <- "17Nov2022"
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships?
 
 #------------------------- Sample all juveniles -------------------------#
 sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "08Aug2022"
+date.of.PopSim <- "17Nov2022"
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships?
 
 #------------------------- Sample all ages -------------------------#
 sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "19Jul2022"
+date.of.PopSim <- "17Nov2022"
 HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships?
 
 
+
+
 ########################## Objective 2 #########################
-#### Note to Self: NEED TO DO MORE WORK ON THIS SECTION  ####
 #------------------------- Set input file locations -------------------------
-PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
-PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
-inSeeds <- "Seeds2022.04.15"
 
 #------------------------- Set output file locations ------------------------- 
-temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/models/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Nov2022/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Nov2022/Model.results/"
 outSeeds <- "Seeds2022.04.15"
 
 #------------------------- Objective 2 common settings -------------------------
 fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none".
-jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
-estimated.parameters <- paste0(jags_params, collapse = ",")
-mating.periodicity <- 1 #number of years between mating for females
-#Survival prior info
+model <- "annual.model" #For naming output files
 
 #========================= Scenario 2.1 =========================
 #------------------------- Scenario 2.1.1: Small population decline; no lambda in model
+PopSim.lambda <- "lambda.slight.decrease"
 scenario<- "scenario_2.1.1" #For naming output files
+jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
 
+#------------------------- Scenario 2.1.2: Small population growth; no lambda in model
+PopSim.lambda <- "lambda.slight.increase"
+scenario<- "scenario_2.1.2" #For naming output files
+jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 2.1.3: Substantial population decline; no lambda in model
+PopSim.lambda <- "lambda.extreme" 
+scenario<- "scenario_2.1.3" #For naming output files
+jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+
+#========================= Scenario 2.2 =========================
+#------------------------- Scenario 2.2.1: Small population decline; lambda in model w/ tight prior
+PopSim.lambda <- "lambda.slight.decrease"
+scenario<- "scenario_2.2.1" #For naming output files
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 2.2.2: Small population growth; lambda in model w/ tight prior
+PopSim.lambda <- "lambda.slight.increase"
+scenario<- "scenario_2.2.2" #For naming output files
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 2.2.3: Substantial population decline; lambda in model w/ tight prior
+PopSim.lambda <- "lambda.extreme" 
+scenario<- "scenario_2.2.3" #For naming output files
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+
+#========================= Scenario 2.3 =========================
+#------------------------- Scenario 2.3.1: Small population decline; lambda in model w/ wide prior
+PopSim.lambda <- "lambda.slight.decrease"
+scenario<- "scenario_2.3.1" #For naming output files
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 2.3.2: Small population growth; lambda in model w/ wide prior
+PopSim.lambda <- "lambda.slight.increase"
+scenario<- "scenario_2.3.2" #For naming output files
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 2.3.3: Substantial population decline; lambda in model w/ wide prior
+PopSim.lambda <- "lambda.extreme" 
+scenario<- "scenario_2.3.3" #For naming output files
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#========================== Sampling
 #------------------------- Target YOY -------------------------#
 sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "19Jul2022"
+date.of.PopSim <- "17Nov2022"
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships?
 
 #------------------------- Sample all juveniles -------------------------#
 sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "08Aug2022"
+date.of.PopSim <- "17Nov2022"
 HS.only <- "yes" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships?
 
 #------------------------- Sample all ages -------------------------#
 sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-date.of.PopSim <- "19Jul2022"
+date.of.PopSim <- "17Nov2022"
 HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships?
 
 
+
 ########################## Objective 3 #########################
-mating.periodicity <- 2 #number of years between mating for females
+#------------------------- Set output file locations ------------------------- 
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.results/"
+outSeeds <- "Seeds2022.04.15"
+
+#------------------------- Objective 3 common settings -------------------------
+fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none".
+PopSim.lambda <- "lambda.1"
+
+#========================= Scenario 3.1 =========================
+#------------------------- Scenario 3.1.1: Biennial breeding; psi = 1; annual model
+PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.1.1" #For naming output files
+model <- "annual.model"
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 3.1.2: Biennial breeding; psi = 1; multiennial model
+PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.1.2" #For naming output files
+model <- "multiennial.model"
+jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
 
 
-#rseeds <- sample(1:1000000,iterations)
-#save(rseeds, file = "rseeds_2022.04.15.rda")
+#========================= Scenario 3.2 =========================
+#------------------------- Scenario 3.2.1: Biennial breeding; psi = 0.9; annual model
+PopSim.breeding.schedule <- "biennial.breeding_psi0.90" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.2.1" #For naming output files
+model <- "annual.model"
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 3.2.2: Biennial breeding; psi = 0.9; multiennial model
+PopSim.breeding.schedule <- "biennial.breeding_psi0.90" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.2.2" #For naming output files
+model <- "multiennial.model"
+jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+
+#========================= Scenario 3.3 =========================
+#------------------------- Scenario 3.3.1: Biennial breeding; psi = 0.9; annual model
+PopSim.breeding.schedule <- "biennial.breeding_psi0.75" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.3.1" #For naming output files
+model <- "annual.model"
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 3.3.2: Biennial breeding; psi = 0.9; multiennial model
+PopSim.breeding.schedule <- "biennial.breeding_psi0.75" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.3.2" #For naming output files
+model <- "multiennial.model"
+jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+
+
+#========================= Scenario 3.4 =========================
+#------------------------- Scenario 3.4.1: Biennial breeding; psi = 0.9; annual model
+PopSim.breeding.schedule <- "biennial.breeding_psi0.50" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.4.1" #For naming output files
+model <- "annual.model"
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 3.4.2: Biennial breeding; psi = 0.9; multiennial model
+PopSim.breeding.schedule <- "biennial.breeding_psi0.50" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.4.2" #For naming output files
+model <- "multiennial.model"
+jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+
+#========================= Scenario 3.5 =========================
+#------------------------- Scenario 3.5.1: Biennial breeding; psi = 0.9; annual model
+PopSim.breeding.schedule <- "triennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.5.1" #For naming output files
+model <- "annual.model"
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+#------------------------- Scenario 3.5.2: Biennial breeding; psi = 0.9; multiennial model
+PopSim.breeding.schedule <- "triennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.5.2" #For naming output files
+model <- "multiennial.model"
+jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
+
+#========================== Sampling
+#------------------------- Target YOY -------------------------#
+sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "22Nov2022"
+HS.only <- "yes" #Do we only want to filter HS relationships?
+PO.only <- "no" #Do we only want to filter PO relationships?
+
+#------------------------- Sample all juveniles -------------------------#
+sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "22Nov2022"
+HS.only <- "yes" #Do we only want to filter HS relationships?
+PO.only <- "no" #Do we only want to filter PO relationships?
+
+#------------------------- Sample all ages -------------------------#
+sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "22Nov2022"
+HS.only <- "no" #Do we only want to filter HS relationships?
+PO.only <- "no" #Do we only want to filter PO relationships?
+
+
+
+
+########################## Objective 4 #########################
+#------------------------- Set output file locations ------------------------- 
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/"
+outSeeds <- "Seeds2022.04.15"
+
+#------------------------- Objective 3 common settings -------------------------
+fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none".
+PopSim.lambda <- "lambda.1"
+
+#========================= Scenario 3.1 =========================
+#------------------------- Scenario 3.1.1: Biennial breeding; psi = 1; annual model
+PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
+scenario <- "scenario_3.1.1" #For naming output files
+model <- "annual.model"
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+estimated.parameters <- paste0(jags_params, collapse = ",")
+
 
 
 
@@ -321,21 +499,21 @@ nc <- 2      # number of chains
    if(iter %% 100 == 0){
      
 #Results
-    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", sampling.scheme, "_iter_", iter, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
 #    #Model output for diagnostics
-     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", sampling.scheme))
+     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
 # 
-     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", sampling.scheme))
+     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
 # # 
-     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", sampling.scheme))
+     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
 # #    
-     saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", sampling.scheme))
+     saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
 # 
 #    #Save pairwise comparisons matrices
-    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", sampling.scheme))
+    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
 #    
-    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", sampling.scheme))
+    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
 
    }
     
@@ -365,21 +543,21 @@ results2 %>% group_by(sample.prop.juvs, parameter) %>%
  #Home computer: Dell Precision
  
  #Save model estimates
-write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", sampling.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
  
  #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", sampling.scheme)) #Sample size 1
+ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme)) #Sample size 1
  
-  saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", sampling.scheme)) #Sample size 2
+  saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme)) #Sample size 2
  # 
-  saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", sampling.scheme)) #Sample size 3
+  saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme)) #Sample size 3
  # 
-  saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", sampling.scheme)) #Sample size 4
+  saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme)) #Sample size 4
  
  #Save final pairwise comparison matrices
- saveRDS(mom.comps.tibble, file = paste0(results_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", sampling.scheme))
+ saveRDS(mom.comps.tibble, file = paste0(results_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
  
- saveRDS(dad.comps.tibble, file = paste0(results_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", sampling.scheme))
+ saveRDS(dad.comps.tibble, file = paste0(results_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
 
 
 #-------------Quick viz of results--------------#

@@ -35,7 +35,39 @@ lam_min <- min(adult.lambda[ref.year:n_yrs]) #Minimum lambda over estimation per
 lam_max <- max(adult.lambda[ref.year:n_yrs]) #Maximum lambda over estimation period
 
 #psi
-psi_truth <- 1-non.conformists
+psi_truth.vec <- NULL
+#Check proportion of conformists and non-conformists that are breeding each year
+for(i in 1:length(loopy.list)){
+  Newmoms.vec <- loopy.list[[i]] %>% dplyr::filter(age.x == 0) %>% pull(mother.x)
+  
+  # Pot.conf.moms <- loopy.list[[i]] %>% dplyr::filter(sex == "F", 
+  #                                                    age.x == repro.age,
+  #                                                    repro.strategy == "conformist")
+  # 
+  # 
+  # Newmoms.conf.df <- loopy.list[[i]] %>% dplyr::filter(indv.name %in% Newmoms.vec, 
+  #                                                      age.x == repro.age,
+  #                                                      repro.strategy == "conformist")
+  # 
+  # Pot.Nonconf.moms <- loopy.list[[i]] %>% dplyr::filter(sex == "F", 
+  #                                                       age.x == repro.age,
+  #                                                       repro.strategy == "non-conformist")
+  # 
+  # 
+  # Newmoms.Nonconf.df <- loopy.list[[i]] %>% dplyr::filter(indv.name %in% Newmoms.vec, 
+  #                                                         age.x == repro.age,
+  #                                                         repro.strategy == "non-conformist")
+  
+  moms.all.df <- loopy.list[[i]] %>% dplyr::filter(indv.name %in% Newmoms.vec)
+  
+  psi_truth.vec[i] <- moms.all.df %>% group_by(repro.strategy) %>% 
+    summarize(n = n()) %>% 
+    mutate(perc.conf = round(n/sum(n), 2)) %>% 
+    dplyr::filter(repro.strategy == "conformist") %>% 
+    pull(perc.conf)
+}
+
+psi_truth <- round(mean(psi_truth.vec[ref.year:n_yrs]), 2)
 
 #Create dataframe of estimates and truth
 true.values <- tibble(parameter = c("Nf", "psi", "Nm", "survival", "lambda"),
