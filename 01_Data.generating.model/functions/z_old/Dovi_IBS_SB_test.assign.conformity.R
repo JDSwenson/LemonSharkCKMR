@@ -1,6 +1,6 @@
 simulate.pop <- function(init.pop.size, init.prop.female, Nages, mating.periodicity, repro.age, YOY.survival, juvenile.survival, Adult.survival, max.age, num.mates, ff, burn.in, Num.years){
-####---------Set up initial population-----####
 
+  ####---------Set up initial population-----####
 init.pop <- data.frame() # create a blank data frame which will become the initial population
 
 age.x <- NULL
@@ -8,7 +8,6 @@ for(y in 1:length(Nages)) age.x <- c(age.x, rep(y, Nages[y]))
 
 repro.cycle.vec_init <- c(rep(NA, length.out = length(2:repro.age)), #Use 2 bc we don't want to include age 0 and we don't want to double count the age at reproduction. This will give us the right number for our code below to correctly draw from the vector.
                           rep(c(1:mating.periodicity), length.out = length(repro.age:max.age)))
-
 
 for(i in 1:init.pop.size) { # Loop that creates the below data for each individual in a population the size of "init.pop.size"
   

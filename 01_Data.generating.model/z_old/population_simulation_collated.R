@@ -40,27 +40,27 @@ f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity 
 
 #################### Breeding schedule ######################
 #------------------------------ Annual ------------------------------
-breeding.schedule <- "annual.breeding"
-mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-non.conformists <- 0
-#Change fecundity based on breeding cycle
-ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
-ff
+# breeding.schedule <- "annual.breeding"
+# mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+# non.conformists <- 0
+# #Change fecundity based on breeding cycle
+# ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
+# ff
 
 #------------------------------ Biennial ------------------------------
-# mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-# ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle. The first term is female offspring per individual. The second term is mates per year.
-# ff
+mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle. The first term is female offspring per individual. The second term is mates per year.
+ff
 
 #============================== psi 1 ==============================
  # breeding.schedule <- "biennial.breeding_psi1"
  # non.conformists <- 0
 
 #============================== psi 0.90 ==============================
-# breeding.schedule <- "biennial.breeding_psi0.90"
-# non.conformists <- 0.10 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
-# ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-# ff
+breeding.schedule <- "biennial.breeding_psi0.90"
+non.conformists <- 0.10 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
+ff
 
 #============================== psi 0.75 ==============================
 # breeding.schedule <- "biennial.breeding_psi0.75"
@@ -79,18 +79,18 @@ ff
 
 #################### Population growth ####################
 #------------------------------Stable------------------------------
-#population.growth <- "lambda.1"
+population.growth <- "lambda.1"
 
 #------------------------------Slight increase------------------------------
 # population.growth <- "lambda.slight.increase"
-# ff.shift <- ff+0.5 #Increase fecundity to slightly increase population growth
+# ff.shift <- ff+0.5 #Increase fecundity to slightly increase population growth - only works for annual breeding
 
 #------------------------------Slight decrease------------------------------
 # population.growth <- "lambda.slight.decrease"
-# ff.shift <- ff-0.5 #Decrease fecundity to slightly decrease population growth
+# ff.shift <- ff-0.5 #Decrease fecundity to slightly decrease population growth - only works for annual breeding
 
 #------------------------------Substantial decrease------------------------------
-population.growth <- "lambda.extreme"
+#population.growth <- "lambda.extreme"
 
 
 
