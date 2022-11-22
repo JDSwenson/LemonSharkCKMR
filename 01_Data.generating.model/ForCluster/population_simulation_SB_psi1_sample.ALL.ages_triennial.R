@@ -2,11 +2,16 @@
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
 library(MASS)
 library(popbio)
-library(mpmtools)
+#library(mpmtools)  # not at CRAN;
+# install.packages("devtools")
+#devtools::install_github("BruceKendall/mpmtools")
 library(ggpubr)
-library(rjags)
-library(R2jags)
-library(jagsUI)
+# The rjags package is just an interface to the JAGS library
+# Make sure you have installed JAGS-4.x.y.exe (for any x >=0, y>=0) from
+# http://www.sourceforge.net/projects/mcmc-jags/files
+# library(rjags)
+# library(R2jags)
+# library(jagsUI)
 library(Rlab)
 library(runjags)
 library(postpack)
@@ -14,11 +19,12 @@ library(coda)
 
 rm(list=ls())
 
-source("./01_Data.generating.model/functions/Dovi_IBS_SB_test.assign.conformity_orig.R")
+#source("functions/Dovi_IBS_SB_test.assign.conformity_mat12.R") #All biennial breeders reproduce for the first time at age 12
+source("./01_Data.generating.model/functions/Dovi_IBS_SB_test.assign.conformity_mat12OR13_liz.R") #Half of biennial breeders reproduce for the first time at age 12; the other half at age 13.
 
 #################### Set output file locations and labels ####################
-temp_location <- "~/R/working_directory/temp_results/"
-output.location <- "./output/Population.simulations/"
+temp_location <- "output/"
+output.location <- "output/"
 parents_prefix <- "parents.breakdown"
 sample_prefix <- "sample.info"
 pop.size.prefix <- "pop.size"
@@ -33,7 +39,7 @@ juvenile.survival <- 0.8 # CHANGED FROM 0.9; juvenile survival
 Adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
-num.mates <- c(1:3) #vector of potential number of mates per mating
+num.mates <- c(1:3) #1  #c(1:3) #vector of potential number of mates per mating
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
 
 
@@ -43,40 +49,34 @@ f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity 
 # breeding.schedule <- "annual.breeding"
 # mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 # non.conformists <- 0
-# #Change fecundity based on breeding cycle
-# ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
-# ff
 
 #------------------------------ Biennial ------------------------------
-mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle. The first term is female offspring per individual. The second term is mates per year.
-ff
+mating.periodicity <- 3 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 
 #============================== psi 1 ==============================
- breeding.schedule <- "biennial.breeding_psi1"
- non.conformists <- 0
+  breeding.schedule <- "triennial.breeding_psi1"
+  non.conformists <- 0
 
 #============================== psi 0.90 ==============================
-breeding.schedule <- "biennial.breeding_psi0.90"
-non.conformists <- 0.10 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
-ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-ff
+# breeding.schedule <- "biennial.breeding_psi0.90"
+# non.conformists <- 0.10 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 
 #============================== psi 0.75 ==============================
-# breeding.schedule <- "biennial.breeding_psi0.75"
-# non.conformists <- 0.25 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
-# ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-# ff
+ #breeding.schedule <- "biennial.breeding_psi0.75"
+ #non.conformists <- 0.25 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 
 #============================== psi 0.50 ==============================
-# breeding.schedule <- "biennial.breeding_psi0.50"
-# non.conformists <- 0.50 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
-# ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-# ff
+#breeding.schedule <- "biennial.breeding_psi0.50"
+#non.conformists <- 0.50 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
 
 
-
-
+# Adjust fecundity ==============================================================
+## for effective number of breeders each year, mating cycle, number of mates ====
+#(from liz) ====
+psi <- 1-non.conformists
+ff <- mating.periodicity/(mating.periodicity-psi*mating.periodicity+psi)*f/init.prop.female/mean(num.mates)
+ff
+# ====
 #################### Population growth ####################
 #------------------------------Stable------------------------------
 population.growth <- "lambda.1"
@@ -111,7 +111,9 @@ date.of.simulation <- today
 
 rseeds <- readRDS("rseeds_2022.04.15.rda")
 seeds <- "Seeds2022.04.15"
-
+# create some seeds: 
+#rseeds <- trunc(1529375630*runif(1000, min=0, max=1 ) )
+#rseeds[1]  <- 746160703
 
 #----------------------- DATA-GENERATING MODEL --------------------
 # Note on sequencing: Birthdays happen at beginning of each year, followed by mating, then death (i.e. a female who dies in year 10 can still give birth and have surviving pups in year 10)
@@ -141,7 +143,7 @@ sample.vec.prop <- c(.5, 1, 1.5, 2)
 
 ####-------------- Prep simulation ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 500 #Number of iterations to loop over
+iterations <- 2  # 1 just to look at output     500 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -199,8 +201,7 @@ iterations <- 500 #Number of iterations to loop over
    rseed <- rseeds[iter]
    set.seed(rseed)
 
-   source("./01_Data.generating.model/functions/Dovi_IBS_SB_test.assign.conformity_orig.R")
-   
+
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
                init.prop.female = init.prop.female,
@@ -282,7 +283,7 @@ iterations <- 500 #Number of iterations to loop over
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("01_Data.generating.model/functions/PopSim_truth.R")
+    source("./01_Data.generating.model/functions/PopSim_truth.R")
     
     #Save info for samples to examine in more detail
     sample.df_all.info <- sample.df_all.info %>% 

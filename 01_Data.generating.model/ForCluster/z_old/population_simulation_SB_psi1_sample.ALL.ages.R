@@ -14,7 +14,8 @@ library(coda)
 
 rm(list=ls())
 
-source("./01_Data.generating.model/functions/Dovi_IBS_SB_test.assign.conformity_orig.R")
+source("./01_Population.simulations/functions/Dovi_IBS_SB_test.assign.conformity.R")
+source("./01_Population.simulations/functions/pairwise_comparisons_HS.PO_SB.R")
 
 #################### Set output file locations and labels ####################
 temp_location <- "~/R/working_directory/temp_results/"
@@ -38,11 +39,12 @@ f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity 
 
 
 
+
 #################### Breeding schedule ######################
 #------------------------------ Annual ------------------------------
 # breeding.schedule <- "annual.breeding"
 # mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-# non.conformists <- 0
+# 
 # #Change fecundity based on breeding cycle
 # ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
 # ff
@@ -57,10 +59,10 @@ ff
  non.conformists <- 0
 
 #============================== psi 0.90 ==============================
-breeding.schedule <- "biennial.breeding_psi0.90"
-non.conformists <- 0.10 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
-ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
-ff
+# breeding.schedule <- "biennial.breeding_psi0.90"
+# non.conformists <- 0.10 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+# ff <- ff*(1-non.conformists) #Change female fecundity per breeding cycle to account for non-conformists
+# ff
 
 #============================== psi 0.75 ==============================
 # breeding.schedule <- "biennial.breeding_psi0.75"
@@ -83,11 +85,11 @@ population.growth <- "lambda.1"
 
 #------------------------------Slight increase------------------------------
 # population.growth <- "lambda.slight.increase"
-# ff.shift <- ff+0.5 #Increase fecundity to slightly increase population growth - only works for annual breeding
+# ff.shift <- ff+0.5 #Increase fecundity to slightly increase population growth
 
 #------------------------------Slight decrease------------------------------
 # population.growth <- "lambda.slight.decrease"
-# ff.shift <- ff-0.5 #Decrease fecundity to slightly decrease population growth - only works for annual breeding
+# ff.shift <- ff-0.5 #Decrease fecundity to slightly decrease population growth
 
 #------------------------------Substantial decrease------------------------------
 #population.growth <- "lambda.extreme"
@@ -100,7 +102,7 @@ population.growth <- "lambda.1"
 #sampling.scheme <- "target.YOY"
 
 #============================== sample all juveniles ==============================
-#sampling.scheme <- "sample.all.juvenile.ages"
+# sampling.scheme <- "sample.all.juvenile.ages"
 
 #============================== sample all ages ==============================
 sampling.scheme <- "sample.ALL.ages"
@@ -136,7 +138,19 @@ estimation.year <- n_yrs - 5 # Set year of estimation for truth calculations
 
 #--------------------- Sampling parameters ---------------------
 sample.years <- c(n_yrs - c(3:0)) #For four years of sampling
+#sample.years <- n_yrs #One year of sampling
+#sample.size <- 300 #sample size per year
+#sample.vec.juvs <- c(50, 100, 150, 200) #vector to sample over per year
+#sample.vec.adults <- c(sample.vec.juvs/5)
+#sample.vec.total <- sample.vec.juvs + sample.vec.adults
 sample.vec.prop <- c(.5, 1, 1.5, 2)
+
+
+#----------------------- MCMC parameters ----------------------#
+ni <- 40000 # number of post-burn-in samples per chain
+nb <- 50000 # number of burn-in samples
+nt <- 20     # thinning rate
+nc <- 2      # number of chains
 
 
 ####-------------- Prep simulation ----------------------
@@ -162,7 +176,6 @@ iterations <- 500 #Number of iterations to loop over
  sim.samples.3 <- paste0(sample.vec.prop[3], "prop.sampled")
  sim.samples.4 <- paste0(sample.vec.prop[4], "prop.sampled")
 
- #
  #---------------------Initialize array from previous checkpoint--------------------------
 #Results
 #  results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
@@ -199,7 +212,7 @@ iterations <- 500 #Number of iterations to loop over
    rseed <- rseeds[iter]
    set.seed(rseed)
 
-   source("./01_Data.generating.model/functions/Dovi_IBS_SB_test.assign.conformity_orig.R")
+   source("./01_Population.simulations/functions/Dovi_IBS_SB_test.assign.conformity.R")
    
   #Run individual based simulation
   out <- simulate.pop(init.pop.size = init.pop.size, 
@@ -227,7 +240,7 @@ iterations <- 500 #Number of iterations to loop over
     mutate(seed = rseed, iteration = iter)
   
   #organize results and calculate summary statistics from the simulation
-  source("./01_Data.generating.model/functions/query_results_PopSim.R")
+  source("./01_Population.simulations/functions/query_results_PopSim.R")
   
   #-----------------------Collect samples-------------------------
   #Loop over sample sizes stored in sample.vec  
@@ -282,7 +295,7 @@ iterations <- 500 #Number of iterations to loop over
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
     #Compile results and summary statistics from simulation to compare estimates
-    source("01_Data.generating.model/functions/PopSim_truth.R")
+    source("01_Population.simulations/functions/PopSim_truth.R")
     
     #Save info for samples to examine in more detail
     sample.df_all.info <- sample.df_all.info %>% 
