@@ -33,21 +33,21 @@ today <- format(Sys.Date(), "%d%b%Y")
 
 ```{r set-file-locations and read in files, include = FALSE}
 #------------- Simulation parameters and labels  ----------------#
-objective_1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
-objective_1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
-objective_1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/figures/"
+objective_1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.output/"
+objective_1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.results/"
+objective_1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.results/figures/"
 
-objective_2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
-objective_2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
-objective_2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+objective_2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.output/"
+objective_2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.results/"
+objective_2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.results/figures/"
 
-objective_3_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.output/"
-objective_3_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/"
-objective_3_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/figures/"
+objective_3_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Pre_Nov2022/Model.output/"
+objective_3_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Pre_Nov2022/Model.results/"
+objective_3_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Pre_Nov2022/Model.results/figures/"
 
-objective_4_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.output/"
-objective_4_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/"
-objective_4_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/figures/"
+objective_4_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Pre_Nov2022/Model.output/"
+objective_4_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Pre_Nov2022/Model.results/"
+objective_4_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Pre_Nov2022/Model.results/figures/"
 
 
 results_prefix <- "CKMR_results"

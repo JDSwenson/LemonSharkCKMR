@@ -1,3 +1,5 @@
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/JAGS_models/" #Location of JAGS models
+  
 HS.PO_noLambda_annual_model_validation = function(){
   #PRIORS - uninformative
   mu ~ dunif(1, 10000)
@@ -118,14 +120,14 @@ HS.only_noLambda_Skip_model = function(){
   #Likelihood
   #Moms
   #HS - even years
-  for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+  for(i in 1:mom.yrs_HS.on){ # Loop over maternal cohort comparisons
+    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
-  for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+  for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
+    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
   }
   
   #Dads
@@ -138,7 +140,7 @@ HS.only_noLambda_Skip_model = function(){
 
 ####
 
-HSPOP_noLambda_Skip_model= function(){
+HS.PO_noLambda_Skip_model= function(){
   
   #PRIORS - uninformative
   mu ~ dunif(1, 10000)
@@ -153,14 +155,14 @@ HSPOP_noLambda_Skip_model= function(){
   #Likelihood
   #Moms
   #HS - even years
-  for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+  for(i in 1:mom.yrs_HS.on){ # Loop over maternal cohort comparisons
+    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
-  for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+  for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
+    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf)), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
   }
 
   #Moms
@@ -192,14 +194,14 @@ HS.only_wideLambda_Skip_model = function(){
   #Likelihood
   #Moms
   #HS - even years
-  for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+  for(i in 1:mom.yrs_HS.on){ # Loop over maternal cohort comparisons
+    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.on[i]))), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
-  for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+  for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
+    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.off[j]))), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
   }
   
   #Dads
@@ -212,7 +214,7 @@ HS.only_wideLambda_Skip_model = function(){
 
 ####
 
-HSPOP_wideLambda_Skip_model= function(){
+HS.PO_wideLambda_Skip_model= function(){
   
   #PRIORS - uninformative
   mu ~ dunif(1, 10000)
@@ -226,14 +228,14 @@ HSPOP_wideLambda_Skip_model= function(){
   #Likelihood
   #Moms
   #HS - even years
-  for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+  for(i in 1:mom.yrs_HS.on){ # Loop over maternal cohort comparisons
+    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.on[i]))), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
-  for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+  for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
+    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.off[j]))), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
   }
   
   #Moms
@@ -264,14 +266,14 @@ HS.only_narrowLambda_Skip_model = function(){
   #Likelihood
   #Moms
   #HS - even years
-  for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+  for(i in 1:mom.yrs_HS.on){ # Loop over maternal cohort comparisons
+    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.on[i]))), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
-  for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+  for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
+    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.off[j]))), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
   }
   
   #Dads
@@ -284,7 +286,7 @@ HS.only_narrowLambda_Skip_model = function(){
 
 ####
 
-HSPOP_narrowLambda_Skip_model= function(){
+HS.PO_narrowLambda_Skip_model= function(){
   
   #PRIORS - uninformative
   mu ~ dunif(1, 10000)
@@ -298,14 +300,14 @@ HSPOP_narrowLambda_Skip_model= function(){
   #Likelihood
   #Moms
   #HS - even years
-  for(i in 1:mom.yrs_HS.even){ # Loop over maternal cohort comparisons
-    mom.positives_HS.even[i] ~ dbin((a*(survival^mom.mort.yrs_HS.even[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.even[i]))), mom.n.comps_HS.even[i]) # Sex-specific CKMR model equation
+  for(i in 1:mom.yrs_HS.on){ # Loop over maternal cohort comparisons
+    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.on[i]))), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
-  for(j in 1:mom.yrs_HS.odd){ # Loop over maternal cohort comparisons
-    mom.positives_HS.odd[j] ~ dbin(((survival^mom.mort.yrs_HS.odd[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.odd[j]))), mom.n.comps_HS.odd[j]) # Sex-specific CKMR model equation
+  for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
+    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.off[j]))), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
   }
   
   #Moms
@@ -337,17 +339,17 @@ write_model(HS.PO_wideLambda_annual_model, jags_file)
 jags_file = paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
 write_model(HS.only_noLambda_Skip_model, jags_file)
 
-jags_file = paste0(jags.model_location, "HSPOP_noLambda_Skip_model.txt")
-write_model(HSPOP_noLambda_Skip_model, jags_file)
+jags_file = paste0(jags.model_location, "HS.PO_noLambda_Skip_model.txt")
+write_model(HS.PO_noLambda_Skip_model, jags_file)
 
 jags_file = paste0(jags.model_location, "HS.only_wideLambda_Skip_model.txt")
 write_model(HS.only_wideLambda_Skip_model, jags_file)
 
-jags_file = paste0(jags.model_location, "HSPOP_wideLambda_Skip_model.txt")
-write_model(HSPOP_wideLambda_Skip_model, jags_file)
+jags_file = paste0(jags.model_location, "HS.PO_wideLambda_Skip_model.txt")
+write_model(HS.PO_wideLambda_Skip_model, jags_file)
 
 jags_file = paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt")
 write_model(HS.only_narrowLambda_Skip_model, jags_file)
 
-jags_file = paste0(jags.model_location, "HSPOP_narrowLambda_Skip_model.txt")
-write_model(HSPOP_narrowLambda_Skip_model, jags_file)
+jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt")
+write_model(HS.PO_narrowLambda_Skip_model, jags_file)

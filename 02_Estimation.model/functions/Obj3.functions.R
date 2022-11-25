@@ -361,7 +361,7 @@ HS.dad.pairwise.df <- dad_comps.HS %>%
 mom_comps.all <- bind_rows(HS.mom.pairwise.df, PO.mom.pairwise.df) %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) %>% 
   arrange(desc(ref.year), mort.yrs) %>% 
-  mutate(BI = ifelse(mort.yrs %% 2 == 0, "even", "odd"))
+  mutate(BI = ifelse(mort.yrs %% mating.periodicity == 0, "on", "off"))
 
 dad_comps.all <- bind_rows(HS.dad.pairwise.df, PO.dad.pairwise.df) %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) %>% 
@@ -543,13 +543,13 @@ calc.psi <- function(loopy.list){
   #Extract all positive maternal half-sib comparisons from sampled years
   positives.mom.BI <- pairwise.BI.all.info %>% filter(older.sib.mom == younger.sib.mom) %>% 
     mutate(yr.gap = younger.sib.birth - older.sib.birth) %>% 
-    mutate(BI = ifelse(yr.gap %% 2 == 0, "even", "odd")) %>% #If the year gap between ha;f-sibs is divisible by 2, then call the breeding interval (BI) "even"
+    mutate(BI = ifelse(yr.gap %% mating.periodicity == 0, "on", "off")) %>% #If the year gap between ha;f-sibs is divisible by 2, then call the breeding interval (BI) "even"
     dplyr::distinct(older.sib.birth, younger.sib.birth, younger.sib.mom, .keep_all = TRUE) #Duplicative of earlier; making sure cohort size isn't biasing things here
   
   #Everything matches up re: positives and 
   positives.mom.BI %>% group_by(BI) %>% summarize(n()) #How many positive comparisons for 
   
-  skipped.moms <- positives.mom.BI %>% dplyr::filter(BI == "even") %>% 
+  skipped.moms <- positives.mom.BI %>% dplyr::filter(BI == "on") %>% 
     dplyr::distinct(younger.sib.mom) %>% 
     pull(younger.sib.mom) #Should be the same as the older sib mom
   

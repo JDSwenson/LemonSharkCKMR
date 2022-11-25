@@ -1,28 +1,17 @@
 ######################### STEP 1: PREPARE DATA ########################
 #------------------------ Annual model ------------------------
-if(model == "annual"){
+if(model == "annual.model"){
 yrs <- c(estimation.year:n_yrs)
-ref.year <- min(mom_comps.all$ref.year, dad_comps.all$ref.year)
+ref.year.mom <- min(mom_comps.all$ref.year)
+ref.year.dad <- min(dad_comps.all$ref.year)
 
 #Create vectors of data for JAGS
 #Mom
-#HS - even years
-mom_comps.HS_even <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "even")
-mom.mort.yrs_HS.even <- mom_comps.HS_even$mort.yrs
-mom.popGrowth.yrs_HS.even <- mom_comps.HS_even$pop.growth.yrs
-mom.n.comps_HS.even <- mom_comps.HS_even$all
-mom.positives_HS.even <- mom_comps.HS_even$yes
-mom.yrs_HS.even <- nrow(mom_comps.HS_even)
-#mom.R0 <- mom_comps.all$R0
-
-#Mom
-#HS - odd years
-mom_comps.HS_odd <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "odd")
-mom.mort.yrs_HS.odd <- mom_comps.HS_odd$mort.yrs
-mom.popGrowth.yrs_HS.odd <- mom_comps.HS_odd$pop.growth.yrs
-mom.n.comps_HS.odd <- mom_comps.HS_odd$all
-mom.positives_HS.odd <- mom_comps.HS_odd$yes
-mom.yrs_HS.odd <- nrow(mom_comps.HS_odd)
+mom.mort.yrs <- mom_comps.all$mort.yrs
+mom.popGrowth.yrs <- mom_comps.all$pop.growth.yrs
+mom.n.comps <- mom_comps.all$all
+mom.positives <- mom_comps.all$yes
+mom.yrs <- nrow(mom_comps.all)
 
 
 #Dad
@@ -32,33 +21,39 @@ dad.n.comps <- dad_comps.all$all
 dad.positives <- dad_comps.all$yes
 dad.yrs <- nrow(dad_comps.all)
 
+if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt")){
 #Calculate parameters for beta distribution from mean and variance for survival
  surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
  surv.alpha <- surv.betaParams[[1]]
  surv.beta <- surv.betaParams[[2]]
+ }
 }
 
 
 #------------------------ Multiennial model ------------------------
-if(model == "multiennial"){
+if(model == "multiennial.model"){
+  yrs <- c(estimation.year:n_yrs)
+  ref.year.mom <- min(mom_comps.all$ref.year)
+  ref.year.dad <- min(dad_comps.all$ref.year)
+  
     #Create vectors of data for JAGS
     #Mom
     #HS - even years
-    mom_comps.HS_even <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "even")
-    mom.mort.yrs_HS.even <- mom_comps.HS_even$mort.yrs
-    mom.popGrowth.yrs_HS.even <- mom_comps.HS_even$pop.growth.yrs
-    mom.n.comps_HS.even <- mom_comps.HS_even$all
-    mom.positives_HS.even <- mom_comps.HS_even$yes
-    mom.yrs_HS.even <- nrow(mom_comps.HS_even)
+    mom_comps.HS_on <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "on")
+    mom.mort.yrs_HS.on <- mom_comps.HS_on$mort.yrs
+    mom.popGrowth.yrs_HS.on <- mom_comps.HS_on$pop.growth.yrs
+    mom.n.comps_HS.on <- mom_comps.HS_on$all
+    mom.positives_HS.on <- mom_comps.HS_on$yes
+    mom.yrs_HS.on <- nrow(mom_comps.HS_on)
     
     #Mom
-    #HS - odd years
-    mom_comps.HS_odd <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "odd")
-    mom.mort.yrs_HS.odd <- mom_comps.HS_odd$mort.yrs
-    mom.popGrowth.yrs_HS.odd <- mom_comps.HS_odd$pop.growth.yrs
-    mom.n.comps_HS.odd <- mom_comps.HS_odd$all
-    mom.positives_HS.odd <- mom_comps.HS_odd$yes
-    mom.yrs_HS.odd <- nrow(mom_comps.HS_odd)
+    #HS - off years
+    mom_comps.HS_off <- mom_comps.all %>% dplyr::filter(type == "HS", BI == "off")
+    mom.mort.yrs_HS.off <- mom_comps.HS_off$mort.yrs
+    mom.popGrowth.yrs_HS.off <- mom_comps.HS_off$pop.growth.yrs
+    mom.n.comps_HS.off <- mom_comps.HS_off$all
+    mom.positives_HS.off <- mom_comps.HS_off$yes
+    mom.yrs_HS.off <- nrow(mom_comps.HS_off)
     
     #Dad
     dad.mort.yrs <- dad_comps.all$mort.yrs
@@ -86,8 +81,8 @@ if(model == "multiennial"){
 #------------------------- Annual model; no lambda -------------------------
  #========================= Model validation =========================#
 #Informed prior on survival#
-if(model == "annual"){
-  if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation")){
+if(model == "annual.model"){
+  if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt")){
     #Define data
     jags_data = list(
       #Mom
@@ -130,31 +125,31 @@ if(model == "annual"){
        dad.popGrowth.yrs = dad.popGrowth.yrs,
        dad.n.comps = dad.n.comps,
        dad.positives = dad.positives,
-       dad.yrs = dad.yrs,
+       dad.yrs = dad.yrs
    )
  }
 }
 
 #------------------------- Multiennial model -------------------------
 
-if(model == "multiennial" & HS.only == "yes"){
+if(model == "multiennial.model" & HS.only == "yes"){
   #Define data
   jags_data = list(
     #Mom
     #HS: even years
-    mom.mort.yrs_HS.even = mom.mort.yrs_HS.even,
-    mom.popGrowth.yrs_HS.even = mom.popGrowth.yrs_HS.even,
-    mom.n.comps_HS.even = mom.n.comps_HS.even,
-    mom.positives_HS.even = mom.positives_HS.even,
-    mom.yrs_HS.even = mom.yrs_HS.even,
+    mom.mort.yrs_HS.on = mom.mort.yrs_HS.on,
+    mom.popGrowth.yrs_HS.on = mom.popGrowth.yrs_HS.on,
+    mom.n.comps_HS.on = mom.n.comps_HS.on,
+    mom.positives_HS.on = mom.positives_HS.on,
+    mom.yrs_HS.on = mom.yrs_HS.on,
     
     #Mom
     #HS: odd years
-    mom.mort.yrs_HS.odd = mom.mort.yrs_HS.odd,
-    mom.popGrowth.yrs_HS.odd = mom.popGrowth.yrs_HS.odd,
-    mom.n.comps_HS.odd = mom.n.comps_HS.odd,
-    mom.positives_HS.odd = mom.positives_HS.odd,
-    mom.yrs_HS.odd = mom.yrs_HS.odd,
+    mom.mort.yrs_HS.off = mom.mort.yrs_HS.off,
+    mom.popGrowth.yrs_HS.off = mom.popGrowth.yrs_HS.off,
+    mom.n.comps_HS.off = mom.n.comps_HS.off,
+    mom.positives_HS.off = mom.positives_HS.off,
+    mom.yrs_HS.off = mom.yrs_HS.off,
     
     
     #Dad
@@ -173,24 +168,24 @@ if(model == "multiennial" & HS.only == "yes"){
 
 
 
-if(model == "multiennial" & HS.only != "yes"){
+if(model == "multiennial.model" & HS.only != "yes"){
   #Define data
   jags_data = list(
     #Mom
     #HS: even years
-    mom.mort.yrs_HS.even = mom.mort.yrs_HS.even,
-    mom.popGrowth.yrs_HS.even = mom.popGrowth.yrs_HS.even,
-    mom.n.comps_HS.even = mom.n.comps_HS.even,
-    mom.positives_HS.even = mom.positives_HS.even,
-    mom.yrs_HS.even = mom.yrs_HS.even,
+    mom.mort.yrs_HS.on = mom.mort.yrs_HS.on,
+    mom.popGrowth.yrs_HS.on = mom.popGrowth.yrs_HS.on,
+    mom.n.comps_HS.on = mom.n.comps_HS.on,
+    mom.positives_HS.on = mom.positives_HS.on,
+    mom.yrs_HS.on = mom.yrs_HS.on,
     
     #Mom
     #HS: odd years
-    mom.mort.yrs_HS.odd = mom.mort.yrs_HS.odd,
-    mom.popGrowth.yrs_HS.odd = mom.popGrowth.yrs_HS.odd,
-    mom.n.comps_HS.odd = mom.n.comps_HS.odd,
-    mom.positives_HS.odd = mom.positives_HS.odd,
-    mom.yrs_HS.odd = mom.yrs_HS.odd,
+    mom.mort.yrs_HS.off = mom.mort.yrs_HS.off,
+    mom.popGrowth.yrs_HS.off = mom.popGrowth.yrs_HS.off,
+    mom.n.comps_HS.off = mom.n.comps_HS.off,
+    mom.positives_HS.off = mom.positives_HS.off,
+    mom.yrs_HS.off = mom.yrs_HS.off,
     
     #Mom
     #PO
@@ -216,9 +211,9 @@ if(model == "multiennial" & HS.only != "yes"){
 
 ######################### STEP 3: SPECIFY INITIAL VALUES #########################
 #------------------------- Annual model -------------------------
-if(model == "annual"){
+if(model == "annual.model"){
   #If no lambda, then do not specify a starting value for this parameter (which isn't in the model)
-  if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation") | jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model.txt")){
+  if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt") | jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model.txt")){
     jags_inits = function(nc) {
       inits = list()
       for(c in 1:nc){
@@ -250,7 +245,7 @@ if(model == "annual"){
  
  
 #------------------------- Multiennial model -------------------------
-if(model == "multiennial"){
+if(model == "multiennial.model"){
   jags_inits = function(nc) {
     inits = list()
     for(c in 1:nc){

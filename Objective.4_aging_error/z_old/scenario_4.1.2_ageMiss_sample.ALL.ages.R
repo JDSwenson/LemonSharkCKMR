@@ -4,7 +4,7 @@
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
 library(MASS)
 library(popbio)
-library(mpmtools, lib.loc = ".")
+library(mpmtools)
 library(ggpubr)
 library(rjags)
 library(R2jags)
@@ -20,7 +20,7 @@ rm(list=ls())
 source("./Objective.4_aging_error/functions/Obj4.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
 #----------------Set input file locations ------------------------------
-PopSim.location <- "./output/Population.simulations/"
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
 PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.breeding.schedule <- "biennial.breeding_NoNonConform" #Can be annual.breeding or biennial.breeding
 Sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
@@ -29,9 +29,9 @@ inSeeds <- "Seeds2022.04.15"
 
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
-MCMC_location <- "./output/Objective.4_aging_error/Model.output/"
-jags.model_location <- "./output/Objective.4_aging_error/models/"
-results_location <- "./output/Objective.4_aging_error/Model.results/"
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.output/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/models/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/"
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -40,7 +40,7 @@ mom.comps.prefix <- "comparisons/mom.comps"
 dad.comps.prefix <- "comparisons/dad.comps"
 samples.prefix <- "samples/samples.missassigned"
 
-#source("./Objective.4_aging_error/functions/Obj4_JAGS.models.R")
+source("./Objective.4_aging_error/functions/Obj4_JAGS.models.R")
 #jags_file <- paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HSPOP_noLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HS.only_wideLambda_Skip_model.txt")
@@ -309,7 +309,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-      source("Objective.4_aging_error/functions/Obj4_runJAGS_HSPO_wLam.R")
+      source("Objective.4_aging_error/functions/Obj4_run.JAGS_HS.PO.R")
       
       #Calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
