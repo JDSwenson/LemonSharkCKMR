@@ -1,3 +1,8 @@
+#Data Viz - check why sample sizes don't match
+test.all <- s4.1.1_all.ages %>% group_by(iteration) %>% summarize(num = n())
+test.juvs <- s4.1.1_all.juvs %>% group_by(iteration) %>% summarize(num = n())
+test.YOY <- s4.1.1_YOY %>% group_by(iteration) %>% summarize(num = n())
+
 #Population simulations
 born90 <- loopy.list[[90]] %>% dplyr::filter(birth.year == 90)
 born89 <- loopy.list[[89]] %>% dplyr::filter(birth.year == 89)

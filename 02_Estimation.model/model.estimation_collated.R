@@ -21,6 +21,7 @@ MCMC_prefix <- "CKMR_modelout"
 jags.model.prefix <- "CKMR.JAGS_"
 mom.comps.prefix <- "comparisons/mom.comps"
 dad.comps.prefix <- "comparisons/dad.comps"
+samples.prefix <- "samples/samples.missassigned"
 
 ######################### Specify other common settings #########################
 PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Nov2022/" #Location of population simulation output files
@@ -750,7 +751,10 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
  
  saveRDS(dad.comps.tibble, file = paste0(results_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
 
-
+ if(exists("age.cv") == TRUE){
+   #Save samples dataframe with misassigned ages
+   saveRDS(samples.miss, file = paste0(results_location, samples.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
+}
 #-------------Quick viz of results--------------#
 #Box plot of relative bias
 # ggplot(data=results2, aes(x=factor(sample.proportion))) +

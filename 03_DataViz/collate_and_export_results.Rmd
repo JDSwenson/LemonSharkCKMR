@@ -33,21 +33,21 @@ today <- format(Sys.Date(), "%d%b%Y")
 
 ```{r set-file-locations and read in files, include = FALSE}
 #------------- Simulation parameters and labels  ----------------#
-objective_1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
-objective_1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
-objective_1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/figures/"
+objective_1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.output/"
+objective_1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.results/"
+objective_1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.results/figures/"
 
-objective_2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.output/"
-objective_2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/"
-objective_2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Model.results/figures/"
+objective_2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.output/"
+objective_2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.results/"
+objective_2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.results/figures/"
 
-objective_3_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.output/"
-objective_3_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/"
-objective_3_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Model.results/figures/"
+objective_3_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.output/"
+objective_3_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.results/"
+objective_3_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.results/figures/"
 
-objective_4_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.output/"
-objective_4_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/"
-objective_4_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/figures/"
+objective_4_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.output/"
+objective_4_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/"
+objective_4_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/figures/"
 
 
 results_prefix <- "CKMR_results"
@@ -161,7 +161,7 @@ model.type.obj2.3A <- "HS + PO"
 
 #-------------Objective 3 --------------------
 #date.of.simulation.scenario_2.2.1Y <- "13Jul2022"
-purpose.obj3.1Y <- c("scenario_3.1.1_SB_target.YOY", "scenario_3.1.2_SB_target.YOY", "scenario_3.1.3_SB_target.YOY")
+purpose.obj3.1.1Y <- c("scenario_3.1.1_SB_target.YOY", "scenario_3.1.2_SB_target.YOY", "scenario_3.1.3_SB_target.YOY")
 file.scenario_3.1Y <- c("scenario_3.1.1_SB_target.YOY", "scenario_3.1.2_SB_target.YOY", "scenario_3.1.3_SB_target.YOY")
 purpose.obj3.1.labY <- "Target YOY"
 model.type.obj3.1Y <- "HS.only"
@@ -325,7 +325,7 @@ seeds <- "Seeds2022.04.15"
 
 
 ```{r read in files}
-source(file = "~/R/working_directory/LemonSharkCKMR/02_DataViz/functions/truth_calcs.R")
+source(file = "~/R/working_directory/LemonSharkCKMR/03_DataViz/functions/truth_calcs.R")
 obj1.truth.df
 obj2.truth.df
 obj3.truth.df_psi1
@@ -559,822 +559,311 @@ obj2_results <- scenario_2.1_results.all %>% bind_rows(scenario_2.2_results.all,
 write_csv(obj2_results, file = paste0(objective_2_results_location, "obj2_collated_results.csv"))
 
 
-#--------------------- Objective 3 ---------------------------------
-naive.model <- "naive_model/"
-ben.model <- "Ben_model/"
-liz.model <- "Liz_model/"
-
-#-------------------------------naive model------------------------------------
-#--------------------- Scenario 3.1 ---------------------------------#
-#Objective 3.1
-scenario_3.1.1_files <- list.files(path = paste0(objective_3_results_location, "naive_model/"),
+#--------------------- objective 3 ---------------------------------
+#objective 3.1
+obj3_target.YOY_files <- list.files(path = paste0(objective_3_results_location),
                             recursive = FALSE,
-                            pattern = "*scenario_3.1.1_*",
+                            pattern = "*target.YOY*",
                             full.names = TRUE)
 
-scenario_3.1.1_files
+obj3_target.YOY_files
 
-scenario_3.1.2_files <- list.files(path = paste0(objective_3_results_location, "naive_model/"),
+obj3_target.YOY_results <- map_dfr(obj3_target.YOY_files, read_csv) %>% 
+  mutate(sampling.scheme = "target YOY")
+
+obj3_sample.all.juveniles_files <- list.files(path = paste0(objective_3_results_location),
                             recursive = FALSE,
-                            pattern = "*scenario_3.1.2_*",
+                            pattern = "*sample.all.juvenile.ages*",
                             full.names = TRUE)
 
-scenario_3.1.2_files
+obj3_sample.all.juveniles_files
 
+obj3_sample.all.juveniles_results <- map_dfr(obj3_sample.all.juveniles_files, read_csv) %>% 
+  mutate(sampling.scheme = "sample all juveniles")
 
-scenario_3.1.3_files <- list.files(path = paste0(objective_3_results_location, "naive_model/"),
+obj3_sample.ALL.ages_files <- list.files(path = paste0(objective_3_results_location),
                             recursive = FALSE,
-                            pattern = "*scenario_3.1.3_*",
+                            pattern = "*sample.ALL.ages*",
                             full.names = TRUE)
 
-scenario_3.1.3_files
+obj3_sample.ALL.ages_files
 
+obj3_sample.ALL.ages_results <- map_dfr(obj3_sample.ALL.ages_files, read_csv) %>% 
+  mutate(sampling.scheme = "sample ALL ages")
 
-scenario_3.1.1_results <- map_dfr(scenario_3.1.1_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.1Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.1J, "sample all juvenile ages",
-                                         "sample all age classes")),
-         survival.prior = "diffuse",
-         lambda.prior = "none",
-         cv = (sd/mean)*100,
-         population.growth = "neutral")
+annual.scenarios <- c("scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1")
 
-scenario_3.1.2_results <- map_dfr(scenario_3.1.2_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.1Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.1J, "sample all juvenile ages",
-                                         "sample all age classes")),
-         survival.prior = "diffuse",
-         lambda.prior = "diffuse",
-         cv = (sd/mean)*100,
-         population.growth = "neutral")
+multiennial.scenarios <- c("scenario_3.1.2", "scenario_3.2.2", "scenario_3.3.2", "scenario_3.4.2", "scenario_3.5.2")
 
-scenario_3.1.3_results <- map_dfr(scenario_3.1.3_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.1Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.1J, "sample all juvenile ages",
-                                         "sample all age classes")),
-         survival.prior = "diffuse",
-         lambda.prior = "tight",
-         cv = (sd/mean)*100,
-         population.growth = "neutral")
+obj3_results <- bind_rows(obj3_target.YOY_results, obj3_sample.all.juveniles_results, obj3_sample.ALL.ages_results) %>% mutate(model = ifelse(scenario %in% annual.scenarios, "annual", "multiennial")) %>% 
+  mutate(popsim.psi = ifelse(scenario == "scenario_3.1.1" | scenario == "scenario_3.1.2", 1, 
+                             ifelse(scenario == "scenario_3.2.1" | scenario == "scenario_3.2.2", 0.9,
+                             ifelse(scenario == "scenario_3.3.1" | scenario == "scenario_3.3.2", 0.75,
+                             ifelse(scenario == "scenario_3.4.1" | scenario == "scenario_3.4.2", 0.5, 1))))) %>% 
+  mutate(mating.periodicity = ifelse(scenario == "scenario_3.5.1" | scenario == "scenario_3.5.2", 3, 2)) %>% 
+  mutate(cv = (sd/mean)*100)
 
+write_csv(obj3_results, file = paste0(objective_3_results_location, "obj3_collated_results.csv"))
 
-
-scenario_3.1_results.all <- scenario_3.1.1_results %>% bind_rows(scenario_3.1.2_results, scenario_3.1.3_results) %>% 
-  mutate(model = "base") %>% 
-  inner_join(obj3.truth.df_psi1, by = c("iteration", "seed", "est.yr", "population.growth")) %>% 
-  mutate(all.truth = ifelse(parameter == "Nm", Male.adult.pop,
-                            ifelse(parameter == "Nf", Female.adult.pop, all.truth))) %>% 
-  #dplyr::filter(year == 85) %>% 
-  dplyr::select(-c(Male.adult.pop, Female.adult.pop)) %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs) %>% 
-  dplyr::filter(prop.sampled == 1.5) %>% 
-  mutate(sim.psi = 1,
-         psi.prior = "none",
-         model_used = "annual") %>% 
-  mutate(sampling.scheme = ifelse(sampling.scheme == "sample all age classes", "sample all ages", sampling.scheme))
-
-scenario_3.1_results.all
-
-# #-------------------------------Ben's model-------------------------------------
-# #-----------------------------scenario 3.2.1----------------------------------#
-# #YOY
-# scenario_3.2.1Y <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_28Jul2022_Seeds2022.04.15_lambda.1_biennial.breeding_NoNonConform_target.YOY_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "target YOY",
-#          lambda.prior = "none")
-# 
-#   #Juvs
-# scenario_3.2.1J <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_08Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_NoNonConform_sample.all.juvenile.ages_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "sample all juvenile ages",
-#          lambda.prior = "none")
-# 
-# #Adults
-# scenario_3.2.1A <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_28Jul2022_Seeds2022.04.15_lambda.1_biennial.breeding_NoNonConform_sample.ALL.ages_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "sample all ages",
-#          lambda.prior = "none")
-# 
-# scenario_3.2_results.all <- bind_rows(scenario_3.2.1Y, scenario_3.2.1J, scenario_3.2.1A) %>% 
-#   mutate(sim.psi = 1) %>% 
-#   dplyr::rename(prop.sampled = sample.prop.juvs)
-# 
-# 
-# #---------------------------------------Scenario 3.3.1-------------------------#
-# #YOY
-# scenario_3.3.1Y <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.9_target.YOY_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "target YOY",
-#          lambda.prior = "none")
-# 
-# #Juvs
-# scenario_3.3.1J <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.9_sample.all.juvenile.ages_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "sample all juvenile ages",
-#          lambda.prior = "none")
-# 
-# #Adults
-# scenario_3.3.1A <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.9_sample.ALL.ages_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "sample all ages",
-#          lambda.prior = "none")
-# 
-# 
-# scenario_3.3_results.all <- bind_rows(scenario_3.3.1Y, scenario_3.3.1J, scenario_3.3.1A) %>% 
-#   mutate(sim.psi = 0.9) %>% 
-#   dplyr::rename(prop.sampled = sample.prop.juvs)
-# 
-# 
-# #---------------------------------------Scenario 3.4.1-------------------------#
-# #YOY
-# scenario_3.4.1Y <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.75_target.YOY_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "target YOY",
-#          lambda.prior = "none")
-# 
-# #Juvs
-# scenario_3.4.1J <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.75_sample.all.juvenile.ages_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "sample all juvenile ages",
-#          lambda.prior = "none")
-# 
-# #Adults
-# scenario_3.4.1A <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.75_sample.ALL.ages_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "sample all ages",
-#          lambda.prior = "none")
-# 
-# 
-# scenario_3.4_results.all <- bind_rows(scenario_3.4.1Y, scenario_3.4.1J, scenario_3.4.1A) %>% 
-#   mutate(sim.psi = 0.75) %>% 
-#   dplyr::rename(prop.sampled = sample.prop.juvs)
-# 
-# #---------------------------------------Scenario 3.5.1-------------------------#
-# #YOY
-# scenario_3.5.1Y <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.5_target.YOY_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "target YOY",
-#          lambda.prior = "none")
-# 
-# #Juvs
-# scenario_3.5.1J <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.5_sample.all.juvenile.ages_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "sample all juvenile ages",
-#          lambda.prior = "none")
-# 
-# #Adults
-# scenario_3.5.1A <- read_csv(paste0(objective_3_results_location, ben.model, "CKMR_results_14Sep2022_Seeds2022.04.15_sample.info_29Aug2022_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.5_sample.ALL.ages_BMQskip_noLambda.csv")) %>% 
-#   mutate(sampling.scheme = "sample all ages",
-#          lambda.prior = "none")
-# 
-# scenario_3.5_results.all <- bind_rows(scenario_3.5.1Y, scenario_3.5.1J, scenario_3.5.1A) %>% 
-#   mutate(sim.psi = 0.5) %>% 
-#   dplyr::rename(prop.sampled = sample.prop.juvs)
-# 
-# 
-# scenario_3.1_results.all_4ben <- scenario_3.1_results.all[,colnames(scenario_3.1_results.all) %in% colnames(scenario_3.5_results.all) == TRUE]
-# 
-# obj3_results.all_ben <- bind_rows(scenario_3.1_results.all_4ben, scenario_3.2_results.all, scenario_3.3_results.all, scenario_3.4_results.all, scenario_3.5_results.all)
-# 
-# obj3_results.all_ben_final <- obj3_results.all_ben %>% inner_join(psi_all.truth, by = c("sim.psi", "iteration")) %>%
-#   mutate(all.truth = ifelse(parameter == "psi", psi.truth, all.truth),
-#          breed.truth = ifelse (parameter == "psi", psi.truth, breed.truth),
-#          population.growth = "neutral")
-# 
-# 
-# write_csv(obj3_results.all_ben_final, file = paste0(objective_3_results_location, "obj3_collated_results_Ben.csv"))
-
-
-#--------------------- Liz's model ---------------------------------
-#Objective 3.2
-scenario_3.2.1_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
+#--------------------- objective 4 ---------------------------------
+#objective 4.1
+obj4_target.YOY_files <- list.files(path = paste0(objective_4_results_location),
                             recursive = FALSE,
-                            pattern = "*scenario_3.2.1_*",
+                            pattern = "*target.YOY*",
                             full.names = TRUE)
 
-scenario_3.2.1_files
+obj4_target.YOY_files
 
-scenario_3.2.2_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
+obj4_target.YOY_results <- map_dfr(obj4_target.YOY_files, read_csv) %>% 
+  mutate(sampling.scheme = "target YOY")
+
+obj4_sample.all.juveniles_files <- list.files(path = paste0(objective_4_results_location),
                             recursive = FALSE,
-                            pattern = "*scenario_3.2.2_*",
+                            pattern = "*sample.all.juvenile.ages*",
                             full.names = TRUE)
 
-scenario_3.2.2_files
+obj4_sample.all.juveniles_files
 
-scenario_3.2.3_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
+obj4_sample.all.juveniles_results <- map_dfr(obj4_sample.all.juveniles_files, read_csv) %>% 
+  mutate(sampling.scheme = "sample all juveniles")
+
+obj4_sample.ALL.ages_files <- list.files(path = paste0(objective_4_results_location),
                             recursive = FALSE,
-                            pattern = "*scenario_3.2.3_*",
+                            pattern = "*sample.ALL.ages*",
                             full.names = TRUE)
 
-scenario_3.2.3_files
-
-#Read in files
-scenario_3.2.1_results.liz <- map_dfr(scenario_3.2.1_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.2Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.2J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "none",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 1,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.2.2_results.liz <- map_dfr(scenario_3.2.2_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.2Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.2J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "diffuse",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 1,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.2.3_results.liz <- map_dfr(scenario_3.2.3_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.2Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.2J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "tight",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 1,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-scenario_3.2_results.all_liz <- bind_rows(scenario_3.2.1_results.liz, scenario_3.2.2_results.liz, scenario_3.2.3_results.liz)
-
-
-#Objective 3.3
-scenario_3.3.1_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.3.1_*",
-                            full.names = TRUE)
-
-scenario_3.3.1_files
-
-scenario_3.3.2_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.3.2_*",
-                            full.names = TRUE)
-
-scenario_3.3.2_files
-
-scenario_3.3.3_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.3.3_*",
-                            full.names = TRUE)
-
-scenario_3.3.3_files
-
-
-#Read in files
-scenario_3.3.1_results.liz <- map_dfr(scenario_3.3.1_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.3Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.3J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "none",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.9,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.3.2_results.liz <- map_dfr(scenario_3.3.2_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.3Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.3J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "diffuse",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.9,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.3.3_results.liz <- map_dfr(scenario_3.3.3_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.3Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.3J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "tight",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.9,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.3_results.all_liz <- bind_rows(scenario_3.3.1_results.liz, scenario_3.3.2_results.liz, scenario_3.3.3_results.liz)
-
-#Objective 3.4
-scenario_3.4.1_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.4.1_*",
-                            full.names = TRUE)
-
-scenario_3.4.1_files
-
-scenario_3.4.2_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.4.2_*",
-                            full.names = TRUE)
-
-scenario_3.4.2_files
-
-scenario_3.4.3_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.4.3_*",
-                            full.names = TRUE)
-
-scenario_3.4.3_files
-
-
-#Read in files
-scenario_3.4.1_results.liz <- map_dfr(scenario_3.4.1_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.4Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.4J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "none",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.75,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.4.2_results.liz <- map_dfr(scenario_3.4.2_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.4Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.4J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "diffuse",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.75,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.4.3_results.liz <- map_dfr(scenario_3.4.3_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.4Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.4J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "tight",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.75,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.4_results.all_liz <- bind_rows(scenario_3.4.1_results.liz, scenario_3.4.2_results.liz, scenario_3.4.3_results.liz)
-
-#Objective 3.5
-scenario_3.5.1_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.5.1_*",
-                            full.names = TRUE)
-
-scenario_3.5.1_files
-
-scenario_3.5.2_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.5.2_*",
-                            full.names = TRUE)
-
-scenario_3.5.2_files
-
-scenario_3.5.3_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.5.3_*",
-                            full.names = TRUE)
-
-scenario_3.5.3_files
-
-
-#Read in files
-scenario_3.5.1_results.liz <- map_dfr(scenario_3.5.1_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.5Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.5J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "none",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.5,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.5.2_results.liz <- map_dfr(scenario_3.5.2_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.5Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.5J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "diffuse",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.5,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.5.3_results.liz <- map_dfr(scenario_3.5.3_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.5Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.5J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "tight",
-         psi.prior = "uniform",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 0.5,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.5_results.all_liz <- bind_rows(scenario_3.5.1_results.liz, scenario_3.5.2_results.liz, scenario_3.5.3_results.liz)
-
-#Objective 3.6
-scenario_3.6.1_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.6.1_*",
-                            full.names = TRUE)
-
-scenario_3.6.1_files
-
-scenario_3.6.2_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.6.2_*",
-                            full.names = TRUE)
-
-scenario_3.6.2_files
-
-scenario_3.6.3_files <- list.files(path = paste0(objective_3_results_location, "Liz_model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_3.6.3_*",
-                            full.names = TRUE)
-
-scenario_3.6.3_files
-
-
-#Read in files
-scenario_3.6.1_results.liz <- map_dfr(scenario_3.6.1_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.6Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.6J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "none",
-         psi.prior = "fixed",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 1,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.6.2_results.liz <- map_dfr(scenario_3.6.2_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.6Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.6J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "diffuse",
-         psi.prior = "fixed",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 1,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-
-scenario_3.6.3_results.liz <- map_dfr(scenario_3.6.3_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj3.6Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj3.6J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         lambda.prior = "tight",
-         psi.prior = "fixed",
-         cv = (sd/mean)*100,
-         population.growth = "neutral",
-         sim.psi = 1,
-         model_used = "Liz_biennial") %>% 
-  dplyr::rename(prop.sampled = sample.prop.juvs)
-
-scenario_3.6_results.all_liz <- bind_rows(scenario_3.6.1_results.liz, scenario_3.6.2_results.liz, scenario_3.6.3_results.liz)
-
-
-
-scenario_3.1_results.all_liz <- scenario_3.1_results.all[,colnames(scenario_3.1_results.all) %in% colnames(scenario_3.3.1_results.liz) == TRUE]
-
-
-
-obj3_results.all_liz <- scenario_3.1_results.all_liz %>% bind_rows(scenario_3.2_results.all_liz, scenario_3.3_results.all_liz, scenario_3.4_results.all_liz, scenario_3.5_results.all_liz, scenario_3.6_results.all_liz) %>% 
-  inner_join(psi_all.truth, by = c("sim.psi", "iteration")) %>% 
-  mutate(all.truth = ifelse(parameter == "psi", psi.truth, all.truth))
-  #dplyr::filter(year == 85) %>% 
-
-  write_csv(obj3_results.all_liz, file = paste0(objective_3_results_location, "obj3_collated_results_Liz.csv"))
-
-
-
-#--------------------- Objective 4 ---------------------------------
-#Load everything together
-#Files
-scenario_4_files <- list.files(path = paste0(objective_4_results_location, "liz.model/"),
-                            recursive = FALSE,
-                            pattern = "*scenario_4_*",
-                            full.names = TRUE)
-
-scenario_4_files
-
-#Results
-obj4_results <- map_dfr(scenario_4_files, read_csv) %>% 
-  mutate(sampling.scheme = ifelse(purpose %in% purpose.obj4Y, "target YOY",
-                                  ifelse(purpose %in% purpose.obj4J, "sample all juvenile ages",
-                                         "sample all ages")),
-         survival.prior = "diffuse",
-         cv = (sd/mean)*100) %>% 
-  mutate(lambda.prior = ifelse(purpose %in% c(purpose_4.1.1_vec, purpose_4.2.1_vec, purpose_4.3.1_vec), "diffuse",
-                                      ifelse(purpose %in% c(purpose_4.1.2_vec, purpose_4.2.2_vec, purpose_4.3.2_vec), "tight",
-                                             "none"))) %>% 
-  mutate(miss.cv = ifelse(purpose %in% purpose_4.1.all_vec, 0.05,
-                          ifelse(purpose %in% purpose_4.2.all_vec, 0.10, 0.20)))
-
-  write_csv(obj4_results, file = paste0(objective_4_results_location, "obj4_collated_results_Liz.csv"))
-
-```
-
+obj4_sample.ALL.ages_files
+
+obj4_sample.ALL.ages_results <- map_dfr(obj4_sample.ALL.ages_files, read_csv) %>% 
+  mutate(sampling.scheme = "sample ALL ages")
+
+annual.scenarios <- c("scenario_4.1.1", "scenario_4.1.2", "scenario_4.1.3")
+
+multiennial.scenarios <- c("scenario_4.2.1", "scenario_4.2.2", "scenario_4.2.3")
+
+obj4_results <- bind_rows(obj4_target.YOY_results, obj4_sample.all.juveniles_results, obj4_sample.ALL.ages_results) %>% mutate(model = ifelse(scenario %in% annual.scenarios, "annual", "multiennial")) %>%
+  mutate(age.error_cv = ifelse(scenario == "scenario_4.1.1_5CV" | scenario == "scenario_4.2.1_5CV", "5% CV",
+                               ifelse(scenario == "scenario_4.1.2_10CV" | scenario == "scenario_4.2.2_10CV", "10% CV", "20% CV"))) %>% 
+  mutate(age.error_cv = factor(age.error_cv, levels = c("5% CV", "10% CV", "20% CV"))) %>% 
+  mutate(cv = (sd/mean)*100)
+
+
+write_csv(obj4_results, file = paste0(objective_4_results_location, "obj4_collated_results.csv"))
+
+# #--------------------- Objective 4 ---------------------------------
+# #Load everything together
+# #Files
+# scenario_4_files <- list.files(path = paste0(objective_4_results_location, "liz.model/"),
+#                             recursive = FALSE,
+#                             pattern = "*scenario_4_*",
+#                             full.names = TRUE)
+# 
+# scenario_4_files
+# 
+# #Results
+# obj4_results <- map_dfr(scenario_4_files, read_csv) %>% 
+#   mutate(sampling.scheme = ifelse(purpose %in% purpose.obj4Y, "target YOY",
+#                                   ifelse(purpose %in% purpose.obj4J, "sample all juvenile ages",
+#                                          "sample all ages")),
+#          survival.prior = "diffuse",
+#          cv = (sd/mean)*100) %>% 
+#   mutate(lambda.prior = ifelse(purpose %in% c(purpose_4.1.1_vec, purpose_4.2.1_vec, purpose_4.3.1_vec), "diffuse",
+#                                       ifelse(purpose %in% c(purpose_4.1.2_vec, purpose_4.2.2_vec, purpose_4.3.2_vec), "tight",
+#                                              "none"))) %>% 
+#   mutate(miss.cv = ifelse(purpose %in% purpose_4.1.all_vec, 0.05,
+#                           ifelse(purpose %in% purpose_4.2.all_vec, 0.10, 0.20)))
+# 
+#   write_csv(obj4_results, file = paste0(objective_4_results_location, "obj4_collated_results_Liz.csv"))
+ ```
+# 
 ```{r Obj4 - Read in sample files}
 #Read in sample files from age misassignment simulations
 #Have to read in separately bc didn't save a column to distinguish each scenario from the others in the sample dataframes
 #---------------------Read in sample files-------------------
-#---------------------Sample all ages------------------------
+
+# Note that sample sizes may be different than what's recorded in the sample.size.total column for two reasons: 1) I multiply the number of samples for the final year of the simulation by the number of years samples were drawn from, so there's error there, and 2) the sample dataframe here is saved AFTER removing self-recaptures.
+
+#---------------------Annual model------------------------
+#Scenario 4.1.1 - 5% CV
+s4.1.1_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.1_5CV_annual.model_sample.ALL.ages")
+
+s4.1.1_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.1_5CV_annual.model_sample.all.juvenile.ages")
+
+s4.1.1_YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.1_5CV_annual.model_target.YOY")
+
+s4.1.1_all <- bind_rows(s4.1.1_all.ages, s4.1.1_all.juvs, s4.1.1_YOY) %>% 
+  mutate(model = "annual",
+         age.cv = "5% CV")
+
+#Scenario 4.1.2 - 10% CV
+s4.1.2_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.2_10CV_annual.model_sample.ALL.ages")
+
+s4.1.2_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.2_10CV_annual.model_sample.all.juvenile.ages")
+
+s4.1.2_YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.2_10CV_annual.model_target.YOY")
+
+s4.1.2_all <- bind_rows(s4.1.2_all.ages, s4.1.2_all.juvs, s4.1.2_YOY) %>% 
+  mutate(model = "annual",
+         age.cv = "10% CV")
+
+
 #Scenario 4.1 - 5% CV
-s4.1.1_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.1_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "diffuse", 
-         miss.cv = 0.05)
+s4.1.3_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.3_20CV_annual.model_sample.ALL.ages")
 
-s4.1.2_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.2_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.05)
+s4.1.3_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.3_20CV_annual.model_sample.all.juvenile.ages")
 
-s4.1.3_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.3_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.05)
+s4.1.3_YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.1.3_20CV_annual.model_target.YOY")
 
-#Scenario 4.2 - 10% CV
-s4.2.1_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.1_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "diffuse", 
-         miss.cv = 0.10)
-
-s4.2.2_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.2_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.10)
-
-s4.2.3_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.3_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.10)
-
-#Scenario 4.2 - 10% CV
-s4.3.1_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.1_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "diffuse", 
-         miss.cv = 0.20)
-
-s4.3.2_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.2_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.20)
-
-s4.3.3_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.3_ageMiss_sample.ALL.ages") %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.20)
+s4.1.3_all <- bind_rows(s4.1.3_all.ages, s4.1.3_all.juvs, s4.1.3_YOY) %>% 
+  mutate(model = "annual",
+         age.cv = "20% CV")
 
 
-#--------------------Sample all juveniles----------------------------
-#Scenario 4.1
-s4.1.1_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.1_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "diffuse",
-         miss.cv = 0.05)
+#---------------------multiennial model------------------------
+#Scenario 4.2.1 - 5% CV
+s4.2.1_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.1_5CV_multiennial.model_sample.ALL.ages")
 
-s4.1.2_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.2_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.05)
+s4.2.1_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.1_5CV_multiennial.model_sample.all.juvenile.ages")
 
-s4.1.3_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.3_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.05)
+s4.2.1_YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.1_5CV_multiennial.model_target.YOY")
 
-#Scenario 4.2
-s4.2.1_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.1_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "diffuse",
-         miss.cv = 0.10)
+s4.2.1_all <- bind_rows(s4.2.1_all.ages, s4.2.1_all.juvs, s4.2.1_YOY) %>% 
+  mutate(model = "multiennial",
+         age.cv = "5% CV")
 
-s4.2.2_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.2_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.10)
+#Scenario 4.2.2 - 10% CV
+s4.2.2_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.2_10CV_multiennial.model_sample.ALL.ages")
 
-s4.2.3_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.3_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.10)
+s4.2.2_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.2_10CV_multiennial.model_sample.all.juvenile.ages")
 
-#Scenario 4.3 - 20% cv
-s4.3.1_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.1_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "diffuse",
-         miss.cv = 0.20)
+s4.2.2_YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.2_10CV_multiennial.model_target.YOY")
 
-s4.3.2_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.2_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.20)
-
-s4.3.3_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.3_ageMiss_sample.all.juvenile.ages") %>% 
-  dplyr::filter(age.x < 12) %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.20)
-
-#-------------------------Target YOY-----------------------------
-#Scenario 4.1
-s4.1.1_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.1_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "diffuse",
-         miss.cv = 0.05)
-
-s4.1.2_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.2_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.05)
-
-s4.1.3_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.1.3_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.05)
-
-#Scenario 4.2
-s4.2.1_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.1_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "diffuse",
-         miss.cv = 0.10)
-
-s4.2.2_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.2_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.10)
-
-s4.2.3_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.2.3_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.10)
-
-#Scenario 4.3 - 20% CV
-s4.3.1_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.1_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "diffuse",
-         miss.cv = 0.20)
-
-s4.3.2_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.2_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "tight",
-         miss.cv = 0.20)
-
-s4.3.3_target.YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging_error/Model.results/liz_model/samples/samples.missassigned_24Sep2022_Seeds2022.04.15_scenario_4.3.3_ageMiss_target.YOY") %>% 
-  dplyr::filter(age.x == 0) %>% 
-  mutate(lambda.prior = "none",
-         miss.cv = 0.20)
+s4.2.2_all <- bind_rows(s4.2.2_all.ages, s4.2.2_all.juvs, s4.2.2_YOY) %>% 
+  mutate(model = "multiennial",
+         age.cv = "10% CV")
 
 
-scenario_4.samps <- bind_rows(s4.1.1_target.YOY, s4.1.2_target.YOY, s4.1.3_target.YOY, 
-                              s4.2.1_target.YOY, s4.2.2_target.YOY, s4.2.3_target.YOY,
-                              s4.3.1_target.YOY, s4.3.2_target.YOY, s4.3.3_target.YOY,
-                              s4.1.1_all.juvs, s4.1.2_all.juvs, s4.1.3_all.juvs, 
-                              s4.2.1_all.juvs, s4.2.2_all.juvs, s4.2.3_all.juvs,
-                              s4.3.1_all.juvs, s4.3.2_all.juvs, s4.3.3_all.juvs,
-                              s4.1.1_all.ages, s4.1.2_all.ages, s4.1.3_all.ages, 
-                              s4.2.1_all.ages, s4.2.2_all.ages, s4.2.3_all.ages,
-                              s4.3.1_all.ages, s4.3.2_all.ages, s4.3.3_all.ages) %>% 
+#Scenario 4.2 - 5% CV
+s4.2.3_all.ages <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.3_20CV_multiennial.model_sample.ALL.ages")
+
+s4.2.3_all.juvs <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.3_20CV_multiennial.model_sample.all.juvenile.ages")
+
+s4.2.3_YOY <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/samples/samples.missassigned_28Nov2022_Seeds2022.04.15_scenario_4.2.3_20CV_multiennial.model_target.YOY")
+
+s4.2.3_all <- bind_rows(s4.2.3_all.ages, s4.2.3_all.juvs, s4.2.3_YOY) %>% 
+  mutate(model = "multiennial",
+         age.cv = "20% CV")
+
+
+scenario_4.samps <- bind_rows(s4.1.1_all, s4.1.2_all, s4.1.3_all,
+                              s4.2.1_all, s4.2.2_all, s4.2.3_all) %>%
   mutate(yrs.off = age.miss - age.x)
 
 write_csv(scenario_4.samps, file = paste0(objective_4_results_location, "scenario_4.samps.csv"))
-
-#-------------------------Format results files -------------------------
-#Lambda in model w/ wide prior
-#Correctly assigned ages: scenario_3.2.2
-obj4_diffuse.lam_ages.corr <- scenario_3.2.2_results.liz %>% 
-  mutate(scenario = "ages correctly assigned")
-
-s.temp <- obj4_diffuse.lam_ages.corr %>% 
-  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
-                   median.bias = median(relative_bias),
-                   mean.cv = mean(cv)) %>%
-  dplyr::arrange(parameter, sampling.scheme) %>% 
-  mutate(miss.cv = 0)
-
-
-#Misassigned ages: scenario_4.1
-obj4_diffuse.lam_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "diffuse") %>% 
-  mutate(scenario = "ages misassigned")
-
-obj4_diffuse.lam_summ <- obj4_diffuse.lam_ages.miss %>% 
-  group_by(parameter, sampling.scheme, lambda.prior, scenario, miss.cv) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
-                   median.bias = median(relative_bias),
-                   mean.cv = mean(cv)) %>%
-  dplyr::arrange(parameter, sampling.scheme) %>% 
-  bind_rows(s.temp)
-
-obj4_diffuse.lam_summ %>% arrange(parameter, sampling.scheme, scenario, miss.cv) %>% 
-  View()
-
-#Lambda in model w/ tight prior
-#Correctly assigned ages: scenario_3.3.3
-obj4_tight.lam_ages.corr <- scenario_3.2.3_results.liz %>% 
-  mutate(scenario = "ages correctly assigned")
-
-s.temp <- obj4_tight.lam_ages.corr %>% group_by(sampling.scheme) %>% 
-  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
-                   median.bias = median(relative_bias),
-                   mean.cv = mean(cv)) %>%
-  dplyr::arrange(parameter, sampling.scheme) %>% 
-  mutate(miss.cv = 0)
-
-
-
-#Misassigned ages: scenario_4.2
-obj4_tight.lam_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "tight") %>% 
-  mutate(scenario = "ages misassigned")
-
-obj4_tight.lam_summ <- obj4_tight.lam_ages.miss %>% 
-  group_by(parameter, sampling.scheme, lambda.prior, scenario, miss.cv) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
-                   median.bias = median(relative_bias),
-                   mean.cv = mean(cv)) %>%
-  dplyr::arrange(parameter, sampling.scheme) %>% 
-  bind_rows(s.temp)
-
-obj4_tight.lam_summ %>% arrange(parameter, sampling.scheme, scenario, miss.cv) %>% 
-  View()
-
-
-#Lambda NOT in model
-#Correctly assigned ages: scenario_3.2.1
-obj4_no.lam_ages.corr <- scenario_3.2.1_results.liz %>% 
-  mutate(scenario = "ages correctly assigned") %>% 
-  mutate(sampling.scheme = ifelse(sampling.scheme == "sample all age classes", "sample all ages", sampling.scheme))
-
-s.temp <- obj4_no.lam_ages.corr %>% group_by(sampling.scheme) %>% 
-  group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
-                   median.bias = median(relative_bias),
-                   mean.cv = mean(cv)) %>%
-  dplyr::arrange(parameter, sampling.scheme) %>% 
-    mutate(miss.cv = 0)
-
-
-
-#Misassigned ages: scenario_4.3
-obj4_no.lam_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "none") %>% 
-    mutate(scenario = "ages misassigned")
-
-obj4_no.lam_summ <- obj4_no.lam_ages.miss %>% 
-  group_by(parameter, sampling.scheme, lambda.prior, scenario, miss.cv) %>% 
-  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
-                   median.bias = median(relative_bias),
-                   mean.cv = mean(cv)) %>%
-  dplyr::arrange(parameter, sampling.scheme) %>% 
-  bind_rows(s.temp)
-
-obj4_no.lam_summ %>% arrange(parameter, sampling.scheme, scenario, miss.cv) %>% 
-  View()
-
-#Summary of results
-obj4.all_summ <- bind_rows(obj4_no.lam_summ, obj4_diffuse.lam_summ, obj4_tight.lam_summ)
-
-write_rds(obj4.all_summ, file = paste0(objective_4_results_location, "obj4.all_summary"))
-
-
-#Prep dataframe for plotting
-obj4.all_results <- obj4_no.lam_ages.corr %>% bind_rows(obj4_no.lam_ages.miss, obj4_tight.lam_ages.corr, obj4_tight.lam_ages.miss, obj4_diffuse.lam_ages.corr, obj4_diffuse.lam_ages.miss) %>% 
-  mutate(lambda.prior_lab = ifelse(lambda.prior == "none", "No lambda",
-                                   ifelse(lambda.prior == "tight", "Tight prior on lambda", "Diffuse prior on lambda"))) %>% 
-  mutate(lambda.prior_lab = factor(lambda.prior_lab, levels = c("No lambda", "Tight prior on lambda", "Diffuse prior on lambda")))
-
-write_rds(obj4.all_results, file = paste0(objective_4_results_location, "obj4.all_results_forPlotting"))
+# 
+# #-------------------------Format results files -------------------------
+# #Lambda in model w/ wide prior
+# #Correctly assigned ages: scenario_3.2.2
+# obj4_diffuse.lam_ages.corr <- scenario_3.2.2_results.liz %>% 
+#   mutate(scenario = "ages correctly assigned")
+# 
+# s.temp <- obj4_diffuse.lam_ages.corr %>% 
+#   group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+#   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+#                    median.bias = median(relative_bias),
+#                    mean.cv = mean(cv)) %>%
+#   dplyr::arrange(parameter, sampling.scheme) %>% 
+#   mutate(miss.cv = 0)
+# 
+# 
+# #Misassigned ages: scenario_4.1
+# obj4_diffuse.lam_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "diffuse") %>% 
+#   mutate(scenario = "ages misassigned")
+# 
+# obj4_diffuse.lam_summ <- obj4_diffuse.lam_ages.miss %>% 
+#   group_by(parameter, sampling.scheme, lambda.prior, scenario, miss.cv) %>% 
+#   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+#                    median.bias = median(relative_bias),
+#                    mean.cv = mean(cv)) %>%
+#   dplyr::arrange(parameter, sampling.scheme) %>% 
+#   bind_rows(s.temp)
+# 
+# obj4_diffuse.lam_summ %>% arrange(parameter, sampling.scheme, scenario, miss.cv) %>% 
+#   View()
+# 
+# #Lambda in model w/ tight prior
+# #Correctly assigned ages: scenario_3.3.3
+# obj4_tight.lam_ages.corr <- scenario_3.2.3_results.liz %>% 
+#   mutate(scenario = "ages correctly assigned")
+# 
+# s.temp <- obj4_tight.lam_ages.corr %>% group_by(sampling.scheme) %>% 
+#   group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+#   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+#                    median.bias = median(relative_bias),
+#                    mean.cv = mean(cv)) %>%
+#   dplyr::arrange(parameter, sampling.scheme) %>% 
+#   mutate(miss.cv = 0)
+# 
+# 
+# 
+# #Misassigned ages: scenario_4.2
+# obj4_tight.lam_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "tight") %>% 
+#   mutate(scenario = "ages misassigned")
+# 
+# obj4_tight.lam_summ <- obj4_tight.lam_ages.miss %>% 
+#   group_by(parameter, sampling.scheme, lambda.prior, scenario, miss.cv) %>% 
+#   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+#                    median.bias = median(relative_bias),
+#                    mean.cv = mean(cv)) %>%
+#   dplyr::arrange(parameter, sampling.scheme) %>% 
+#   bind_rows(s.temp)
+# 
+# obj4_tight.lam_summ %>% arrange(parameter, sampling.scheme, scenario, miss.cv) %>% 
+#   View()
+# 
+# 
+# #Lambda NOT in model
+# #Correctly assigned ages: scenario_3.2.1
+# obj4_no.lam_ages.corr <- scenario_3.2.1_results.liz %>% 
+#   mutate(scenario = "ages correctly assigned") %>% 
+#   mutate(sampling.scheme = ifelse(sampling.scheme == "sample all age classes", "sample all ages", sampling.scheme))
+# 
+# s.temp <- obj4_no.lam_ages.corr %>% group_by(sampling.scheme) %>% 
+#   group_by(parameter, sampling.scheme, lambda.prior, scenario) %>% 
+#   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+#                    median.bias = median(relative_bias),
+#                    mean.cv = mean(cv)) %>%
+#   dplyr::arrange(parameter, sampling.scheme) %>% 
+#     mutate(miss.cv = 0)
+# 
+# 
+# 
+# #Misassigned ages: scenario_4.3
+# obj4_no.lam_ages.miss <- obj4_results %>% dplyr::filter(lambda.prior == "none") %>% 
+#     mutate(scenario = "ages misassigned")
+# 
+# obj4_no.lam_summ <- obj4_no.lam_ages.miss %>% 
+#   group_by(parameter, sampling.scheme, lambda.prior, scenario, miss.cv) %>% 
+#   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+#                    median.bias = median(relative_bias),
+#                    mean.cv = mean(cv)) %>%
+#   dplyr::arrange(parameter, sampling.scheme) %>% 
+#   bind_rows(s.temp)
+# 
+# obj4_no.lam_summ %>% arrange(parameter, sampling.scheme, scenario, miss.cv) %>% 
+#   View()
+# 
+# #Summary of results
+# obj4.all_summ <- bind_rows(obj4_no.lam_summ, obj4_diffuse.lam_summ, obj4_tight.lam_summ)
+# 
+# write_rds(obj4.all_summ, file = paste0(objective_4_results_location, "obj4.all_summary"))
+# 
+# 
+# #Prep dataframe for plotting
+# obj4.all_results <- obj4_no.lam_ages.corr %>% bind_rows(obj4_no.lam_ages.miss, obj4_tight.lam_ages.corr, obj4_tight.lam_ages.miss, obj4_diffuse.lam_ages.corr, obj4_diffuse.lam_ages.miss) %>% 
+#   mutate(lambda.prior_lab = ifelse(lambda.prior == "none", "No lambda",
+#                                    ifelse(lambda.prior == "tight", "Tight prior on lambda", "Diffuse prior on lambda"))) %>% 
+#   mutate(lambda.prior_lab = factor(lambda.prior_lab, levels = c("No lambda", "Tight prior on lambda", "Diffuse prior on lambda")))
+# 
+# write_rds(obj4.all_results, file = paste0(objective_4_results_location, "obj4.all_results_forPlotting"))
 ```

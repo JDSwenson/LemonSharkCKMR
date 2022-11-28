@@ -1,6 +1,7 @@
+#Calculate truth for Objectives 1 and 2
 #----------------Set input file locations ------------------------------
 #Population simulation files
-PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/"
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Pre_Nov2022"
 PopSim.lambda.1 <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.lambda.variable <- "lambda.variable"
 PopSim.lambda.extreme <- "lambda.extreme"
@@ -223,4 +224,4 @@ options(dplyr.summarise.inform = FALSE)
 # 
 #write_rds(psi_all.truth, file = paste0(objective_3_results_location, "psi_all.truth"))
 
-psi_all.truth <- read_rds(file = paste0(objective_3_results_location, "psi_all.truth"))
+#psi_all.truth <- read_rds(file = paste0(objective_3_results_location, "psi_all.truth"))
