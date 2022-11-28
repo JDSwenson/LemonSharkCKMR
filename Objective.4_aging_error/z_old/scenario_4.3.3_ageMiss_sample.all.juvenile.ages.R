@@ -307,7 +307,7 @@ model_settings.df <- tibble(script_name = script_name,
     # ####------------------------ Fit CKMR model ----------------####
     #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-      source("Objective.4_aging_error/functions/Obj4_runJAGS_HS_noLam.R")      
+      source("Objective.4_aging_error/functions/Obj4_run.JAGS_HS.only.R")      
 
       #Calculate truth
       Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,

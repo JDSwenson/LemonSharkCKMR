@@ -8,6 +8,8 @@ pop_size.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSi
 
 
 
+(a*(survival^2))/(((a + psi - (a*psi))*(Nf*(lambda^3))))
+
 
 
 results.1 <- results.all %>% dplyr::filter(purpose == "HS.PO_downsample")
