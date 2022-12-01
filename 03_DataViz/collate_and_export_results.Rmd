@@ -637,9 +637,9 @@ obj4_sample.ALL.ages_files
 obj4_sample.ALL.ages_results <- map_dfr(obj4_sample.ALL.ages_files, read_csv) %>% 
   mutate(sampling.scheme = "sample ALL ages")
 
-annual.scenarios <- c("scenario_4.1.1", "scenario_4.1.2", "scenario_4.1.3")
+annual.scenarios <- c("scenario_4.1.1_5CV", "scenario_4.1.2_10CV", "scenario_4.1.3_20CV")
 
-multiennial.scenarios <- c("scenario_4.2.1", "scenario_4.2.2", "scenario_4.2.3")
+multiennial.scenarios <- c("scenario_4.2.1_5CV", "scenario_4.2.2_10CV", "scenario_4.2.3_20CV")
 
 obj4_results <- bind_rows(obj4_target.YOY_results, obj4_sample.all.juveniles_results, obj4_sample.ALL.ages_results) %>% mutate(model = ifelse(scenario %in% annual.scenarios, "annual", "multiennial")) %>%
   mutate(age.error_cv = ifelse(scenario == "scenario_4.1.1_5CV" | scenario == "scenario_4.2.1_5CV", "5% CV",

@@ -1,3 +1,8 @@
+obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
+                               lambda.prior == "diffuse (0.80 - 1.20)") %>% 
+  group_by(parameter, est.yr, prop.sampled, sampling.scheme, population.growth) %>% 
+  summarize(n())
+
 #Data Viz - check why sample sizes don't match
 test.all <- s4.1.1_all.ages %>% group_by(iteration) %>% summarize(num = n())
 test.juvs <- s4.1.1_all.juvs %>% group_by(iteration) %>% summarize(num = n())

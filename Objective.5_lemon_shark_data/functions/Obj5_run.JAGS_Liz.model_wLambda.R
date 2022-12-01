@@ -5,24 +5,24 @@
 #Create vectors of data for JAGS
 #Mom
 #HS - even years
-mom_comps.HS_even <- mom_comps.HS %>% dplyr::filter(BI == "even")
+mom_comps.HS_on <- mom_comps.HS %>% dplyr::filter(BI == "even")
 
-mom.mort.yrs_HS.even <- mom_comps.HS_even$year_gap
-mom.popGrowth.yrs_HS.even <- mom_comps.HS_even$pop.growth.yrs
-mom.n.comps_HS.even <- mom_comps.HS_even$all
-mom.positives_HS.even <- mom_comps.HS_even$yes
-mom.yrs_HS.even <- nrow(mom_comps.HS_even)
+mom.mort.yrs_HS.on <- mom_comps.HS_on$year_gap
+mom.popGrowth.yrs_HS.on <- mom_comps.HS_on$pop.growth.yrs
+mom.n.comps_HS.on <- mom_comps.HS_on$all
+mom.positives_HS.on <- mom_comps.HS_on$yes
+mom.yrs_HS.on <- nrow(mom_comps.HS_on)
 #mom.R0 <- mom_comps.all$R0
 
 #Mom
 #HS - odd years
-mom_comps.HS_odd <- mom_comps.HS %>% dplyr::filter(BI == "odd")
+mom_comps.HS_off <- mom_comps.HS %>% dplyr::filter(BI == "odd")
 
-mom.mort.yrs_HS.odd <- mom_comps.HS_odd$year_gap
-mom.popGrowth.yrs_HS.odd <- mom_comps.HS_odd$pop.growth.yrs
-mom.n.comps_HS.odd <- mom_comps.HS_odd$all
-mom.positives_HS.odd <- mom_comps.HS_odd$yes
-mom.yrs_HS.odd <- nrow(mom_comps.HS_odd)
+mom.mort.yrs_HS.off <- mom_comps.HS_off$year_gap
+mom.popGrowth.yrs_HS.off <- mom_comps.HS_off$pop.growth.yrs
+mom.n.comps_HS.off <- mom_comps.HS_off$all
+mom.positives_HS.off <- mom_comps.HS_off$yes
+mom.yrs_HS.off <- nrow(mom_comps.HS_off)
 
 #Mom
 #PO
@@ -55,20 +55,20 @@ dad.yrs <- nrow(dad_comps.HS)
   jags_data = list(
     #Mom
     #HS: even years
-    mom.mort.yrs_HS.even = mom.mort.yrs_HS.even,
-    mom.popGrowth.yrs_HS.even = mom.popGrowth.yrs_HS.even,
-    mom.n.comps_HS.even = mom.n.comps_HS.even,
-    mom.positives_HS.even = mom.positives_HS.even,
-    mom.yrs_HS.even = mom.yrs_HS.even,
+    mom.mort.yrs_HS.on = mom.mort.yrs_HS.on,
+    mom.popGrowth.yrs_HS.on = mom.popGrowth.yrs_HS.on,
+    mom.n.comps_HS.on = mom.n.comps_HS.on,
+    mom.positives_HS.on = mom.positives_HS.on,
+    mom.yrs_HS.on = mom.yrs_HS.on,
     #mom.R0 = mom.R0,
     
     #Mom
     #HS: odd years
-    mom.mort.yrs_HS.odd = mom.mort.yrs_HS.odd,
-    mom.popGrowth.yrs_HS.odd = mom.popGrowth.yrs_HS.odd,
-    mom.n.comps_HS.odd = mom.n.comps_HS.odd,
-    mom.positives_HS.odd = mom.positives_HS.odd,
-    mom.yrs_HS.odd = mom.yrs_HS.odd,
+    mom.mort.yrs_HS.off = mom.mort.yrs_HS.off,
+    mom.popGrowth.yrs_HS.off = mom.popGrowth.yrs_HS.off,
+    mom.n.comps_HS.off = mom.n.comps_HS.off,
+    mom.positives_HS.off = mom.positives_HS.off,
+    mom.yrs_HS.off = mom.yrs_HS.off,
     #mom.R0 = mom.R0,
     
     
@@ -107,7 +107,7 @@ dad.yrs <- nrow(dad_comps.HS)
         survival = runif(1, min=0.5, max=0.95),
         Nf = rnorm(1, mean = 500, sd = 100),
         Nm = rnorm(1, mean = 500, sd = 100),
-        psi = runif(1, min=0.75, max=1.0),
+        psi = runif(1, min=0.5, max=1.0),
         lambda = 1
         
       )

@@ -67,11 +67,11 @@ all.comps_lambda.extreme_all.ages <- rbind(mom.comps_lambda.extreme_all.ages, da
 
 #All
 lambda.extreme_comps.all_temp <- bind_rows(all.comps_lambda.extreme_YOY, all.comps_lambda.extreme_juvs, all.comps_lambda.extreme_all.ages) %>% 
-  mutate(population.growth = factor("extreme negative"),
+  mutate(population.growth = factor("severe decline"),
          prop.sampled = factor(sample.prop.all),
          sampling.scheme = factor(sampling.scheme))
   
-obj2_results4Join <- obj2_results %>% dplyr::filter(population.growth == "extreme negative") %>% 
+obj2_results4Join <- obj2_results %>% dplyr::filter(population.growth == "severe decline") %>% 
   dplyr::select(parameter, sampling.scheme, population.growth, iteration, est.yr, est.yr.lab, prop.sampled, relative_bias, in_interval)
 
 #Each estimation year has the same seed, so the comparisons should all be the same
@@ -90,16 +90,23 @@ obj2_lam.results <- obj2_results %>% dplyr::filter(population.growth != "stable"
                                parameter == "lambda") %>% 
   group_by(lambda.prior, population.growth, sampling.scheme, est.yr) %>% 
   dplyr::summarize(percent.correct = round(sum(mean < 1)/n() * 100, 0)) %>% #This will be accurate for negative lambda but not positive
-  mutate(percent.correct = ifelse(population.growth == "slight positive", 100-percent.correct, percent.correct)) %>% #positive lambda is the inverse of the percent.correct column
-  mutate(percent.wrong = 100 - percent.correct)
+  mutate(percent.correct = ifelse(population.growth == "slight increase", 100-percent.correct, percent.correct)) %>% #positive lambda is the inverse of the percent.correct column
+  mutate(percent.wrong = 100 - percent.correct) %>% 
+  dplyr::filter(lambda.prior == "diffuse (0.80 - 1.20)")
 
 obj2.temp1 <- obj2_lam.results %>% dplyr::select(-c(percent.wrong)) %>% 
   dplyr::rename(percent = percent.correct) %>% 
-  mutate(status = factor("correct"))
+  mutate(status = factor("correct")) %>% 
+  mutate(degree = ifelse(population.growth == "slight decline" | population.growth == "slight increase", "slight change", "substantial decline")) %>% 
+  group_by(sampling.scheme, est.yr, status, degree) %>% 
+  dplyr::summarize(percent.summ = round(mean(percent)))
 
 obj2.temp2 <- obj2_lam.results %>% dplyr::select(-c(percent.correct)) %>% 
   dplyr::rename(percent = percent.wrong) %>% 
-  mutate(status = factor("incorrect"))
+  mutate(status = factor("incorrect")) %>% 
+  mutate(degree = ifelse(population.growth == "slight decline" | population.growth == "slight positive", "slight change", "substantial decline")) %>% 
+  group_by(sampling.scheme, est.yr, status, degree) %>% 
+  dplyr::summarize(percent.summ = round(mean(percent)))
 
 obj2_lam.results_4viz <- obj2.temp1 %>% bind_rows(obj2.temp2) %>% 
   mutate(status = factor(status, levels = c("incorrect", "correct"))) #Reverse the order for better viz with the bar plot

@@ -18,7 +18,7 @@ rm(list=ls())
 #----------------Set output file locations ------------------------------
 temp_location <- "~/R/working_directory/temp_results/"
 MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.output/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/models/"
+jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/JAGS_models/" #Location of JAGS models
 results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/"
 
 results_prefix <- "CKMR_results"
@@ -105,23 +105,12 @@ head(juv_ref)
 min(juv_ref$birth.year, na.rm = TRUE) #Earliest capture
 max(juv_ref$birth.year, na.rm = TRUE) #Latest capture
 
-
-#Think we want to focus the estimate on the year 1999 or 2000
-#Also, will need to look more into where the samples come from; can I use the data from the other sites?
-#What does the stock assessment say?
-#Need to try simulating a very small population
-
-
-#head(juv_ref)
-#head(Father_ref)
-#tail(Mother_ref)
-
 source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5.functions.R")
 
 NoFullSibs.df <- juv_ref %>% distinct(mother.x, father.x, .keep_all = TRUE) %>%
   as_tibble() #If there is more than one individual with the same mother AND father, then only keep one.
 
-#--------------Half sibling pairwise comparison df--------------------------
+#--------------Run simulations over different subsets of data--------------------------
 estimation.year <- 2000
 
 years <- c(min(NoFullSibs.df$birth.year):max(NoFullSibs.df$birth.year))
@@ -129,9 +118,11 @@ years <- c(min(NoFullSibs.df$birth.year):max(NoFullSibs.df$birth.year))
 results <- NULL
 post.samps_list <- list()
 rep = 0
+downsample <- "yes"
+max.HSPs <- 150
 
 #Regular loop over different periods of estimation
-  for(i in min(years):max(years-4)){ #Change to -1 if doing full loop
+  for(i in min(years):max(years-1)){ #Change to -1 if doing full loop
     for(j in (i + 2): max(years)){
  #   j= i + 4
 
@@ -189,7 +180,7 @@ positives.HS <- pairwise.df_HS.filt %>% filter(older.sib.mom == younger.sib.mom 
   mutate(shared.parent = ifelse(older.sib.mom == younger.sib.mom, "mother", "father"))
 #nrow(positives.HS)
 
-####----------------Split dataframes into final form for model----------####
+####----------------Construct pairwise comparison matrix for model----------####
 #Sex-specific half-sib
 mom_positives.HS <- positives.HS %>% filter(shared.parent == "mother") %>% 
   dplyr::select(older.sib.birth, younger.sib.birth) %>% 
@@ -229,21 +220,150 @@ dad_comps.HS <- hsp.negs %>%
   dplyr::rename(ref.year = younger.sib.birth) %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) 
 
+#----------------------------Downsample----------------------------------------------#
+if(downsample == "yes"){
+#Downsample for HSPs
+#Calculate proportion of samples born in each birth year
+HS.samps.props <- filtered.samples.HS.df %>% group_by(birth.year) %>%
+  summarize(num = n()) %>%
+  ungroup() %>%
+  mutate(prop = num/sum(num))
+
+#Save vector of proportions corresponding to the correct index in the HS sample dataframe
+HS.props.vec <- filtered.samples.HS.df %>% left_join(HS.samps.props, by = "birth.year") %>%
+  pull(prop)
+
+#Calculate proportion of positive HS comparisons for mom
+HS_comps.mom.yes <- mom_comps.HS %>%
+  summarize(yes = sum(yes)) %>% 
+  pull(yes)
+
+HS_comps.mom.all <- mom_comps.HS %>%
+  summarize(all = sum(all)) %>% 
+  pull(all)
+
+HS_prop.mom.yes <- HS_comps.mom.yes/HS_comps.mom.all #Calculate proportion of positive comparisons
+
+#Calculate proportion of positive HS comparisons for dad
+HS_comps.dad.yes <- dad_comps.HS %>%
+  summarize(yes = sum(yes)) %>% 
+  pull(yes)
+
+HS_comps.dad.all <- dad_comps.HS %>%
+  summarize(all = sum(all)) %>% 
+  pull(all)
+
+HS_prop.dad.yes <- HS_comps.dad.yes/HS_comps.dad.all
+
+HS_prop.mean.yes <- mean(c(HS_prop.mom.yes, HS_prop.dad.yes)) 
+HS_target.comps = round(max.HSPs/HS_prop.mean.yes, 0)
+HS_target.samples <- round(sqrt(HS_target.comps), 0)
+
+HS.samps.df.down <- NULL #Initialize so I don't get an error
+if(HS_comps.mom.yes + HS_comps.dad.yes > max.HSPs){
+  HS.samps.df.down <- filtered.samples.HS.df %>% slice_sample(n = HS_target.samples, weight_by = HS.props.vec) %>% arrange(birth.year) #arrange by birth year so they're in the correct order for combn
+} else{
+  HS.samps.df.down <- filtered.samples.HS.df
+}
+
+####----------------Construct pairwise comparison matrix after downsampling----------####
+pairwise.df.HS <- data.frame(t(combn(HS.samps.df.down$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
+colnames(pairwise.df.HS) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
+
+#Create dataframe of pairwise comparisons with just individual IDs
+head(pairwise.df.HS)
+#head(pairwise.df)
+
+#Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
+OlderSib_birthyears.HS <- filtered.samples.HS.df %>%
+  dplyr::select(older.sib = indv.name, 
+                older.sib.birth = birth.year, 
+                older.sib.mom = mother.x,
+                older.sib.dad = father.x)
+
+#Combine the two dataframes above to extract birth year and parents for each individual in the pairwise comparison matrix. 
+#This is the main pairwise comparison matrix with all (relevant) comparisons and individual data.###
+pairwise.df_all.info.HS <- pairwise.df.HS %>% left_join(OlderSib_birthyears.HS, by = "older.sib") %>% 
+  as_tibble() %>%  
+  left_join(filtered.samples.HS.df, by = "indv.name") %>% 
+  dplyr::rename("younger.sib" = indv.name, 
+                "younger.sib.birth" = birth.year, 
+                "younger.sib.mom" = mother.x, 
+                "younger.sib.dad" = father.x) %>%
+  dplyr::select(older.sib, 
+                older.sib.birth, 
+                younger.sib, 
+                younger.sib.birth, 
+                older.sib.mom, 
+                younger.sib.mom, 
+                older.sib.dad, 
+                younger.sib.dad)
+
+pairwise.df_HS.filt <- pairwise.df_all.info.HS %>% 
+  dplyr::filter(older.sib.birth != younger.sib.birth) %>% #Filter intra-cohort comparisons (for now)
+  dplyr::filter((younger.sib.birth - older.sib.birth) <= (max.age - repro.age))
+
+
+#Extract positive half-sib comparisons
+positives.HS <- pairwise.df_HS.filt %>% filter(older.sib.mom == younger.sib.mom | older.sib.dad == younger.sib.dad) %>% 
+  mutate(shared.parent = ifelse(older.sib.mom == younger.sib.mom, "mother", "father"))
+#nrow(positives.HS)
+
+#Sex-specific half-sib
+mom_positives.HS <- positives.HS %>% filter(shared.parent == "mother") %>% 
+  dplyr::select(older.sib.birth, younger.sib.birth) %>% 
+  plyr::count() %>% 
+  dplyr::rename(yes = freq)
+
+dad_positives.HS <- positives.HS %>% filter(shared.parent == "father")  %>%
+  dplyr::select(older.sib.birth, younger.sib.birth) %>%
+  plyr::count() %>% 
+  dplyr::rename(yes = freq)
+
+
+#Make dataframes for negative comparisons
+hsp.negs <- pairwise.df_HS.filt %>%
+  dplyr::filter(younger.sib.mom != older.sib.mom & younger.sib.dad != older.sib.dad) %>% 
+  dplyr::select(older.sib.birth, younger.sib.birth) %>% 
+  plyr::count() %>% 
+  as_tibble()
+
+mom_comps.HS <- hsp.negs %>% 
+  dplyr::rename(no = freq) %>% 
+  left_join(mom_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+  mutate(yes = replace_na(yes, 0)) %>% 
+  mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
+  mutate(all = yes + no) %>% 
+  mutate(BI = ifelse(year_gap %% 2 == 0, "even", "odd")) %>% 
+  dplyr::rename(ref.year = younger.sib.birth) %>% 
+  mutate(pop.growth.yrs = ref.year - estimation.year) %>% 
+  mutate(mom.oncycle = ifelse(BI == "even", 1, 0))
+
+dad_comps.HS <- hsp.negs %>% 
+  dplyr::rename(no = freq) %>% 
+  left_join(dad_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+  mutate(yes = replace_na(yes, 0)) %>% 
+  mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
+  mutate(all = yes + no) %>% 
+  dplyr::rename(ref.year = younger.sib.birth) %>% 
+  mutate(pop.growth.yrs = ref.year - estimation.year) 
+}
+
 
 #----------------------------Fit JAGS model to Lemon Shark Data------------------------------
 #--------------------Specify which JAGS model to use---------------------------------#
-#jags_file <- paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
+jags_file <- paste0(jags.model_location, "HS.only_noLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HSPOP_noLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HS.only_wideLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HSPOP_wideLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "HSPOP_narrowLambda_Skip_model.txt")
 #jags_file <- paste0(jags.model_location, "LizModel_noLambda.txt")
-jags_file <- paste0(jags.model_location, "LizModel_Lambda.txt")
+#jags_file <- paste0(jags.model_location, "LizModel_Lambda.txt")
 
 #JAGS parameters
-jags_params = c("Nf", "Nm", "survival", "psi", "lambda") #w lambda
-#jags_params = c("Nf", "Nm", "survival", "psi") #w/o lambda
+#jags_params = c("Nf", "Nm", "survival", "psi", "lambda") #w lambda
+jags_params = c("Nf", "Nm", "survival", "psi") #w/o lambda
 mating.periodicity <- 2 #Will be translated to a
 
 #Adult.survival <- 0.85 #If wanting to fix survival, or give it a tighter prior
@@ -255,9 +375,6 @@ nt <- 20     # thinning rate
 nc <- 2      # number of chains
 
 #----------------------------Fit JAGS model-------------------------------#
-#Ben's model
-#source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_HS.only.R")
-
 if(sum(mom_comps.HS$yes) > 0 & sum(dad_comps.HS$yes) > 0){
 
   #Liz's model
@@ -279,7 +396,7 @@ print(paste0("Finished comparison ", i, " to ", j))
 }
 }
 
-write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.09.18_wLambda.csv")
+write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.11.30_wLambda.csv")
 
 #write_rds(post.samps_list, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/post_samples")
 
