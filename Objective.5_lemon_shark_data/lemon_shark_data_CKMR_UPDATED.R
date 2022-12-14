@@ -89,6 +89,22 @@ mother_ref <- juv_ref %>% dplyr::select(birth.year, mother.x) %>%
   plyr::count() %>% 
   as_tibble
 
+#Calculate percent of sampled individuals with unknown mother
+num.unknown.mom <- juv_ref %>% group_by(indv.name) %>% 
+  summarize(unknown.mom = sum(is.na(mother.x) == TRUE)) %>% 
+  dplyr::filter(unknown.mom > 0) %>% 
+  nrow()
+
+num.known.mom <- juv_ref %>% group_by(indv.name) %>% 
+  summarize(unknown.mom = sum(is.na(mother.x) == TRUE)) %>% 
+  dplyr::filter(unknown.mom == 0) %>% 
+  nrow()
+
+
+#Check how many individuals were recaptured
+juv_ref %>% group_by(indv.name) %>% 
+  summarize(num = n()) %>% 
+  dplyr::filter(num > 1)
 
 #Replace NAs for parents with a random string of numbers (so assume for now that samples with NA for parents are unrelated)
 for(i in 1:nrow(juv_ref)){
@@ -220,6 +236,9 @@ dad_comps.HS <- hsp.negs %>%
   dplyr::rename(ref.year = younger.sib.birth) %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) 
 
+num.samps_all <- nrow(filtered.samples.HS.df) #Save the total number of samples
+mom.pos_all <- sum(mom_positives.HS$yes)
+
 #----------------------------Downsample----------------------------------------------#
 if(downsample == "yes"){
 #Downsample for HSPs
@@ -265,6 +284,8 @@ if(HS_comps.mom.yes + HS_comps.dad.yes > max.HSPs){
 } else{
   HS.samps.df.down <- filtered.samples.HS.df
 }
+
+num.samps_down <- nrow(HS.samps.df.down)
 
 ####----------------Construct pairwise comparison matrix after downsampling----------####
 pairwise.df.HS <- data.frame(t(combn(HS.samps.df.down$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
@@ -347,6 +368,9 @@ dad_comps.HS <- hsp.negs %>%
   mutate(all = yes + no) %>% 
   dplyr::rename(ref.year = younger.sib.birth) %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) 
+
+mom.pos_down <- sum(mom_positives.HS$yes)
+dad.pos_down <- sum(dad_positives.HS$yes)
 }
 
 
@@ -384,7 +408,11 @@ results.temp <- model.summary2 %>% mutate(min.year = i, max.year = j) %>%
   mutate(years_sampled = j - i,
          mom_HSPs = sum(mom_comps.HS$yes),
          dad_HSPs = sum(dad_comps.HS$yes),
-         estimation_year = estimation.year)
+         estimation_year = estimation.year,
+         num.samps_all = num.samps_all,
+         num.samps_down = num.samps_down,
+         mom_HSPS.all = mom.pos_all,
+         mom_HSPs.down = mom.pos_down)
   
 
 results <- bind_rows(results, results.temp)
@@ -396,21 +424,34 @@ print(paste0("Finished comparison ", i, " to ", j))
 }
 }
 
-write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.11.30_wLambda.csv")
+write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.01_downsample.csv")
 
 #write_rds(post.samps_list, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/post_samples")
+
+
 
 #----------------Minimum number of moms and dads-------------------------------
 #Calculate minimum number of mothers per year
 mother_ref %>% 
+  drop_na(mother.x) %>% 
   group_by(birth.year) %>% 
   summarize(min.moms = n()) %>% 
   dplyr::arrange(desc(min.moms)) %>% 
   dplyr::arrange(birth.year) %>% 
   View()
-  dplyr::filter(birth.year == estimation.year)
+  
+#Calculate average number of moms per year
+mother_ref %>% 
+  drop_na(mother.x) %>% 
+  dplyr::filter(birth.year > 1994) %>% #Remove years before which we estimate abundance
+  group_by(birth.year) %>% 
+  summarize(min.moms = n()) %>% 
+  dplyr::arrange(desc(min.moms)) %>% 
+  dplyr::arrange(birth.year) %>% 
+  summarize(mean.moms.per.yr = mean(min.moms))
 
 mother_ref %>% dplyr::filter(is.na(mother.x) == TRUE)
+
 
 father_ref %>% 
   group_by(birth.year) %>% 

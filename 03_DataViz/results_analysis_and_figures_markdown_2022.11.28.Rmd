@@ -310,15 +310,22 @@ fig1.a <- obj1_results %>% dplyr::filter(survival.prior == "informed",
 #  theme_ridges() + 
   facet_wrap(~prop.sampled.lab) + 
   theme_bw() +
-  theme(legend.title = element_blank(),
-        legend.position = "bottom") + 
   xlim(-100, 100) +
   scale_fill_manual(values = cp) +
-  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1)
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank(),
+        legend.position = "none")
 
 fig1.a
 
-#ggsave("Figure_1a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+ggsave("Figure_1a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 fig1.b <- obj1_results %>% dplyr::filter(survival.prior == "informed",
                                parameter != "survival") %>% 
@@ -332,13 +339,21 @@ ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
   scale_fill_manual(values = cp) +
   #ggtitle("B)") +
   facet_wrap(~prop.sampled.lab) +
-  theme(legend.title = element_blank(),
-        legend.position = "bottom") +
-  scale_y_log10()
+  theme() +
+  scale_y_log10() +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank(),
+        legend.position = "none")
 
 fig1.b
 
-#ggsave("Figure_1b_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+ggsave("Figure_1b_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 
 fig1.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
@@ -348,17 +363,24 @@ fig1.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
 #    ggtitle("C)") + 
     labs(x = "HSPs") +
     theme_bw() + 
-    theme(legend.title = element_blank(),
-          legend.position = "bottom") + 
     ylab("Density") +
     scale_fill_manual(values = cp) +
     scale_color_manual(values = cp) +
     facet_wrap(~prop.sampled.lab, scales = "free_y") + 
-  scale_x_continuous(breaks = c(50, 100, 150, 200, 250, 300, 350))
+  scale_x_continuous(breaks = c(50, 100, 150, 200, 250, 300, 350)) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank(),
+          legend.position = "bottom")
 
 fig1.c
 
-#ggsave("Figure_1c_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+ggsave("Figure_1c_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 
 fig1.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
@@ -370,20 +392,26 @@ fig1.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
     theme_bw() + 
 #    theme(legend.title = element_blank(), #For ggarrange
 #          axis.title.y = element_blank()) + 
-      theme(legend.title = element_blank(), #for saving individual plot (w/ y axis label)
-          legend.position = "bottom") + 
     scale_fill_manual(values = cp) +
     scale_color_manual(values = cp) +
-    facet_wrap(~prop.sampled.lab, scales = "free_y")
+    facet_wrap(~prop.sampled.lab, scales = "free_y") +
+   theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank(),
+          legend.position = "bottom")
 
 fig1.d
 
-#ggsave("Figure_1d_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+ggsave("Figure_1d_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 
 ggarrange(fig1.a, fig1.b, fig1.c, fig1.d, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom") #OK to ignore warnings; the first two are values > the x axis limit in 1A); the 7998 missing values are from plotting POPs
 
-ggsave("Figure_1ALL_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+ggsave("Figure_2ALL_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 500, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 5000, height = 3000, units = "px")
 
 
 ```
@@ -765,6 +793,7 @@ fig5a <- ls_data %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), param
   facet_wrap(~years.lab) +
   theme_bw() +
   labs(x = "Estimation year", y = "Female abundance") +
+  ggtitle("Full dataset") +
   theme(axis.text = element_text(size = 15),
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size = 15),
@@ -775,10 +804,15 @@ fig5a <- ls_data %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), param
 
 fig5a
 
-ggsave("Figure_5_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Figure_5a_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
-#----------------------Figure S7----------------------------
-figS7 <- ls_data %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), parameter == "survival") %>% dplyr::mutate(years_sampled_actual = years_sampled + 1) %>%
+#-----------------------Down sampled-----------------------------------
+ls_data.down <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.01_downsample.csv")
+
+ls_data.down %>% dplyr::filter(years_sampled == 2, parameter == "Nf") %>% 
+  dplyr::slice_max(Q50)
+
+fig5b <- ls_data.down %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), parameter == "Nf") %>% dplyr::mutate(years_sampled_actual = years_sampled + 1) %>% 
   mutate(years.lab = paste0(years_sampled_actual, " years sampled"),
          year.est = ceiling(min.year + years_sampled/2)) %>% 
   ggplot(aes(x = year.est, y = Q50)) + 
@@ -786,7 +820,8 @@ figS7 <- ls_data %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), param
   geom_smooth(method = "gam") +
   facet_wrap(~years.lab) +
   theme_bw() +
-  labs(x = "Estimation year", y = "Adult survival") +
+  ggtitle("Downsampled dataset") +
+  labs(x = "Estimation year", y = "Female abundance") +
   theme(axis.text = element_text(size = 15),
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size = 15),
@@ -795,10 +830,85 @@ figS7 <- ls_data %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), param
         legend.title = element_text(size = 20),
         plot.title = element_text(size=25))
 
-figS7
+fig5b
 
-ggsave("Figure_S7_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Figure_5b_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
+#----------------------Figure S7----------------------------
+figS7a <- ls_data %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), parameter == "survival") %>% dplyr::mutate(years_sampled_actual = years_sampled + 1) %>%
+  mutate(years.lab = paste0(years_sampled_actual, " years sampled"),
+         year.est = ceiling(min.year + years_sampled/2)) %>% 
+  ggplot(aes(x = year.est, y = Q50)) + 
+  geom_point() + 
+  geom_smooth(method = "gam") +
+  facet_wrap(~years.lab) +
+  theme_bw() +
+  labs(x = "Estimation year", y = "Adult survival") +
+  ggtitle("Full dataset") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))
+
+figS7a
+
+ggsave("Figure_S7a_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+figS7b <- ls_data.down %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), parameter == "survival") %>% dplyr::mutate(years_sampled_actual = years_sampled + 1) %>%
+  mutate(years.lab = paste0(years_sampled_actual, " years sampled"),
+         year.est = ceiling(min.year + years_sampled/2)) %>% 
+  ggplot(aes(x = year.est, y = Q50)) + 
+  geom_point() + 
+  geom_smooth(method = "gam") +
+  facet_wrap(~years.lab) +
+  theme_bw() +
+  labs(x = "Estimation year", y = "Adult survival") +
+  ggtitle("Downsampled dataset") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))
+
+figS7b
+
+ggsave("Figure_S7b_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+
+#Make table of full dataset and downsampled dataset results
+table4.full <- ls_data %>% dplyr::filter(min.year == 1993 & max.year == 2015) %>% 
+  mutate(samples = table4.down$num.samps_all,
+         dataset = "Full")
+
+table4.full <- table4.full %>% dplyr::select(parameter,
+                              median = Q50,
+                              HPD2.5,
+                              HPD97.5,
+                              sd = sd,
+                              samples,
+                              mom_HSPs = mom_HSPs,
+                              dad_HSPs = dad_HSPs,
+                              dataset)
+
+table4.down <- ls_data.down %>% dplyr::filter(min.year == 1993 & max.year == 2015) %>% 
+  mutate(dataset = "Downsampled")
+
+table4.down <- table4.down %>% dplyr::select(parameter,
+                              median = Q50,
+                              HPD2.5,
+                              HPD97.5,
+                              sd = sd,
+                              samples = num.samps_down,
+                              mom_HSPs = mom_HSPs.down,
+                              dad_HSPs = dad_HSPs,
+                              dataset)
+
+(table4.all <- table4.full %>% bind_rows(table4.down))
 ```
 
 
