@@ -287,8 +287,8 @@ It appears to me that a) the model works well overall, and b) targeted sampling 
 #---------------Figure 1---------------------
 #Randomly selected palette with nice colors
 #plot.colors <- c("aquamarine", "aquamarine4", "indianred1", "indianred4", "khaki4")
-#plot.colors.fig1 <- c("aquamarine4", "indianred1", "lightyellow2")
-#scales::show_col(plot.colors.fig1)
+#plot.colors.fig2 <- c("aquamarine4", "indianred1", "lightyellow2")
+#scales::show_col(plot.colors.fig2)
 
 #color blind-friendly palette from online
 #cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","#999999")
@@ -300,7 +300,7 @@ cp <- brewer.pal(3, "Set2") #Choose palette + number of colors
 scales::show_col(cp)
 
 #-------------------Objective 1 Density plots-------------------------#
-fig1.a <- obj1_results %>% dplyr::filter(survival.prior == "informed",
+fig2.a <- obj1_results %>% dplyr::filter(survival.prior == "informed",
                                parameter != "survival") %>% 
   ggplot(aes(x = relative_bias,
              y = parameter, 
@@ -323,11 +323,11 @@ fig1.a <- obj1_results %>% dplyr::filter(survival.prior == "informed",
         legend.title = element_blank(),
         legend.position = "none")
 
-fig1.a
+fig2.a
 
 ggsave("Figure_1a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
-fig1.b <- obj1_results %>% dplyr::filter(survival.prior == "informed",
+fig2.b <- obj1_results %>% dplyr::filter(survival.prior == "informed",
                                parameter != "survival") %>% 
 ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
   geom_violin(aes(y=cv), draw_quantiles = 0.5) +
@@ -351,12 +351,12 @@ ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
         legend.title = element_blank(),
         legend.position = "none")
 
-fig1.b
+fig2.b
 
 ggsave("Figure_1b_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 
-fig1.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
+fig2.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
                                parameter != "survival") %>% 
   ggplot(aes(x = HSPs_detected, fill = sampling.scheme)) +
     geom_density(alpha = 0.6) + 
@@ -378,12 +378,12 @@ fig1.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
         legend.title = element_blank(),
           legend.position = "bottom")
 
-fig1.c
+fig2.c
 
 ggsave("Figure_1c_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 
-fig1.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
+fig2.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
                                parameter != "survival") %>% 
   ggplot(aes(x = POPs_detected, fill = sampling.scheme)) +
     geom_density(alpha = 0.6) + 
@@ -394,6 +394,7 @@ fig1.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
 #          axis.title.y = element_blank()) + 
     scale_fill_manual(values = cp) +
     scale_color_manual(values = cp) +
+      ylab("Density") +
     facet_wrap(~prop.sampled.lab, scales = "free_y") +
    theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
@@ -404,12 +405,12 @@ fig1.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
         legend.title = element_blank(),
           legend.position = "bottom")
 
-fig1.d
+fig2.d
 
 ggsave("Figure_1d_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 
-ggarrange(fig1.a, fig1.b, fig1.c, fig1.d, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom") #OK to ignore warnings; the first two are values > the x axis limit in 1A); the 7998 missing values are from plotting POPs
+ggarrange(fig2.a, fig2.b, fig2.c, fig2.d, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom") #OK to ignore warnings; the first two are values > the x axis limit in 1A); the 7998 missing values are from plotting POPs
 
 ggsave("Figure_2ALL_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 500, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 5000, height = 3000, units = "px")
 
@@ -428,7 +429,7 @@ cp2 <- brewer.pal(3, "RdYlBu") #Choose palette + number of colors
 scales::show_col(cp2)
 
 #-------------------Objective 2 Density plots-------------------------#
-(fig2.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
+(fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
     mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>% 
   ggplot(aes(x = relative_bias,
              y = est.yr.lab, 
@@ -455,7 +456,7 @@ scales::show_col(cp2)
       ggsave("Figure_3a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #Very pretty histogram but not sure what to do with it ...
-# (fig2.b <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
+# (fig3.b <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
 #   geom_histogram(binwidth = 1,
 #                  alpha = 0.6,
 #                  position = "identity",
@@ -514,8 +515,8 @@ ggsave("Figure_S1_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 3
 source(file = "~/R/working_directory/LemonSharkCKMR/03_DataViz/functions/Truth_comps_samples_analysis_ToSource.R")
 
 #How often did the model predict the direction of lambda correctly? 
-plot.colors.fig2.2 <- c("tomato3", "steelblue2")
-scales::show_col(plot.colors.fig2.2)
+plot.colors.fig3.2 <- c("tomato3", "steelblue2")
+scales::show_col(plot.colors.fig3.2)
 
 (figS2 <- obj2_lam.results_4viz %>% 
     mutate(est.yr = factor(est.yr)) %>% 
@@ -537,7 +538,7 @@ scales::show_col(plot.colors.fig2.2)
     #theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
 #  facet_wrap(~sampling.scheme) +
   #xlim(-100, 200) +
-  scale_fill_manual(values = plot.colors.fig2.2)) +
+  scale_fill_manual(values = plot.colors.fig3.2)) +
   theme_bw() +
     theme(axis.text = element_text(size = 15),
         axis.title = element_text(size = 20),
@@ -779,13 +780,14 @@ scales::show_col(plot.colors.figs5)
 
 
 ```{r objective 5 viz}
-ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.09.17.csv")
+ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.15_Allsamples.csv")
 
-ls_data %>% dplyr::filter(years_sampled == 2, parameter == "Nf") %>% 
+ls_data %>% dplyr::filter(years_sampled == 3, parameter == "Nf") %>% 
   dplyr::slice_max(Q50)
 
-fig5a <- ls_data %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), parameter == "Nf") %>% dplyr::mutate(years_sampled_actual = years_sampled + 1) %>% 
-  mutate(years.lab = paste0(years_sampled_actual, " years sampled"),
+fig5a <- ls_data %>% dplyr::filter(max.year < 2016) %>% 
+  dplyr::filter(years_sampled %in% c(3, 4, 5, 6, 7, 8), parameter == "Nf") %>%
+  mutate(years.lab = paste0(years_sampled, " years sampled"),
          year.est = ceiling(min.year + years_sampled/2)) %>% 
   ggplot(aes(x = year.est, y = Q50)) + 
   geom_point() + 

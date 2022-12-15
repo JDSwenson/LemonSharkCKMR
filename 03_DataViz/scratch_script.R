@@ -1,3 +1,5 @@
+ls_data %>% dplyr::filter(years_sampled == 3)
+
 obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
                                lambda.prior == "diffuse (0.80 - 1.20)") %>% 
   group_by(parameter, est.yr, prop.sampled, sampling.scheme, population.growth) %>% 
