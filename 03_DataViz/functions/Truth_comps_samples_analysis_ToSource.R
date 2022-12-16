@@ -101,12 +101,12 @@ obj2.temp1 <- obj2_lam.results %>% dplyr::select(-c(percent.wrong)) %>%
   group_by(sampling.scheme, est.yr, status, degree) %>% 
   dplyr::summarize(percent.summ = round(mean(percent)))
 
-obj2.temp2 <- obj2_lam.results %>% dplyr::select(-c(percent.correct)) %>% 
-  dplyr::rename(percent = percent.wrong) %>% 
+obj2.temp2 <- obj2.temp1 %>%
   mutate(status = factor("incorrect")) %>% 
-  mutate(degree = ifelse(population.growth == "slight decline" | population.growth == "slight positive", "slight change", "substantial decline")) %>% 
-  group_by(sampling.scheme, est.yr, status, degree) %>% 
-  dplyr::summarize(percent.summ = round(mean(percent)))
+  mutate(percent.inc = 100 - percent.summ) %>% 
+  dplyr::select(-c(percent.summ)) %>% 
+  dplyr::rename(percent.summ = percent.inc)
 
+  
 obj2_lam.results_4viz <- obj2.temp1 %>% bind_rows(obj2.temp2) %>% 
   mutate(status = factor(status, levels = c("incorrect", "correct"))) #Reverse the order for better viz with the bar plot

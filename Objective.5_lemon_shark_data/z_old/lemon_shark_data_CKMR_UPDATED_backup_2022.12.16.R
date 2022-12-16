@@ -171,14 +171,11 @@ years <- c(min(NoFullSibs.df$birth.year):max(NoFullSibs.df$birth.year))
 results <- NULL
 post.samps_list <- list()
 rep = 0
-downsample <- "no"
-down.perc <- 0.3 #Percentage of samples to retain from each year
-#max.HSPs <- 150 #Not using anymore
-
-#rseeds <- sample(c(1:10000000), size = 200)
+downsample <- "yes"
+max.HSPs <- 150
 
 #Regular loop over different periods of estimation
-  for(i in min(years)){ #Sub in this and change to -1 if doing full loop: max(years-2)
+  for(i in min(years):max(years-2)){ #Change to -1 if doing full loop
     for(j in (i + 2): max(years)){
  #   j= i + 4
 
@@ -189,12 +186,10 @@ down.perc <- 0.3 #Percentage of samples to retain from each year
 #   for(j in (i + 2): max(years)){
 
         rep = rep+1
-        rseed.iter <- rseeds[rep]
-        set.seed(rseed.iter)
-        
+    
         filtered.samples.HS.df <- NoFullSibs.df %>% 
-          #group_by(mother.x, birth.year) %>% #Can comment out this line and the next to include all HSPs; uncomment to just use one indv per litter.
-          #slice_sample(n=1) %>% 
+          # group_by(mother.x, birth.year) %>% #Can comment out this line and the next to include all HSPs
+          # slice_sample(n=1) %>% 
           dplyr::arrange(birth.year) %>% 
           mutate(birth.year = as.numeric(birth.year)) %>%  #Arrange so older sib always comes first in pairwise comparison matrix
           ungroup() %>%
@@ -292,26 +287,32 @@ if(downsample == "yes"){
 HS.samps.props <- filtered.samples.HS.df %>% group_by(birth.year) %>%
   summarize(num = n()) %>%
   ungroup() %>%
-  mutate(num.samps = ceiling(num * down.perc))
+  mutate(prop = num/sum(num))
 
 #Save vector of proportions corresponding to the correct index in the HS sample dataframe
-# HS.props.vec <- filtered.samples.HS.df %>% left_join(HS.samps.props, by = "birth.year") %>%
-#   pull(num.samps)
+HS.props.vec <- filtered.samples.HS.df %>% left_join(HS.samps.props, by = "birth.year") %>%
+  pull(prop)
+
+#Calculate proportion of positive HS comparisons for mom
+HS_comps.mom.yes <- mom_comps.HS %>%
+  summarize(yes = sum(yes)) %>% 
+  pull(yes)
+
+HS_comps.mom.all <- mom_comps.HS %>%
+  summarize(all = sum(all)) %>% 
+  pull(all)
+
+HS_prop.mom.yes <- HS_comps.mom.yes/HS_comps.mom.all #Calculate proportion of positive comparisons
+
+HS_target.comps = round(max.HSPs/HS_prop.mom.yes, 0)
+HS_target.samples <- round(sqrt(HS_target.comps), 0)
 
 HS.samps.df.down <- NULL #Initialize so I don't get an error
-HS.samps.temp <- NULL
 
-set.seed(rseed.iter)
-for(n in 1:nrow(HS.samps.props)){
-
-    down.year <- HS.samps.props$birth.year[n]
-  
-  HS.samps.temp <- filtered.samples.HS.df %>% dplyr::filter(birth.year == down.year) %>% 
-    slice_sample(n = HS.samps.props$num.samps[n]) %>% 
-    arrange(birth.year) #arrange by birth year so they're in the correct order for combn
-
-HS.samps.df.down <- bind_rows(HS.samps.df.down, HS.samps.temp)
-
+if(HS_comps.mom.yes > max.HSPs){
+  HS.samps.df.down <- filtered.samples.HS.df %>% slice_sample(n = HS_target.samples, weight_by = HS.props.vec) %>% arrange(birth.year) #arrange by birth year so they're in the correct order for combn
+} else{
+  HS.samps.df.down <- filtered.samples.HS.df
 }
 
 num.samps_down <- nrow(HS.samps.df.down)
@@ -432,29 +433,18 @@ nc <- 2      # number of chains
 #----------------------------Fit JAGS model-------------------------------#
 if(sum(mom_comps.HS$yes) > 0){
 
-
-  set.seed(rseed.iter)
   #MHSP only model
   source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
 
-  if(downsample == "yes"){
 results.temp <- model.summary2 %>% mutate(min.year = i, max.year = j) %>% 
   mutate(years_sampled = j - i,
          mom_HSPs = sum(mom_comps.HS$yes),
          estimation_year = estimation.year,
          num.samps_all = num.samps_all,
-         num.samps_down = num.samps_down,
-         mom_HSPS.all = mom.pos_all,
-         mom_HSPs.down = mom.pos_down,
-         seed = rseed.iter)
-  } else{
-    results.temp <- model.summary2 %>% mutate(min.year = i, max.year = j) %>% 
-      mutate(years_sampled = j - i,
-             mom_HSPs = sum(mom_comps.HS$yes),
-             estimation_year = estimation.year,
-             num.samps_all = num.samps_all,
-             seed = rseed.iter)
-  }
+       #  num.samps_down = num.samps_down,
+         mom_HSPS.all = mom.pos_all)
+       #  mom_HSPs.down = mom.pos_down)
+  
 
 results <- bind_rows(results, results.temp)
 post.samps_list[[rep]] <- post
@@ -467,7 +457,7 @@ print(paste0("Finished comparison ", i, " to ", j))
 
 results2 <- results %>% mutate(years_sampled = years_sampled+1)
 
-write_csv(results2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.16_FullLitter_wLambda.csv")
+write_csv(results2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.15_FullLitter_downsample_wLambda.csv")
 
 #write_rds(post.samps_list, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/post_samples")
 

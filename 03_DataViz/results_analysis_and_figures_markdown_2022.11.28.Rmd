@@ -431,9 +431,12 @@ scales::show_col(cp2)
 #-------------------Objective 2 Density plots-------------------------#
 (fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
     mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>% 
+    mutate(lam.label = ifelse(lambda.prior == "none", "naive",
+                          ifelse(lambda.prior == "diffuse (0.80 - 1.20)", "adapted (diffuse lambda prior)", "adapted (narrow lambda prior)"))) %>% 
+    mutate(lam.label = factor(lam.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
   ggplot(aes(x = relative_bias,
              y = est.yr.lab, 
-             fill = lambda.prior)) + 
+             fill = lam.label)) + 
   geom_density_ridges(alpha = 0.6) + 
   labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
@@ -443,7 +446,7 @@ scales::show_col(cp2)
   xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
   scale_fill_manual(values = cp2, 
-                    name = "Lambda prior") +
+                    name = "Model") +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
     theme_bw()) +
     theme(axis.text = element_text(size = 12),
@@ -453,7 +456,7 @@ scales::show_col(cp2)
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20))
 
-      ggsave("Figure_3a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+      ggsave("Figure_3a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #Very pretty histogram but not sure what to do with it ...
 # (fig3.b <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
@@ -519,7 +522,9 @@ plot.colors.fig3.2 <- c("tomato3", "steelblue2")
 scales::show_col(plot.colors.fig3.2)
 
 (figS2 <- obj2_lam.results_4viz %>% 
-    mutate(est.yr = factor(est.yr)) %>% 
+    mutate(est.yr = factor(est.yr),
+           degree.plot = ifelse(degree == "substantial decline", "severe decline", degree)) %>%
+    mutate(degree.plot = factor(degree.plot, levels = c("slight change", "severe decline"))) %>% 
   mutate(perc.lab = paste0(percent.summ, "%")) %>% 
   ggplot(aes(x = est.yr,
              y = percent.summ, 
@@ -532,7 +537,7 @@ scales::show_col(plot.colors.fig3.2)
                   size = 4, 
               fontface = "bold",
             position = position_stack(vjust = 0.5)) +
-  facet_grid(rows = vars(degree), cols = vars(sampling.scheme)) +
+  facet_grid(rows = vars(degree.plot), cols = vars(sampling.scheme)) +
     labs(x="\nEstimation year", y="Percent") +
     #This adjusts the x axis labels to stagger them. "points" is the unit by which to stagger, but could use others e.g. cm, in, etc.
     #theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
@@ -548,7 +553,7 @@ scales::show_col(plot.colors.fig3.2)
         legend.title = element_blank())
 
 
-ggsave("Figure_S2_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Figure_S2_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 9, units = "in")
 
 ```
 
@@ -583,9 +588,9 @@ obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.
         legend.title = element_text(size = 20),
         plot.title = element_text(size=25))) +
   guides(fill=guide_legend(title="Model")) +
-  ggtitle("Intermittent breeding")
+  ggtitle("a) Intermittent breeding")
 
-      ggsave("Figure_4a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+      ggsave("Figure_4a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
 
       
       #---------Objective 4-------------------------#
@@ -605,7 +610,7 @@ obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(y="Relative bias", x = "Age-length uncertainty") +
-  scale_fill_manual(values = cp3) +
+  scale_fill_manual(values = cp4) +
   facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "free") +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
@@ -616,15 +621,16 @@ obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.
         legend.title = element_text(size = 20),
         plot.title = element_text(size=25))) +
   guides(fill=guide_legend(title="Population + model")) +
-  ggtitle("Aging error")
+  ggtitle("b) Aging error")
 
-      ggsave("Figure_4b_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+      ggsave("Figure_4b_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
 
 
   #------------------Figure S3--------------------------
       #biennial vs annual model w/ biennial breeding: lambda (violin), survival (violin), psi (boxplot)
 
 (figS3a <- obj3_results_4plot %>% dplyr::filter(parameter %in% c("survival", "lambda"), breeding.schedule == "biennial", est.yr == 85) %>% 
+   mutate(parameter = factor(parameter, levels = c("survival", "lambda"))) %>% 
   ggplot(aes(x=factor(popsim.psi), fill = model)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
@@ -641,7 +647,7 @@ obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.
         plot.title = element_text(size=25))) +
   guides(fill=guide_legend(title="Model"))
 
-      ggsave("Figure_S3a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+      ggsave("Figure_S3a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 7.35, units = "in")
       
       #psi
       (figS3b <- obj3_results_4plot %>% dplyr::filter(parameter == "psi", breeding.schedule == "biennial", est.yr == 85) %>% 
@@ -780,22 +786,46 @@ scales::show_col(plot.colors.figs5)
 
 
 ```{r objective 5 viz}
-ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.15_Allsamples.csv")
+ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.16_FullLitter_wLambda.csv") %>% 
+  mutate(num.samps = num.samps_all) %>% 
+  dplyr::select(-c(num.samps_all))
 
-ls_data %>% dplyr::filter(years_sampled == 3, parameter == "Nf") %>% 
-  dplyr::slice_max(Q50)
+#One individual per litter
+# ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.15_OneIndvPerLitter_wLambda.csv") %>% 
+#   mutate(num.samps = num.samps_all) %>% 
+#   dplyr::select(-c(num.samps_all))
 
-fig5a <- ls_data %>% dplyr::filter(max.year < 2016) %>% 
-  dplyr::filter(years_sampled %in% c(3, 4, 5, 6, 7, 8), parameter == "Nf") %>%
-  mutate(years.lab = paste0(years_sampled, " years sampled"),
-         year.est = ceiling(min.year + years_sampled/2)) %>% 
-  ggplot(aes(x = year.est, y = Q50)) + 
-  geom_point() + 
-  geom_smooth(method = "gam") +
-  facet_wrap(~years.lab) +
+
+ls_data.down <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.16_FullLitter_downsample_wLambda.csv") %>% 
+  mutate(mom_HSPs = mom_HSPs.down,
+         num.samps = num.samps_down) %>% 
+  dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all))
+
+ls_data.full4viz <- ls_data %>% dplyr::filter(estimation_year > 1996) %>% 
+  mutate(Dataset = "Full")
+ls_data.down4viz <- ls_data.down %>% dplyr::filter(estimation_year > 1996) %>% 
+  mutate(Dataset = "Downsampled")
+
+ls_data4viz <- bind_rows(ls_data.full4viz, ls_data.down4viz) %>% 
+  mutate(Dataset = factor(Dataset, levels = c("Full", "Downsampled")))
+
+#------------------------------Fig 5a: Nf-----------------------------------------#
+brewer.pal.info #See different palette options from Rcolorbrewer
+cp5 <- brewer.pal(3, "Dark2") #Choose palette + number of colors
+scales::show_col(cp5)
+
+fig5a <- ls_data4viz %>% dplyr::filter(max.year < 2016, min.year == 1993) %>% 
+  dplyr::filter(parameter == "Nf") %>%
+  ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
+  #geom_point() + 
+  geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
+                  position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "gam", se = FALSE, aes(linetype = Dataset)) +
+  #facet_wrap(~years.lab) +
   theme_bw() +
   labs(x = "Estimation year", y = "Female abundance") +
-  ggtitle("Full dataset") +
+  scale_color_manual(values = cp5) +
+  ggtitle("a)") +
   theme(axis.text = element_text(size = 15),
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size = 15),
@@ -806,24 +836,22 @@ fig5a <- ls_data %>% dplyr::filter(max.year < 2016) %>%
 
 fig5a
 
-ggsave("Figure_5a_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_5a_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
-#-----------------------Down sampled-----------------------------------
-ls_data.down <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.01_downsample.csv")
-
-ls_data.down %>% dplyr::filter(years_sampled == 2, parameter == "Nf") %>% 
-  dplyr::slice_max(Q50)
-
-fig5b <- ls_data.down %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), parameter == "Nf") %>% dplyr::mutate(years_sampled_actual = years_sampled + 1) %>% 
-  mutate(years.lab = paste0(years_sampled_actual, " years sampled"),
-         year.est = ceiling(min.year + years_sampled/2)) %>% 
-  ggplot(aes(x = year.est, y = Q50)) + 
-  geom_point() + 
-  geom_smooth(method = "gam") +
-  facet_wrap(~years.lab) +
+#-----------------------Fig5b: Survival------------------------------------#
+fig5b <- ls_data4viz %>% dplyr::filter(max.year < 2016, min.year == 1993) %>% 
+  dplyr::filter(parameter == "survival") %>%
+  ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
+  #geom_point() + 
+  geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5, group = Dataset),
+                  position = position_dodge(width = 1)) +
+  geom_smooth(method = "gam", se = FALSE, aes(linetype = Dataset)) +
+  #facet_wrap(~years.lab) +
   theme_bw() +
-  ggtitle("Downsampled dataset") +
-  labs(x = "Estimation year", y = "Female abundance") +
+  ylim(0.5, 1) +
+  labs(x = "Estimation year", y = "Survival") +
+  ggtitle("b)") +
+  scale_color_manual(values = cp5) +
   theme(axis.text = element_text(size = 15),
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size = 15),
@@ -834,83 +862,26 @@ fig5b <- ls_data.down %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), 
 
 fig5b
 
-ggsave("Figure_5b_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_5b_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
-#----------------------Figure S7----------------------------
-figS7a <- ls_data %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), parameter == "survival") %>% dplyr::mutate(years_sampled_actual = years_sampled + 1) %>%
-  mutate(years.lab = paste0(years_sampled_actual, " years sampled"),
-         year.est = ceiling(min.year + years_sampled/2)) %>% 
-  ggplot(aes(x = year.est, y = Q50)) + 
-  geom_point() + 
-  geom_smooth(method = "gam") +
-  facet_wrap(~years.lab) +
-  theme_bw() +
-  labs(x = "Estimation year", y = "Adult survival") +
-  ggtitle("Full dataset") +
-  theme(axis.text = element_text(size = 15),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))
+ggarrange(fig5a, fig5b, common.legend = TRUE, legend = "bottom")
 
-figS7a
-
-ggsave("Figure_S7a_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
-
-figS7b <- ls_data.down %>% dplyr::filter(years_sampled %in% c(2, 3, 4, 5, 6, 7), parameter == "survival") %>% dplyr::mutate(years_sampled_actual = years_sampled + 1) %>%
-  mutate(years.lab = paste0(years_sampled_actual, " years sampled"),
-         year.est = ceiling(min.year + years_sampled/2)) %>% 
-  ggplot(aes(x = year.est, y = Q50)) + 
-  geom_point() + 
-  geom_smooth(method = "gam") +
-  facet_wrap(~years.lab) +
-  theme_bw() +
-  labs(x = "Estimation year", y = "Adult survival") +
-  ggtitle("Downsampled dataset") +
-  theme(axis.text = element_text(size = 15),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))
-
-figS7b
-
-ggsave("Figure_S7b_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Figure_5_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 12, height = 6, units = "in")
 
 
 #Make table of full dataset and downsampled dataset results
-table4.full <- ls_data %>% dplyr::filter(min.year == 1993 & max.year == 2015) %>% 
-  mutate(samples = table4.down$num.samps_all,
-         dataset = "Full")
+#Start with bind rows bc it's before converting Dataset to a factor
+table4 <- bind_rows(ls_data.full4viz, ls_data.down4viz) %>%
+  dplyr::filter(parameter == "Nf") %>% 
+  mutate(HPDI = paste0("(", round(HPD2.5, 0)," - ", round(HPD97.5, 0), ")")) %>%
+  dplyr::select(Median = Q50,
+                HPDI,
+                `Estimation year` = estimation_year,
+                `Number of samples` = num.samps,
+                `Mom HSPs` = mom_HSPs,
+                Dataset)
 
-table4.full <- table4.full %>% dplyr::select(parameter,
-                              median = Q50,
-                              HPD2.5,
-                              HPD97.5,
-                              sd = sd,
-                              samples,
-                              mom_HSPs = mom_HSPs,
-                              dad_HSPs = dad_HSPs,
-                              dataset)
-
-table4.down <- ls_data.down %>% dplyr::filter(min.year == 1993 & max.year == 2015) %>% 
-  mutate(dataset = "Downsampled")
-
-table4.down <- table4.down %>% dplyr::select(parameter,
-                              median = Q50,
-                              HPD2.5,
-                              HPD97.5,
-                              sd = sd,
-                              samples = num.samps_down,
-                              mom_HSPs = mom_HSPs.down,
-                              dad_HSPs = dad_HSPs,
-                              dataset)
-
-(table4.all <- table4.full %>% bind_rows(table4.down))
+write_csv(table4, file = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/tables/table4.csv")
 ```
 
 
