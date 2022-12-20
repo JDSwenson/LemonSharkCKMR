@@ -171,11 +171,11 @@ years <- c(min(NoFullSibs.df$birth.year):max(NoFullSibs.df$birth.year))
 results <- NULL
 post.samps_list <- list()
 rep = 0
-downsample <- "no"
+downsample <- "yes"
 down.perc <- 0.3 #Percentage of samples to retain from each year
 #max.HSPs <- 150 #Not using anymore
 
-#rseeds <- sample(c(1:10000000), size = 200)
+rseeds <- sample(c(1:10000000), size = 200)
 
 #Regular loop over different periods of estimation
   for(i in min(years)){ #Sub in this and change to -1 if doing full loop: max(years-2)
@@ -193,12 +193,12 @@ down.perc <- 0.3 #Percentage of samples to retain from each year
         set.seed(rseed.iter)
         
         filtered.samples.HS.df <- NoFullSibs.df %>% 
-          #group_by(mother.x, birth.year) %>% #Can comment out this line and the next to include all HSPs; uncomment to just use one indv per litter.
-          #slice_sample(n=1) %>% 
+          group_by(mother.x, birth.year) %>% #Can comment out this line and the next to include all HSPs; uncomment to just use one indv per litter.
+          slice_sample(n=1) %>% 
           dplyr::arrange(birth.year) %>% 
           mutate(birth.year = as.numeric(birth.year)) %>%  #Arrange so older sib always comes first in pairwise comparison matrix
-          ungroup() %>%
-          dplyr::filter(birth.year >= i & birth.year <= j)
+          ungroup() %>% #Uncomment the pipe to include filtering
+          dplyr::filter(birth.year >= i & birth.year <= j) #Comment out this line to use the full dataset
 
 pairwise.df.HS <- data.frame(t(combn(filtered.samples.HS.df$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
 colnames(pairwise.df.HS) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
@@ -467,7 +467,7 @@ print(paste0("Finished comparison ", i, " to ", j))
 
 results2 <- results %>% mutate(years_sampled = years_sampled+1)
 
-write_csv(results2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.16_FullLitter_wLambda.csv")
+write_csv(results2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.19_OneIndvPerLitter_Downsampled_wLambda.csv")
 
 #write_rds(post.samps_list, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/post_samples")
 
