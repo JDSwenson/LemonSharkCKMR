@@ -54,7 +54,7 @@ f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity 
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
 
 #============================== psi 1 ==============================
-  breeding.schedule <- "biennial.breeding_psi1"
+  breeding.schedule <- "biennial.breeding_psi1_stochasticCycles"
   non.conformists <- 0
   percent.breed_off.cycle <- 0.1 #Percent of off-cycle mothers that will breed each year
   percent.skip_on.cycle <- 0.1 #Percent of on-cycle mothers that will skip breeding each year

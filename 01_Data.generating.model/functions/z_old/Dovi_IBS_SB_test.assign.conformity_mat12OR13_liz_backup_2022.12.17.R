@@ -151,30 +151,6 @@ for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulat
   #Add all mothers that are meant to breed in the year, plus a small proportion that are not
   mothers <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle == repro.cycle.vec[v+1] & data1$repro.strategy == "conformist") #determine which females are available to breed in this year; this is an index
 
-  #-----------------------------------Switch cycles------------------------#
-  
-  #Remove a percent of on-cycle breeders from the breeding pool this year
-  if(exists("percent.skip_on.cycle") == TRUE & percent.skip_on.cycle > 0){
-    #Randomly select from the vector of on-cycle mothers some that will not breed this year
-    mothers.skip_on.cycle <- sample(mothers, size = length(mothers)*percent.skip_on.cycle)
-    
-    #Remove the non-breeding on-cycle mothers from the vector of breeding mothers for this year
-    mothers <- c(mothers[!mothers %in% mothers.skip_on.cycle])
-  }
-  
-  
-  #Include a percentage of off-cycle breeders in the breeding pool this year
-  if(exists("percent.breed_off.cycle") == TRUE & percent.breed_off.cycle > 0){
-    #Which potential mothers are off cycle?
-    mothers.all_off.cycle <- which(data1$sex=='F' & data1$age.x>=repro.age & data1$repro.cycle == repro.cycle.vec[v] & data1$repro.strategy == "conformist")
-    
-    #Randomly select from the vector of off-cycle mothers the percent specified by percent.breed_off.cycle
-    mothers.breed_off.cycle <- sample(mothers.all_off.cycle, size = length(mothers.all_off.cycle)*percent.breed_off.cycle)
-    
-    #Add the off cycle mothers to the vector of breeding mothers for this year
-    mothers <- sort(c(mothers, mothers.breed_off.cycle))
-    }
-  
   
   #-----------------------------------Non-conformist mothers------------------------------------#
   #------------------If allowing all annual breeders to breed at age 12
