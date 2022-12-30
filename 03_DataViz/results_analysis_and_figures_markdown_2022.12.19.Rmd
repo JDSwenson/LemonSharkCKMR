@@ -983,7 +983,7 @@ obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 0.5, parameter == "Nf
 obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 1, parameter == "Nf", model == "multiennial", mating.periodicity == 3) %>%
   group_by(parameter, sampling.scheme) %>% 
   dplyr::summarize(mean.bias = mean(relative_bias),
-                   percent_in_interva l = sum(in_interval == "Y")/n() * 100,
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
                    mean.cv = mean(cv),
                    mean.HSPs = mean(HSPs_detected),
                    mean.POPs = mean(POPs_detected)) %>%
