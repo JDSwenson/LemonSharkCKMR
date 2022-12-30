@@ -310,18 +310,18 @@ derived.quantities = "yes"
 
 #========================== Sampling ==========================
 #------------------------- Target YOY -------------------------#
-#sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-#HS.only <- "yes" #Do we only want to filter HS relationships?
+sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+HS.only <- "yes" #Do we only want to filter HS relationships?
 
 #------------------------- Sample all juveniles -------------------------#
-# sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-# HS.only <- "yes" #Do we only want to filter HS relationships?
+ # sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+ # HS.only <- "yes" #Do we only want to filter HS relationships?
 
 #------------------------- Sample all ages -------------------------#
- sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
- HS.only <- "no" #Do we only want to filter HS relationships?
- PO.only <- "no" #Do we only want to filter PO relationships?
- jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt") #Need to use a different model if sampling all age classes AND using the biennial model
+ # sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+ # HS.only <- "no" #Do we only want to filter HS relationships?
+ # PO.only <- "no" #Do we only want to filter PO relationships?
+ # jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt") #Need to use a different model if sampling all age classes AND using the biennial model
 
 
 

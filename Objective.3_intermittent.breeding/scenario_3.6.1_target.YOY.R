@@ -39,6 +39,7 @@ max.age <- 50 #set the maximum age allowed in the simulation
 n_yrs <- 90 #Number of years the simulation was run for
 inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
 sample.props <- 1.5 #Either label this with the percent we want to target (if just one) or if wanting to run over all sample proportions, set as "all"
+derived.quantities <- "no"
 
 
 ########################## Objective 1 #########################
@@ -298,30 +299,39 @@ mating.periodicity <- 2 #Overwrite below if triennial breeding
 # mating.periodicity <- 3
 
 #========================= Scenario 3.6: Biennial breeding w/ stochasticity
-#------------------------- Scenario 3.6.1: Biennial breeding; psi = 1; multiennial model; 10% on-cycle breeders fail to breed; 10% off-cycle breeders do breed.
+#------------------------- Scenario 3.6.1: Biennial breeding; psi = 1; annual model; 10% on-cycle breeders fail to breed; 10% off-cycle breeders do breed.
 date.of.PopSim <- "27Dec2022"
 PopSim.breeding.schedule <- "biennial.breeding_psi1_stochasticCycles" #Can be annual.breeding or biennial.breeding
 scenario <- "scenario_3.6.1" #For naming output files
-model <- "multiennial.model"
-jags_params = c("Nf", "psi", "Nm", "survival", "lambda", "Nfb1", "Nfb2") #List the parameters to be estimated
+model <- "annual.model"
+jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
 estimated.parameters <- paste0(jags_params, collapse = ",")
-jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") #Specify the HS only model as the model for now. If the likelihood should include POPs, then we will override the model when we select the sampling scheme several lines down.
-derived.quantities = "yes"
+jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
+
+#------------------------- Scenario 3.6.2: Biennial breeding; psi = 1; multiennial model; 10% on-cycle breeders fail to breed; 10% off-cycle breeders do breed.
+# date.of.PopSim <- "27Dec2022"
+# PopSim.breeding.schedule <- "biennial.breeding_psi1_stochasticCycles" #Can be annual.breeding or biennial.breeding
+# scenario <- "scenario_3.6.2" #For naming output files
+# model <- "multiennial.model"
+# jags_params = c("Nf", "psi", "Nm", "survival", "lambda", "Nfb1", "Nfb2") #List the parameters to be estimated
+# estimated.parameters <- paste0(jags_params, collapse = ",")
+# jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") #Specify the HS only model as the model for now. If the likelihood should include POPs, then we will override the model when we select the sampling scheme several lines down.
+# derived.quantities = "yes"
 
 #========================== Sampling ==========================
 #------------------------- Target YOY -------------------------#
-#sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-#HS.only <- "yes" #Do we only want to filter HS relationships?
+sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+HS.only <- "yes" #Do we only want to filter HS relationships?
 
 #------------------------- Sample all juveniles -------------------------#
-# sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-# HS.only <- "yes" #Do we only want to filter HS relationships?
+ # sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+ # HS.only <- "yes" #Do we only want to filter HS relationships?
 
 #------------------------- Sample all ages -------------------------#
- sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
- HS.only <- "no" #Do we only want to filter HS relationships?
- PO.only <- "no" #Do we only want to filter PO relationships?
- jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt") #Need to use a different model if sampling all age classes AND using the biennial model
+ # sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+ # HS.only <- "no" #Do we only want to filter HS relationships?
+ # PO.only <- "no" #Do we only want to filter PO relationships?
+ # jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt") #Need to use a different model if sampling all age classes AND using the biennial model
 
 
 

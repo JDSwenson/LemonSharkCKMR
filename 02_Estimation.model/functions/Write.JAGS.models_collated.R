@@ -135,6 +135,10 @@ HS.only_noLambda_Skip_model = function(){
   for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
     dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
+  
+  #Derived quantities
+  Nfb1 <- ((a + psi - a*psi)/a)*Nf
+  Nfb2 <- Nf/a
 }
 
 
@@ -282,6 +286,9 @@ HS.only_narrowLambda_Skip_model = function(){
     dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
   
+  #Derived quantities
+  Nfb1 <- ((a + psi - a*psi)/a)*Nf
+  Nfb2 <- Nf/a
 }
 
 ####
@@ -321,6 +328,11 @@ HS.PO_narrowLambda_Skip_model= function(){
   for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
     dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
+  
+  #Derived quantities
+  Nfb1 <- ((a + psi - a*psi)/a)*Nf
+  Nfb2 <- Nf/a
+  
 }
 
 
@@ -375,7 +387,10 @@ MHSP.only_narrowLambda_Skip_model = function(){
   for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
     mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.off[j]))), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
   }
-  
+ 
+  #Derived quantities
+  Nfb1 <- ((a + psi - a*psi)/a)*Nf
+  Nfb2 <- Nf/a 
 }
 
 
