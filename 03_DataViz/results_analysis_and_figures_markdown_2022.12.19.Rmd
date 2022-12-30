@@ -569,7 +569,7 @@ cp3.sub <- cp3[c(1,3)]
 #---------Figure 4----------------------------
 #---------Objective 3-------------------------#
 obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.periodicity == 2, "biennial", "triennial")) %>% 
-  mutate(popsim.psi = factor(popsim.psi, levels = c(1, 0.9, 0.75, 0.5))) %>% 
+  mutate(popsim.psi = factor(popsim.psi, levels = c("1", "1*", "0.9", "0.75", "0.5"))) %>% 
   mutate(sampling.scheme = ifelse(sampling.scheme == "sample ALL ages", "sample all ages", sampling.scheme))
 
 (fig4a <- obj3_results_4plot %>% dplyr::filter(parameter == "Nf" | parameter == "Nm", breeding.schedule == "biennial", est.yr == 85) %>% 
@@ -590,7 +590,7 @@ obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.
   guides(fill=guide_legend(title="Model")) +
   ggtitle("a) Intermittent breeding")
 
-      ggsave("Figure_4a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
+      #ggsave("Figure_4a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
 
       
       #---------Objective 4-------------------------#
@@ -983,12 +983,21 @@ obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 0.5, parameter == "Nf
 obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 1, parameter == "Nf", model == "multiennial", mating.periodicity == 3) %>%
   group_by(parameter, sampling.scheme) %>% 
   dplyr::summarize(mean.bias = mean(relative_bias),
-                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   percent_in_interva l = sum(in_interval == "Y")/n() * 100,
                    mean.cv = mean(cv),
                    mean.HSPs = mean(HSPs_detected),
                    mean.POPs = mean(POPs_detected)) %>%
   dplyr::arrange(parameter, sampling.scheme)
 
+#3.6: psi = 1*
+obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == "1*", parameter == "Nf", model == "multiennial", mating.periodicity == 2) %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
 
 #4.1: 5% CV - annual breeding
 obj4_results %>% dplyr::filter(est.yr == 85, parameter == "Nf", model == "annual", age.error_cv != "accurate", age.error_cv == "5% CV") %>%

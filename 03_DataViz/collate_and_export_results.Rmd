@@ -591,15 +591,16 @@ obj3_sample.ALL.ages_files
 obj3_sample.ALL.ages_results <- map_dfr(obj3_sample.ALL.ages_files, read_csv) %>% 
   mutate(sampling.scheme = "sample ALL ages")
 
-annual.scenarios <- c("scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1")
+annual.scenarios <- c("scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1")
 
-multiennial.scenarios <- c("scenario_3.1.2", "scenario_3.2.2", "scenario_3.3.2", "scenario_3.4.2", "scenario_3.5.2")
+multiennial.scenarios <- c("scenario_3.1.2", "scenario_3.2.2", "scenario_3.3.2", "scenario_3.4.2", "scenario_3.5.2", "scenario_3.6.2")
 
 obj3_results <- bind_rows(obj3_target.YOY_results, obj3_sample.all.juveniles_results, obj3_sample.ALL.ages_results) %>% mutate(model = ifelse(scenario %in% annual.scenarios, "annual", "multiennial")) %>% 
   mutate(popsim.psi = ifelse(scenario == "scenario_3.1.1" | scenario == "scenario_3.1.2", 1, 
                              ifelse(scenario == "scenario_3.2.1" | scenario == "scenario_3.2.2", 0.9,
                              ifelse(scenario == "scenario_3.3.1" | scenario == "scenario_3.3.2", 0.75,
-                             ifelse(scenario == "scenario_3.4.1" | scenario == "scenario_3.4.2", 0.5, 1))))) %>% 
+                             ifelse(scenario == "scenario_3.4.1" | scenario == "scenario_3.4.2", 0.5,
+                              ifelse(scenario == "scenario_3.6.1" | scenario == "scenario_3.6.2", "1*", 1)))))) %>% 
   mutate(mating.periodicity = ifelse(scenario == "scenario_3.5.1" | scenario == "scenario_3.5.2", 3, 2)) %>% 
   mutate(cv = (sd/mean)*100)
 
@@ -674,7 +675,7 @@ write_csv(obj4_results, file = paste0(objective_4_results_location, "obj4_collat
 #                           ifelse(purpose %in% purpose_4.2.all_vec, 0.10, 0.20)))
 # 
 #   write_csv(obj4_results, file = paste0(objective_4_results_location, "obj4_collated_results_Liz.csv"))
- ```
+```
 # 
 ```{r Obj4 - Read in sample files}
 #Read in sample files from age misassignment simulations
