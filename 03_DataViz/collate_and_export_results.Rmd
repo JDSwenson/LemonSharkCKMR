@@ -377,7 +377,7 @@ obj1_results <- scenario_1.1_results %>% bind_rows(scenario_1.2_results) %>%
   dplyr::select(-sample.size.juvs)
 
 
-write_csv(obj1_results, file = paste0(objective_1_results_location, "obj1_collated_results.csv"))
+#write_csv(obj1_results, file = paste0(objective_1_results_location, "obj1_collated_results.csv"))
 
 
 #--------------------- Objective 2 ---------------------------------
@@ -556,7 +556,7 @@ obj2_results <- scenario_2.1_results.all %>% bind_rows(scenario_2.2_results.all,
   mutate(mean.adult.lambda.last10 = ifelse(is.na(mean.adult.lambda.last10) == TRUE, mean.adult.lambda, mean.adult.lambda.last10))
 
 
-write_csv(obj2_results, file = paste0(objective_2_results_location, "obj2_collated_results.csv"))
+#write_csv(obj2_results, file = paste0(objective_2_results_location, "obj2_collated_results.csv"))
 
 
 #--------------------- objective 3 ---------------------------------
@@ -604,7 +604,7 @@ obj3_results <- bind_rows(obj3_target.YOY_results, obj3_sample.all.juveniles_res
   mutate(mating.periodicity = ifelse(scenario == "scenario_3.5.1" | scenario == "scenario_3.5.2", 3, 2)) %>% 
   mutate(cv = (sd/mean)*100)
 
-write_csv(obj3_results, file = paste0(objective_3_results_location, "obj3_collated_results.csv"))
+#write_csv(obj3_results, file = paste0(objective_3_results_location, "obj3_collated_results.csv"))
 
 #--------------------- objective 4 ---------------------------------
 #objective 4.1
@@ -649,7 +649,7 @@ obj4_results <- bind_rows(obj4_target.YOY_results, obj4_sample.all.juveniles_res
   mutate(cv = (sd/mean)*100)
 
 
-write_csv(obj4_results, file = paste0(objective_4_results_location, "obj4_collated_results.csv"))
+#write_csv(obj4_results, file = paste0(objective_4_results_location, "obj4_collated_results.csv"))
 
 # #--------------------- Objective 4 ---------------------------------
 # #Load everything together

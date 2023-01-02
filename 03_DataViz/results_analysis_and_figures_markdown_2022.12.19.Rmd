@@ -563,8 +563,9 @@ ggsave("Figure_S2_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 3
 #Palette I want to use
 
 cp3 <- brewer.pal(3, "RdBu") #Choose palette + number of colors
-scales::show_col(cp3.sub)
 cp3.sub <- cp3[c(1,3)]
+scales::show_col(cp3.sub)
+
 
 #---------Figure 4----------------------------
 #---------Objective 3-------------------------#
@@ -590,7 +591,7 @@ obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.
   guides(fill=guide_legend(title="Model")) +
   ggtitle("a) Intermittent breeding")
 
-      #ggsave("Figure_4a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
+      ggsave("Figure_4a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
 
       
       #---------Objective 4-------------------------#
@@ -647,7 +648,7 @@ obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.
         plot.title = element_text(size=25))) +
   guides(fill=guide_legend(title="Model"))
 
-      ggsave("Figure_S3a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 7.35, units = "in")
+      ggsave("Figure_S3a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 7.35, units = "in")
       
       #psi
       (figS3b <- obj3_results_4plot %>% dplyr::filter(parameter == "psi", breeding.schedule == "biennial", est.yr == 85) %>% 
@@ -665,7 +666,7 @@ obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.
         legend.position = "none",
         plot.title = element_text(size=25)))
 
-      ggsave("Figure_S3b_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+      ggsave("Figure_S3b_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
       
         #------------------Figure S4--------------------------
       #triennial breeding, all parameters
@@ -786,36 +787,59 @@ scales::show_col(plot.colors.figs5)
 
 
 ```{r objective 5 viz}
-ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.16_FullLitter_wLambda.csv") %>% 
+#Full dataset
+ls_dataFull <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FullDataset_wLambda.csv") %>% 
   mutate(num.samps = num.samps_all) %>% 
-  dplyr::select(-c(num.samps_all))
+  dplyr::select(-c(num.samps_all)) %>% 
+  dplyr::filter(estimation_year >= 1997)
 
-#One individual per litter
-# ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.15_OneIndvPerLitter_wLambda.csv") %>% 
-#   mutate(num.samps = num.samps_all) %>% 
-#   dplyr::select(-c(num.samps_all))
-
-
-ls_data.down <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.16_FullLitter_downsample_wLambda.csv") %>% 
+ls_data.Fulldown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_DownsampledDataset_wLambda.csv") %>% 
   mutate(mom_HSPs = mom_HSPs.down,
          num.samps = num.samps_down) %>% 
-  dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all))
+  dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all)) %>%
+  dplyr::filter(estimation_year >= 1997)
 
-ls_data.full4viz <- ls_data %>% dplyr::filter(estimation_year > 1996) %>% 
+
+#One individual per litter - shows the same results as when using the full litter
+ # ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.30_OneIndvPerLitter_wLambda.csv") %>% 
+ #   mutate(num.samps = num.samps_all) %>% 
+ #   dplyr::select(-c(num.samps_all))
+
+#Five year intervals
+ls_dataFive <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FiveYearIntervals_wLambda.csv") %>% 
+  mutate(num.samps = num.samps_all) %>% 
+  dplyr::select(-c(num.samps_all)) %>% 
+  dplyr::filter(estimation_year >= 1997)
+
+
+# ls_data.Fivedown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.30_FullLitter_FiveYearIntervals_Downsample_wLambda.csv") %>% 
+#   mutate(mom_HSPs = mom_HSPs.down,
+#          num.samps = num.samps_down) %>% 
+#   dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all))
+
+
+ls_data.full4viz <- ls_dataFull %>% dplyr::filter(estimation_year > 1996) %>% 
   mutate(Dataset = "Full")
-ls_data.down4viz <- ls_data.down %>% dplyr::filter(estimation_year > 1996) %>% 
-  mutate(Dataset = "Downsampled")
+ls_data.Fulldown4viz <- ls_data.Fulldown %>% dplyr::filter(estimation_year > 1996) %>% 
+  mutate(Dataset = "Full | downsampled")
 
-ls_data4viz <- bind_rows(ls_data.full4viz, ls_data.down4viz) %>% 
-  mutate(Dataset = factor(Dataset, levels = c("Full", "Downsampled")))
+ls_data.five4viz <- ls_dataFive %>% dplyr::filter(estimation_year > 1996) %>% 
+  mutate(Dataset = "Five year intervals")
+# ls_data.Fivedown4viz <- ls_data.Fivedown %>% dplyr::filter(estimation_year > 1996) %>% 
+#   mutate(Dataset = "Five year intervals | downsampled")
+
+ls_data4viz <- bind_rows(ls_data.full4viz, 
+                         ls_data.Fulldown4viz,
+                         ls_data.five4viz) %>% 
+  mutate(Dataset = factor(Dataset, levels = c("Full", "Full | downsampled", "Five year intervals")))
 
 #------------------------------Fig 5a: Nf-----------------------------------------#
 brewer.pal.info #See different palette options from Rcolorbrewer
 cp5 <- brewer.pal(3, "Dark2") #Choose palette + number of colors
 scales::show_col(cp5)
 
-fig5a <- ls_data4viz %>% dplyr::filter(max.year < 2016, min.year == 1993) %>% 
-  dplyr::filter(parameter == "Nf") %>%
+fig5a <- ls_data4viz %>% 
+  dplyr::filter(parameter == "Nfb2") %>%
   ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
   #geom_point() + 
   geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
@@ -836,10 +860,10 @@ fig5a <- ls_data4viz %>% dplyr::filter(max.year < 2016, min.year == 1993) %>%
 
 fig5a
 
-#ggsave("Figure_5a_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_5a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #-----------------------Fig5b: Survival------------------------------------#
-fig5b <- ls_data4viz %>% dplyr::filter(max.year < 2016, min.year == 1993) %>% 
+fig5b <- ls_data4viz %>% 
   dplyr::filter(parameter == "survival") %>%
   ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
   #geom_point() + 
@@ -866,13 +890,13 @@ fig5b
 
 ggarrange(fig5a, fig5b, common.legend = TRUE, legend = "bottom")
 
-ggsave("Figure_5_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 12, height = 6, units = "in")
+ggsave("Figure_5_2023.01.02.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 12, height = 6, units = "in")
 
 
 #Make table of full dataset and downsampled dataset results
 #Start with bind rows bc it's before converting Dataset to a factor
-table4 <- bind_rows(ls_data.full4viz, ls_data.down4viz) %>%
-  dplyr::filter(parameter == "Nf") %>% 
+table4 <- bind_rows(ls_data.full4viz, ls_data.Fulldown4viz, ls_data.five4viz) %>%
+  dplyr::filter(parameter == "Nfb2") %>% 
   mutate(HPDI = paste0("(", round(HPD2.5, 0)," - ", round(HPD97.5, 0), ")")) %>%
   dplyr::select(Median = Q50,
                 HPDI,
@@ -881,7 +905,7 @@ table4 <- bind_rows(ls_data.full4viz, ls_data.down4viz) %>%
                 `Mom HSPs` = mom_HSPs,
                 Dataset)
 
-write_csv(table4, file = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/tables/table4.csv")
+write_csv(table4, file = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/tables/table4_2023.01.02.csv")
 ```
 
 

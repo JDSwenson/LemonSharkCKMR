@@ -178,9 +178,10 @@ down.perc <- 0.3 #Percentage of samples to retain from each year
 rseeds <- sample(c(1:10000000), size = 200)
 
 #Regular loop over different periods of estimation
-  for(i in min(years)){ #Sub in this and change to -1 if doing full loop: max(years-2)
-    for(j in (i + 2): max(years)){
- #   j= i + 4
+for(i in min(years)){
+  for(j in (i + 2): max(years)){ #To iteratively add to all years
+      #for(i in min(years):max(years-4)){ #For five year intervals
+#    for(j in (i + 4)){ #To run in five year intervals
 
     estimation.year = j
     
@@ -193,12 +194,12 @@ rseeds <- sample(c(1:10000000), size = 200)
         set.seed(rseed.iter)
         
         filtered.samples.HS.df <- NoFullSibs.df %>% 
-          group_by(mother.x, birth.year) %>% #Can comment out this line and the next to include all HSPs; uncomment to just use one indv per litter.
-          slice_sample(n=1) %>% 
+        #  group_by(mother.x, birth.year) %>% #Can comment out this line and the next to include all HSPs; uncomment to just use one indv per litter.
+        #  slice_sample(n=1) %>% 
           dplyr::arrange(birth.year) %>% 
           mutate(birth.year = as.numeric(birth.year)) %>%  #Arrange so older sib always comes first in pairwise comparison matrix
           ungroup() %>% #Uncomment the pipe to include filtering
-          dplyr::filter(birth.year >= i & birth.year <= j) #Comment out this line to use the full dataset
+          dplyr::filter(birth.year >= i & birth.year <= j) #Comment out this line and the pipe in the previous line to use the full dataset to estimate abundance for each year
 
 pairwise.df.HS <- data.frame(t(combn(filtered.samples.HS.df$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
 colnames(pairwise.df.HS) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
@@ -417,7 +418,7 @@ dad.pos_down <- sum(dad_positives.HS$yes)
 jags_file <- paste0(jags.model_location, "MHSP.only_narrowLambda_Skip_model.txt")
 
 #JAGS parameters
-jags_params = c("Nf", "survival", "psi", "lambda") #w lambda
+jags_params = c("Nf", "Nfb2", "survival", "psi", "lambda") #w lambda
 #jags_params = c("Nf", "survival", "psi") #w/o lambda
 mating.periodicity <- 2 #Will be translated to a
 
@@ -467,7 +468,7 @@ print(paste0("Finished comparison ", i, " to ", j))
 
 results2 <- results %>% mutate(years_sampled = years_sampled+1)
 
-write_csv(results2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.19_OneIndvPerLitter_Downsampled_wLambda.csv")
+write_csv(results2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_DownsampledDataset_wLambda.csv")
 
 #write_rds(post.samps_list, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/post_samples")
 
