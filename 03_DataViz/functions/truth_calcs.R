@@ -1,7 +1,7 @@
 #Calculate truth for Objectives 1 and 2
 #----------------Set input file locations ------------------------------
 #Population simulation files
-PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Pre_Nov2022"
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Pre_Nov2022/"
 PopSim.lambda.1 <- "lambda.1" # Can be lambda.1 or lambda.variable
 PopSim.lambda.variable <- "lambda.variable"
 PopSim.lambda.extreme <- "lambda.extreme"
@@ -107,7 +107,7 @@ obj2.popsize.variable <- readRDS(file = paste0(PopSim.location, PopSim.lambda.va
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = ifelse(iteration <= 500, "slight negative", "slight positive"))
 
-obj2.popsize.extreme <- readRDS(file = paste0(PopSim.location, PopSim.lambda.extreme, "/pop.size_", lambda_date.4, "_", inSeeds, "_", PopSim.lambda.extreme, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
+obj2.popsize.extreme <- readRDS(file = paste0(PopSim.location, PopSim.lambda.variable, "/pop.size_", lambda_date.4, "_", inSeeds, "_", PopSim.lambda.extreme, "_", PopSim.annual.breeding, "_", Sampling.scheme.YOY)) %>% 
   dplyr::filter(year %in% c(80, 85, 90)) %>% 
   dplyr::mutate(population.growth = "extreme negative")
 

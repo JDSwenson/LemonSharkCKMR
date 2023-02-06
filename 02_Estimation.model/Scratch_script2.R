@@ -1,3 +1,27 @@
+samples.df.YOY <- samples.df
+samples.df.juvs <- samples.df
+samples.df.ALL <- samples.df
+str(samples.df.YOY)
+
+samples.df.YOY %>% group_by(iteration, sampling.scheme, sample.prop) %>% 
+  summarize(samp.size = n()) %>% 
+  group_by(sample.prop) %>% 
+  summarize(mean_samp.size = mean(samp.size))
+
+samples.df.juvs %>% group_by(iteration, sampling.scheme, sample.prop) %>% 
+  summarize(samp.size = n()) %>% 
+  group_by(sample.prop) %>% 
+  summarize(mean_samp.size = mean(samp.size))
+
+samples.df.ALL %>% group_by(iteration, sampling.scheme, sample.prop) %>% 
+  summarize(samp.size = n()) %>% 
+  group_by(sample.prop) %>% 
+  summarize(mean_samp.size = mean(samp.size))
+
+
+
+
+
 samples.df <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", sampling.scheme))
 
 samples.df %>% group_by(age.x) %>% summarize(n())

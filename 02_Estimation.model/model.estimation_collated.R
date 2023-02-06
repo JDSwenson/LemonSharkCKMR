@@ -38,33 +38,32 @@ repro.age <- 12 # set age of reproductive maturity
 max.age <- 50 #set the maximum age allowed in the simulation
 n_yrs <- 90 #Number of years the simulation was run for
 inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
-sample.props <- 1.5 #Either label this with the percent we want to target (if just one) or if wanting to run over all sample proportions, set as "all"
+sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
 
 
 ########################## Objective 1 #########################
 #------------------------- Set input file locations -------------------------#
-# PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
-# PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+ PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+ PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
 
-#------------------------- Set output file locations -------------------------# 
-# MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
-# results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
+#------------------------- Set output file locations -------------------------#
+ MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
+ results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
 
 #------------------------- Objective 1 common settings -------------------------#
-# fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none".
-# jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-# mating.periodicity <- 1 #number of years between mating for females
-#Survival prior info
-# survival.prior.mean <- adult.survival
-# survival.prior.cv <- 0.05
-# survival.prior.sd <- survival.prior.mean * survival.prior.cv
-# scenario <- "objective_1_model.validation" #For naming output files and calculating truth.
-# model <- "annual.model" #For naming output files
+ fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none".
+ jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
+ estimated.parameters <- paste0(jags_params, collapse = ",")
+ mating.periodicity <- 1 #number of years between mating for females
+ 
+ survival.prior.mean <- adult.survival
+ survival.prior.cv <- 0.05
+ survival.prior.sd <- survival.prior.mean * survival.prior.cv
+ scenario <- "objective_1_model.validation" #For naming output files and calculating truth.
+ model <- "annual.model" #For naming output files
 # 
-# source("./02_Estimation.model/functions/Obj1.functions.R") #Changed name of script that includes pairwise comparison and other functions
-#jags_file = paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt") #Specify JAGS model
-
+ source("./02_Estimation.model/functions/Obj1.functions.R") #Changed name of script that includes pairwise comparison and other functions
+jags_file = paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt") 
 
 #------------------------- Target YOY -------------------------#
 # sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
@@ -79,10 +78,10 @@ sample.props <- 1.5 #Either label this with the percent we want to target (if ju
 # PO.only <- "no" #Do we only want to filter PO relationships?
 
 #------------------------- Sample all ages -------------------------#
-# sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-# date.of.PopSim <- "17Nov2022"
-# HS.only <- "no" #Do we only want to filter HS relationships?
-# PO.only <- "no" #Do we only want to filter PO relationships?
+sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
+date.of.PopSim <- "17Nov2022"
+HS.only <- "no" #Do we only want to filter HS relationships?
+PO.only <- "no" #Do we only want to filter PO relationships?
 
 
 
