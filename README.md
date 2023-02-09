@@ -1,20 +1,12 @@
 # LemonSharkCKMR
-This is a project to test the sensitivity of close-kin mark-recapture models when applied to simulated and real populations of a long-lived marine species, with a focus on the Lemon Shark and Cownose Ray.
+This is a project to test the sensitivity of close-kin mark-recapture models when applied to simulated and real populations of a long-lived marine species, with a focus on the Lemon Shark.
 
-**Here's my process for visualizing results:**
-1. Load output files from simulation into the data analysis markdown document
-	a) Use the template in 00_MAIN_scripts and save in the model.assessment folder corresponding to the objective.
-2. Generate and save HPD summary files and any other intermediate file needed for viz
-3. Load intermediate files into markdown file for knitting and knit (esp for manuscript)
+My process, beginning with population simulations and proceeding through analysis and vizualisation, starts with the script population_simulation_collated.R in the 01_Data.generating.model folder. This script will generate distinct populations with specified parameters, and output an RDS file containing sampled individuals with associated metadata (e.g. age, parents, year sampled, etc.).
 
-## Updates from 2022.06.29
-- The model_settings.log file was wiped and updated to reflect the new breakout of objectives. Now, I've split model validation and sample scheme testing into two objectives:
-1) Validate the model using informed priors, a uniform prior on lambda, and three fixed values for lambda, all while sampling just 1% of the population and only the YOY portion. This can be Figure S1.
-2) Test different sampling schemes. Here, I'll try testing YOY only, sampling all juvenile age classes, and sampling all age classes (plus include POPs in model), as well as different sample sizes. This can be Figure 1.
+Next, the script model.estimation_collated.R in the 02_Estimation.model folder reads in the RDS file containing samples, creates a pairwise comparison matrix for each group of samples (corresponding to the number of distinct populations that were generated), and fits a CKMR model that is appropriate for the age composition of sampled individuals (half-sibling if only juveniles were sampled; half-sibling + parent-offspring if adults were also sampled). The CKMR model, including all samples from the posterior distribution, is saved as an RDS file (it's a list with each element containing the model and samples for each iteration), and parameter estimates are saved as a csv file.
 
-- I also saved two different data analysis files that I can run to calculate the HPDIs and save the output files. One was made to run on just one trial; and the other was made to run on two trials.
-- Going forward, whichever one I use, I should save it in the folder for the corresponding trial, while maintaining the original for replication.
+The folder 03_Lemon_shark_data contains code to filter a longterm genetic dataset from lemon sharks in Bimini, Bahamas, create a pairwise comparison matrix, and fit a CKMR model. The code includes various options for subsetting the dataset, and outputs a csv file with parameter estimates.
 
-## Updates from 2022.06.20
-- The simulation_log file was wiped and updated. It was split into two files: one for holding the population simulation and sampling settings; one for the Leslie matrix and prior settings.
+Model results (i.e. parameter estimates) are read into the script collate_and_export_results.Rmd in the 04_DataViz folder. This script focuses on collating results from multiple runs and filtering to only include results where the Markov chains converged. These results are combined to give one output file per objective and exported as a csv file.
 
+Finally, the script results_analysis_and_figures_markdown.Rmd - also in the 04_DataViz folder - reads in the collated results for each objective and produces plots and tables.
