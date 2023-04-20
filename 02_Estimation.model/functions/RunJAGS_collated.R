@@ -289,7 +289,7 @@ post = jagsUI::jags(data = jags_data, #If using postpack from AFS workshop
                           parallel = T
 )
 
-
+if(exists("s") == TRUE){
 if(s == 1){
   sims.list.1[[iter]] <- post
  } else if(s == 2){
@@ -299,7 +299,8 @@ if(s == 1){
 } else if(s == 4){
   sims.list.4[[iter]] <- post
 }
-
+}
+  
 #---------------- STEP 5: CONVERGENCE DIAGNOSTICS -----------------#
 # view convergence diagnostic summaries for all monitored nodes
 # 2.5, 50, and 97.5 are quantiles in model.summary
