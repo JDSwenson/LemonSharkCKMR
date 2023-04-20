@@ -76,6 +76,7 @@ nt <- 20     # thinning rate
 nc <- 2      # number of chains
 jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
 estimated.parameters <- paste0(jags_params, collapse = ",")
+derived.quantities <- "no"
 
 estimation.years <- c(n_yrs - 5, n_yrs)
 
@@ -211,8 +212,8 @@ estimation.years <- c(n_yrs - 5, n_yrs)
     }
 
     #Save some values related to samples so they can be added to the dataframe of results
-      samples.iter <- samples.df %>% dplyr::filter(iteration == iter, sample.prop == sample.proportion) %>% 
-      distinct(seed, iteration, sample.prop = sample.proportion, sample.size.total)
+      samples.iter <- samples.df %>% dplyr::filter(iteration == iter) %>% 
+      distinct(seed, iteration)
 
           
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
@@ -223,25 +224,21 @@ estimation.years <- c(n_yrs - 5, n_yrs)
       results.temp <- results.temp %>% 
         mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs),
                HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
-               scenario = scenario,
                est.yr = estimation.year)
       } else if(length(jags_params) == 4){
         results.temp <- results.temp %>% 
           mutate(HSPs_detected = c(mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs + dad.HSPs),
                  HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
-                 scenario = scenario,
                  est.yr = estimation.year)
       } else if(length(jags_params) == 5){
         results.temp <- results.temp %>% 
           mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs + dad.HSPs),
                  HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
-                 scenario = scenario,
                  est.yr = estimation.year)
       } else if(length(jags_params) == 7){
         results.temp <- results.temp %>% 
           mutate(HSPs_detected = c(mom.HSPs, mom.HSPs, dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs + dad.HSPs, mom.HSPs, mom.HSPs),
                  HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS, mom.Exp.HS),
-                 scenario = scenario,
                  est.yr = estimation.year)
       }
       
@@ -252,7 +249,6 @@ estimation.years <- c(n_yrs - 5, n_yrs)
                HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
                POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs),
                POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO),
-               scenario = scenario,
                est.yr = estimation.year)
       } else if(length(jags_params) == 4){
         results.temp <- results.temp %>% 
@@ -260,7 +256,6 @@ estimation.years <- c(n_yrs - 5, n_yrs)
                  HSPs_expected = c(mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
                  POPs_detected = c(mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs + dad.POPs),
                  POPs_expected = c(mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO + dad.Exp.PO),
-                 scenario = scenario,
                  est.yr = estimation.year)
       } else if(length(jags_params) == 5){
         results.temp <- results.temp %>% 
@@ -268,7 +263,6 @@ estimation.years <- c(n_yrs - 5, n_yrs)
                  HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS),
                  POPs_detected = c(mom.POPs, mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs + dad.POPs),
                  POPs_expected = c(mom.Exp.PO, mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO + dad.Exp.PO),
-                 scenario = scenario,
                  est.yr = estimation.year)
       } else if(length(jags_params) == 7){
         results.temp <- results.temp %>% 
@@ -276,7 +270,6 @@ estimation.years <- c(n_yrs - 5, n_yrs)
                  HSPs_expected = c(mom.Exp.HS, mom.Exp.HS, dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS + dad.Exp.HS, mom.Exp.HS, mom.Exp.HS),
                  POPs_detected = c(mom.POPs, mom.POPs, dad.POPs, mom.POPs + dad.POPs, mom.POPs + dad.POPs, mom.POPs, mom.POPs),
                  POPs_expected = c(mom.Exp.PO, mom.Exp.PO, dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO + dad.Exp.PO, mom.Exp.PO, mom.Exp.PO),
-                 scenario = scenario,
                  est.yr = estimation.year)
       }
     }
@@ -286,13 +279,11 @@ estimation.years <- c(n_yrs - 5, n_yrs)
     
     #Save mom and dad pairwise comparison dataframes
     mom_comps.all <- mom_comps.all %>% mutate(iteration = iter,
-                                              sample.prop = sample.proportion,
                                               sample.size = sample.size.iter,
                                               seed = rseed)
     mom.comps.tibble <- rbind(mom.comps.tibble, mom_comps.all)
     
     dad_comps.all <- dad_comps.all %>% mutate(iteration = iter,
-                                              sample.prop = sample.proportion,
                                               sample.size = sample.size.iter,
                                               seed = rseed)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
@@ -306,14 +297,14 @@ estimation.years <- c(n_yrs - 5, n_yrs)
 #Results
     write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
-#    #Model output for diagnostics
-     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
-# 
-     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
+# #    #Model output for diagnostics
+#      saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
 # # 
-     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
-# #    
-     saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
+#      saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
+# # # 
+#      saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
+# # #    
+#      saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
 # 
 #    #Save pairwise comparisons matrices
     saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
@@ -327,7 +318,6 @@ estimation.years <- c(n_yrs - 5, n_yrs)
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("\n Finished iteration ", iter, ". \n Took ", iter.time, " minutes \n\n"))
    } # end loop over iterations
- }# end loop over estimation years
   
 
     #If using all individuals for Nf truth, instead of breeders
