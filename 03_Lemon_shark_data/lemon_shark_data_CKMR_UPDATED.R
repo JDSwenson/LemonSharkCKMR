@@ -148,7 +148,7 @@ head(juv_ref.North)
 min(juv_ref.North$birth.year, na.rm = TRUE) #Earliest capture
 max(juv_ref.North$birth.year, na.rm = TRUE) #Latest capture
 
-source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5.functions.R")
+source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5.functions.R")
 
 #Remove unknown mothers, then for each group of full sibs keep just one
 NoFullSibs.df <- juv_ref.North %>% drop_na(mother.x) %>% 
@@ -171,17 +171,17 @@ years <- c(min(NoFullSibs.df$birth.year):max(NoFullSibs.df$birth.year))
 results <- NULL
 post.samps_list <- list()
 rep = 0
-downsample <- "yes"
+downsample <- "no"
 down.perc <- 0.3 #Percentage of samples to retain from each year
 #max.HSPs <- 150 #Not using anymore
 
 rseeds <- sample(c(1:10000000), size = 200)
 
 #Regular loop over different periods of estimation
-for(i in min(years)){
-  for(j in (i + 2): max(years)){ #To iteratively add to all years
-      #for(i in min(years):max(years-4)){ #For five year intervals
-#    for(j in (i + 4)){ #To run in five year intervals
+#for(i in min(years)){
+#  for(j in (i + 2): max(years)){ #To iteratively add to all years
+for(i in min(years):max(years-3)){ #For four year intervals
+  for(j in (i + 3)){ #To run in four year intervals
 
     estimation.year = j
     
@@ -436,7 +436,7 @@ if(sum(mom_comps.HS$yes) > 0){
 
   set.seed(rseed.iter)
   #MHSP only model
-  source("~/R/working_directory/LemonSharkCKMR/Objective.5_lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
+  source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
 
   if(downsample == "yes"){
 results.temp <- model.summary2 %>% mutate(min.year = i, max.year = j) %>% 
@@ -468,9 +468,13 @@ print(paste0("Finished comparison ", i, " to ", j))
 
 results2 <- results %>% mutate(years_sampled = years_sampled+1)
 
-write_csv(results2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_DownsampledDataset_wLambda.csv")
+write_csv(results2, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2023.06.22_FourYearIntervals_wLambd.csv")
 
 #write_rds(post.samps_list, file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/post_samples")
+
+
+
+
 
 
 
