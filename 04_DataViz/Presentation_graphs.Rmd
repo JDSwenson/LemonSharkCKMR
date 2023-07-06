@@ -175,7 +175,7 @@ obj1_results %>% group_by(sampling.scheme) %>%
 
 #Average number of samples per sampling scheme
 obj1_results %>% group_by(sampling.scheme) %>% 
-  summarize(mean.samps = mean(total.sample.size))
+  summarize(mean.samps = mean(total.sample.size, na.rm = TRUE))
 
 #Should all be lambda.1
 obj1_results %>% group_by(population.growth) %>% 
@@ -436,34 +436,163 @@ cp2 <- brewer.pal(3, "RdYlBu") #Choose palette + number of colors
 scales::show_col(cp2)
 
 #-------------------Objective 2 Density plots-------------------------#
+#Include specific lambda prior values
 (fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
     mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>% 
     mutate(lam.label = ifelse(lambda.prior == "none", "naive",
                           ifelse(lambda.prior == "diffuse (0.80 - 1.20)", "adapted (diffuse lambda prior)", "adapted (narrow lambda prior)"))) %>% 
     mutate(lam.label = factor(lam.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
-    dplyr::filter(sampling.scheme %in% c("sample all juveniles"), lam.label == "adapted (narrow lambda prior)", population.growth != "severe decline") %>% 
+    dplyr::filter(sampling.scheme %in% c("sample all juveniles"), lam.label != "adapted (narrow lambda prior)") %>% #, population.growth != "severe decline"
   ggplot(aes(x = relative_bias,
              y = est.yr.lab, 
-             fill = sampling.scheme)) + 
+             fill = lam.label)) + 
   geom_density_ridges(alpha = 0.6) + 
   labs(x="Relative bias", y="Estimation year") +
-#  theme_ridges() + 
+  #theme_ridges() + 
   #facet_wrap(~sampling.scheme) + 
   facet_grid(rows = vars(population.growth)) + #, cols = vars(sampling.scheme)
   #theme(strip.text.y = element_blank()) + 
   xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
-  scale_fill_manual(values = cp2[3], 
+  scale_fill_manual(values = c(cp2[3], cp2[1]), 
                     name = "Model") +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
-    theme_bw()) +
+    theme_bw() +
     theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size=15),
         strip.text.y = element_text(size=15),
-        legend.position = "none")
+        legend.position = "none")) 
 
-      ggsave("Figure_3a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+#Include all lambda prior values
+(fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
+    mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>% 
+    mutate(lam.label = ifelse(lambda.prior == "none", "naive",
+                          ifelse(lambda.prior == "diffuse (0.80 - 1.20)", "adapted (diffuse lambda prior)", "adapted (narrow lambda prior)"))) %>% 
+    mutate(lam.label = factor(lam.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
+    dplyr::mutate(real.lam.label = ifelse(lam.label %in% c("adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"), "adapted", "naive")) %>% 
+    dplyr::mutate(filter.column = paste0(population.growth,"_", lam.label)) %>% 
+    dplyr::filter(filter.column %in% c("slight decline_naive", "slight increase_naive", "severe decline_naive", "stable_naive", "slight decline_adapted (narrow lambda prior)", "slight increase_adapted (narrow lambda prior)", "stable_adapted (narrow lambda prior)", "severe decline_adapted (diffuse lambda prior)")) %>% 
+    dplyr::filter(sampling.scheme %in% c("sample all juveniles")) %>% #, population.growth != "severe decline"
+  ggplot(aes(x = relative_bias,
+             y = est.yr.lab, 
+             fill = real.lam.label)) + 
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Relative bias", y="Estimation year") +
+  #theme_ridges() + 
+  #facet_wrap(~sampling.scheme) + 
+  facet_grid(rows = vars(population.growth)) + #, cols = vars(sampling.scheme)
+  #theme(strip.text.y = element_blank()) + 
+  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = c(cp2[1], cp2[3]), 
+                    name = "Model") +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+    theme_bw() +
+    theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.position = "none")) 
+
+#      ggsave("Figure_3a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+
+#---------Objective 3-------------------------#
+cp3 <- brewer.pal(3, "RdBu") #Choose palette + number of colors
+cp3.sub <- cp3[c(1,3)]
+scales::show_col(cp3.sub)
+
+obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.periodicity == 2, "biennial", "triennial")) %>% 
+  mutate(popsim.psi = factor(popsim.psi, levels = c("1", "1*", "0.9", "0.75", "0.5"))) %>% 
+  mutate(sampling.scheme = ifelse(sampling.scheme == "sample ALL ages", "sample all ages", sampling.scheme))
+
+(fig4a <- obj3_results_4plot %>% dplyr::filter(parameter == "Nf", breeding.schedule %in% c("biennial", "triennial"), popsim.psi %in% c("1", "1*"), est.yr == 85, sampling.scheme == "sample all juveniles") %>% 
+    dplyr::mutate(graph.lab = ifelse(popsim.psi == "1*", "Biennial + random", ifelse(
+      breeding.schedule == "triennial", "Triennial", "Biennial"))) %>% 
+  ggplot(aes(x=factor(graph.lab), fill = model)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  #geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(x="Breeding cycle", y="Relative bias") +
+  scale_fill_manual(values = cp3.sub) +
+  #facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "fixed") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        #legend.text = element_text(size = 15),
+        #legend.title = element_text(size = 20),
+        legend.position = "none",
+        plot.title = element_text(size=25))) +
+  guides(fill=guide_legend(title="Model")) #+
+  #ggtitle("a) Intermittent breeding")
+
+      #---------Objective 4-------------------------#
+      brewer.pal.info #See different palette options from Rcolorbrewer
+      cp4 <- brewer.pal(3, "Paired") #Choose palette + number of colors
+scales::show_col(cp4)
+
+obj4_results %>% dplyr::filter(est.yr == 85) %>% 
+  group_by(model, sampling.scheme, age.error_cv) %>% 
+  summarize(number = n())
+
+obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.scheme == "sample ALL ages", "sample all ages", sampling.scheme)) %>% 
+  mutate(age.error_cv = factor(age.error_cv, levels = c("accurate", "5% CV", "10% CV", "20% CV")))
+
+      (fig4b <- obj4_results_4plot %>% dplyr::filter(parameter == "Nf", est.yr == 85, sampling.scheme %in% c("sample all juveniles", "target YOY")) %>% 
+  ggplot(aes(x=factor(age.error_cv), fill = model)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  #geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  geom_hline(yintercept=c(-10, 10), col="black", size=1, linetype = "dashed") +
+  labs(y="Relative bias", x = "Age-length uncertainty") +
+  scale_fill_manual(values = cp4) +
+  facet_grid(cols = vars(sampling.scheme), scales = "free") + #, rows = vars(parameter), 
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))) +
+  guides(fill=guide_legend(title="Population + model")) #+
+#  ggtitle("b) Aging error")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #Very pretty histogram but not sure what to do with it ...
 # (fig3.b <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
