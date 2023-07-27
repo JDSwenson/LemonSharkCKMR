@@ -148,19 +148,234 @@ truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_"
 n_yrs <- max(pop_size.df$year)
 
 ######################### Lambda comparison #################################
-iter1 <- pop_size.df %>% dplyr::filter(iteration == 1)
-  
-iter1$adult.lambda
+#--------------------------Compare over 90 years-------------------------
+yr0 <- 1
 
-#---------------Our method ----------------
-all.adults <- NULL
-all.adults[1] <- iter1$Total.adult.pop[1]
+#Initialize df for saving values
+N90_estimates <- NULL
 
-for(i in 2:nrow(iter1)){
+for(i in 1:max(pop_size.df$iteration)){
+  #Subset for iteration of interest
+  iter <- pop_size.df %>% dplyr::filter(iteration == i)
+  indv.lambdas <- iter$adult.lambda
   
-  all.adults[i] <- round(iter1$Total.adult.pop[i-1] * iter1$adult.lambda[i], 0)
+  #Initialize vectors
+  indv.method_yr1 = avg.method_yr1 <- NULL
+  
+  for(j in 2:length(indv.lambdas)){
+    
+    #Store N0 and save as first element of each vector
+    N0 <- iter$Total.adult.pop[1]
+    indv.method_yr1[1] = avg.method_yr1[1] <- N0
+    
+    #Save vector of individual lambda values
+    indv.lambdas_yr1 <- iter$adult.lambda
+    
+    #Calculate mean lambda
+    mean.lam_yr1 <- mean(iter$adult.lambda, na.rm = TRUE)
+    
+    #Calculate abundance
+    indv.method_yr1[j] <- round(indv.method_yr1[j-1] * indv.lambdas_yr1[j], 0)
+    avg.method_yr1[j] <- round(avg.method_yr1[j-1] * mean.lam_yr1, 0)
+    
+  }
+  
+  combined.df <- tibble(iter$Total.adult.pop[90], indv.method_yr1[90], avg.method_yr1[90]) %>% mutate(iteration = iter$iteration[j],
+                                                                                                          yr0 = yr0,
+                                                                                                          lambda.yrs = length(indv.lambdas))
+  
+  N90_estimates <- bind_rows(N90_estimates, combined.df)
+
+  }
+  
+colnames(N90_estimates)[1:3] <- c("true.adult.pop", "indv.method.pop", "avg.method.pop")
+
+N90_estimates
+
+
+
+#-----------------------Compare over 50 years-------------------------
+yr0 <- 50
+
+#Initialize df for saving values
+N50_estimates <- NULL
+
+for(i in 1:max(pop_size.df$iteration)){
+  #Subset for iteration of interest
+  iter <- pop_size.df %>% dplyr::filter(iteration == i, year >= yr0)
+  
+  indv.lambdas <- iter$adult.lambda
+  
+  #Initialize vectors
+  indv.method_yr50 = avg.method_yr50 <- NULL
+  
+  for(j in 2:length(indv.lambdas)){
+    
+    #Store N0 and save as first element of each vector
+    N0 <- iter$Total.adult.pop[1]
+    indv.method_yr50[1] = avg.method_yr50[1] <- N0
+    
+    #Save vector of individual lambda values
+    indv.lambdas_yr50 <- iter$adult.lambda
+    
+    #Calculate mean lambda
+    mean.lam_yr50 <- mean(iter$adult.lambda, na.rm = TRUE)
+    
+    #Calculate abundance
+    indv.method_yr50[j] <- round(indv.method_yr50[j-1] * indv.lambdas_yr50[j], 0)
+    avg.method_yr50[j] <- round(avg.method_yr50[j-1] * mean.lam_yr50, 0)
+    
+  }
+  
+  combined.df <- tibble(iter$Total.adult.pop[90-yr0+1], indv.method_yr50[90-yr0+1], avg.method_yr50[90-yr0+1]) %>% mutate(iteration = iter$iteration[j],
+                                                                                                          yr0 = yr0,
+                                                                                                          lambda.yrs = length(indv.lambdas))
+  
+  N50_estimates <- bind_rows(N50_estimates, combined.df)
   
 }
+
+colnames(N50_estimates)[1:3] <- c("true.adult.pop", "indv.method.pop", "avg.method.pop")
+
+N50_estimates
+
+#-----------------------Compare over 20 years-------------------------
+yr0 <- 70
+
+#Initialize df for saving values
+N70_estimates <- NULL
+
+for(i in 1:max(pop_size.df$iteration)){
+  #Subset for iteration of interest
+  iter <- pop_size.df %>% dplyr::filter(iteration == i, year >= yr0)
+  
+  indv.lambdas <- iter$adult.lambda
+  
+  #Initialize vectors
+  indv.method_yr70 = avg.method_yr70 <- NULL
+  
+  for(j in 2:length(indv.lambdas)){
+    
+    #Store N0 and save as first element of each vector
+    N0 <- iter$Total.adult.pop[1]
+    indv.method_yr70[1] = avg.method_yr70[1] <- N0
+    
+    #Save vector of individual lambda values
+    indv.lambdas_yr70 <- iter$adult.lambda
+    
+    #Calculate mean lambda
+    mean.lam_yr70 <- mean(iter$adult.lambda, na.rm = TRUE)
+    
+    #Calculate abundance
+    indv.method_yr70[j] <- round(indv.method_yr70[j-1] * indv.lambdas_yr70[j], 0)
+    avg.method_yr70[j] <- round(avg.method_yr70[j-1] * mean.lam_yr70, 0)
+    
+  }
+  
+  combined.df <- tibble(iter$Total.adult.pop[90-yr0+1], indv.method_yr70[90-yr0+1], avg.method_yr70[90-yr0+1]) %>% mutate(iteration = iter$iteration[j],
+                                                                                                                      yr0 = yr0,
+                                                                                                                      lambda.yrs = length(indv.lambdas))
+  
+  N70_estimates <- bind_rows(N70_estimates, combined.df)
+  
+}
+
+colnames(N70_estimates)[1:3] <- c("true.adult.pop", "indv.method.pop", "avg.method.pop")
+
+N70_estimates
+
+
+#-----------------------Compare over 10 years-------------------------
+yr0 <- 80
+
+#Initialize df for saving values
+N80_estimates <- NULL
+
+for(i in 1:max(pop_size.df$iteration)){
+  #Subset for iteration of interest
+  iter <- pop_size.df %>% dplyr::filter(iteration == i, year >= yr0)
+  
+  indv.lambdas <- iter$adult.lambda
+  
+  #Initialize vectors
+  indv.method_yr80 = avg.method_yr80 <- NULL
+  
+  for(j in 2:length(indv.lambdas)){
+    
+    #Store N0 and save as first element of each vector
+    N0 <- iter$Total.adult.pop[1]
+    indv.method_yr80[1] = avg.method_yr80[1] <- N0
+    
+    #Save vector of individual lambda values
+    indv.lambdas_yr80 <- iter$adult.lambda
+    
+    #Calculate mean lambda
+    mean.lam_yr80 <- mean(iter$adult.lambda, na.rm = TRUE)
+    
+    #Calculate abundance
+    indv.method_yr80[j] <- round(indv.method_yr80[j-1] * indv.lambdas_yr80[j], 0)
+    avg.method_yr80[j] <- round(avg.method_yr80[j-1] * mean.lam_yr80, 0)
+    
+  }
+  
+  combined.df <- tibble(iter$Total.adult.pop[90-yr0+1], indv.method_yr80[90-yr0+1], avg.method_yr80[90-yr0+1]) %>% mutate(iteration = iter$iteration[j],
+                                                                                                                          yr0 = yr0,
+                                                                                                                          lambda.yrs = length(indv.lambdas))
+  
+  N80_estimates <- bind_rows(N80_estimates, combined.df)
+  
+}
+
+colnames(N80_estimates)[1:3] <- c("true.adult.pop", "indv.method.pop", "avg.method.pop")
+
+N80_estimates
+
+
+
+#-----------------------Compare over 5 years-------------------------
+yr0 <- 85
+
+#Initialize df for saving values
+N85_estimates <- NULL
+
+for(i in 1:max(pop_size.df$iteration)){
+  #Subset for iteration of interest
+  iter <- pop_size.df %>% dplyr::filter(iteration == i, year >= yr0)
+  
+  indv.lambdas <- iter$adult.lambda
+  
+  #Initialize vectors
+  indv.method_yr85 = avg.method_yr85 <- NULL
+  
+  for(j in 2:length(indv.lambdas)){
+    
+    #Store N0 and save as first element of each vector
+    N0 <- iter$Total.adult.pop[1]
+    indv.method_yr85[1] = avg.method_yr85[1] <- N0
+    
+    #Save vector of individual lambda values
+    indv.lambdas_yr85 <- iter$adult.lambda
+    
+    #Calculate mean lambda
+    mean.lam_yr85 <- mean(iter$adult.lambda, na.rm = TRUE)
+    
+    #Calculate abundance
+    indv.method_yr85[j] <- round(indv.method_yr85[j-1] * indv.lambdas_yr85[j], 0)
+    avg.method_yr85[j] <- round(avg.method_yr85[j-1] * mean.lam_yr85, 0)
+    
+  }
+  
+  combined.df <- tibble(iter$Total.adult.pop[90-yr0+1], indv.method_yr85[90-yr0+1], avg.method_yr85[90-yr0+1]) %>% mutate(iteration = iter$iteration[j],
+                                                                                                                          yr0 = yr0,
+                                                                                                                          lambda.yrs = length(indv.lambdas))
+  
+  N85_estimates <- bind_rows(N85_estimates, combined.df)
+  
+}
+
+colnames(N85_estimates)[1:3] <- c("true.adult.pop", "indv.method.pop", "avg.method.pop")
+
+N85_estimates
 
 
 

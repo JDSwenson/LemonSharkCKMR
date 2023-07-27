@@ -501,7 +501,7 @@ scales::show_col(cp2)
 
 #---------Objective 3-------------------------#
 cp3 <- brewer.pal(3, "RdBu") #Choose palette + number of colors
-cp3.sub <- cp3[c(1,3)]
+cp3.sub <- cp3[c(3,1)]
 scales::show_col(cp3.sub)
 
 obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.periodicity == 2, "biennial", "triennial")) %>% 
@@ -510,8 +510,10 @@ obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.
 
 (fig4a <- obj3_results_4plot %>% dplyr::filter(parameter == "Nf", breeding.schedule %in% c("biennial", "triennial"), popsim.psi %in% c("1", "1*"), est.yr == 85, sampling.scheme == "sample all juveniles") %>% 
     dplyr::mutate(graph.lab = ifelse(popsim.psi == "1*", "Biennial + random", ifelse(
-      breeding.schedule == "triennial", "Triennial", "Biennial"))) %>% 
-  ggplot(aes(x=factor(graph.lab), fill = model)) +
+      breeding.schedule == "triennial", "Triennial", "Biennial")),
+      model.lab = ifelse(model == "annual", "naive", "adapted")) %>% 
+    mutate(model.lab = factor(model.lab, levels = c("naive", "adapted"))) %>% 
+  ggplot(aes(x=factor(graph.lab), fill = model.lab)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   #geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(x="Breeding cycle", y="Relative bias") +
@@ -522,9 +524,9 @@ obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size=15),
         strip.text.y = element_text(size=15),
-        #legend.text = element_text(size = 15),
-        #legend.title = element_text(size = 20),
-        legend.position = "none",
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        #legend.position = "none",
         plot.title = element_text(size=25))) +
   guides(fill=guide_legend(title="Model")) #+
   #ggtitle("a) Intermittent breeding")
@@ -542,7 +544,8 @@ obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.
   mutate(age.error_cv = factor(age.error_cv, levels = c("accurate", "5% CV", "10% CV", "20% CV")))
 
       (fig4b <- obj4_results_4plot %>% dplyr::filter(parameter == "Nf", est.yr == 85, sampling.scheme %in% c("sample all juveniles", "target YOY")) %>% 
-  ggplot(aes(x=factor(age.error_cv), fill = model)) +
+          mutate(model.lab = ifelse(model == "annual", "annual", "biennial")) %>% 
+  ggplot(aes(x=factor(age.error_cv), fill = model.lab)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   #geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   geom_hline(yintercept=c(-10, 10), col="black", size=1, linetype = "dashed") +
