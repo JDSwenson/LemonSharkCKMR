@@ -182,6 +182,7 @@ estimation.year <- n_yrs - 5 # Set year of estimation for truth calculations
 
 #--------------------- Sampling parameters ---------------------
 sample.years <- c(n_yrs - c(3:0)) #For four years of sampling
+sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
 sample.vec.prop <- c(.5, 1, 1.5, 2)
 
 
@@ -299,30 +300,38 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
             mutate(sample.size = round(population_size*(sample.prop/100), 0)) %>%
             pull(sample.size)
           
-          if(sampling.scheme == "target.YOY"){ #If targeting YOY for juvenile samples
-            #Set number of samples to a specific proportion of the population
+          for(j in 1:length(sample.scheme.vec)){
             
-            #Sample YOY only for half-sib analysis
-            sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>%
-              dplyr::filter(age.x == 0) %>%
-              dplyr::slice_sample(n = sample.size) # #Sample each year WITHOUT replacement
+            #Set sampling scheme to 
+            target.samples <- sample.scheme.vec[j]
+            
+            if(target.samples == "target.YOY"){ #If targeting YOY for juvenile samples
+            
+              #Sample YOY only for half-sib analysis
+              sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
+                                                           sampling.scheme = target.samples) %>%
+                dplyr::filter(age.x == 0) %>%
+                dplyr::slice_sample(n = sample.size) # #Sample each year WITHOUT replacement
             
             
-            } else if(sampling.scheme == "sample.all.juvenile.ages"){ #If sampling juveniles
+            } else if(target.samples == "sample.all.juvenile.ages"){ #If sampling juveniles
               sample.df_temp <- loopy.list[[i]] %>% dplyr::filter(age.x < repro.age & age.x > 0) %>% 
-                mutate(capture.year = i) %>%
+                mutate(capture.year = i,
+                       sampling.scheme = target.samples) %>%
                 dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
               
               
-              } else if(sampling.scheme == "sample.ALL.ages"){
+              } else if(target.samples == "sample.ALL.ages"){
               
-              sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>%
+              sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
+                                                           sampling.scheme = target.samples) %>%
                 dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
         
       }      
 
       #Combine samples from all years
         sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
+          }
     }
     
 
@@ -335,7 +344,7 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
     #Save info for samples to examine in more detail
     sample.df_all.info <- sample.df_all.info %>% 
       mutate(sample.size.yr = sample.size,
-             sampling.scheme = sampling.scheme,
+             #sampling.scheme = sampling.scheme,
              iteration = iter,
              seed = rseed,
              sample.prop = sample.prop) %>% 

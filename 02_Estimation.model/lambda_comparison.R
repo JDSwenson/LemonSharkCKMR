@@ -379,6 +379,37 @@ N85_estimates
 
 
 
+#Combine positive and negative lambda growth
+lambda.df.decrease <- bind_rows(N90_estimates, N50_estimates, N70_estimates, N80_estimates, N85_estimates)
+lambda.df.increase <- bind_rows(N90_estimates, N50_estimates, N70_estimates, N80_estimates, N85_estimates)
+
+lambda.df.decrease <- lambda.df.decrease %>% mutate(pop.growth = "slight negative")
+lambda.df.increase <- lambda.df.increase %>% mutate(pop.growth = "slight positive")
+
+lambda.df <- bind_rows(lambda.df.increase, lambda.df.decrease) 
+
+lambda.df <- lambda.df %>% mutate(relative_bias = round(((avg.method.pop - true.adult.pop)/true.adult.pop)*100, 1))
+
+lambda.df %>% group_by(pop.growth, lambda.yrs) %>% 
+  summarize(mean(relative_bias))
+
+
+lambda.df %>% 
+  ggplot(aes(x = factor(lambda.yrs), y = relative_bias, fill = factor(pop.growth))) +
+  geom_violin(draw_quantiles = 0.5, position = position_dodge(0.75), width = 4) +
+ # geom_boxplot(width=.1, outlier.colour=NA, position = dodge) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  labs(x = "lambda years", y = "relative bias") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank())
+
+
 ########################## MCMC & model parameters #########################
 ni <- 40000 # number of post-burn-in samples per chain
 nb <- 50000 # number of burn-in samples
