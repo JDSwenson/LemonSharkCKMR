@@ -1,5 +1,8 @@
 #Load packages
-library(tidyverse) # safe to ignore conflicts with filter() and lag()
+#library(tidyverse) # safe to ignore conflicts with filter() and lag()
+library(dplyr)
+library(tidyr)
+library(stringr)
 library(MASS)
 library(popbio)
 #library(mpmtools)  # not at CRAN;
@@ -42,69 +45,131 @@ max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
 num.mates <- c(1:3) #1  #c(1:3) #vector of potential number of mates per mating
 f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity at equilibrium if no age truncation
 
+#################### Toggles for  population simulation options ####################
+b.schedule <- "biennial" #annual or biennial or triennial
+input.psi <- 1 #Can use any number here; 1 if wanting every individual to have the same schedule
+offcycle.breeding <- "yes" #Options are "yes" or "no"
+input.popGrowth <- "stable" #Options are "stable", "slight increase", "slight decline", or "severe decline"
+p.off <- 0.1
+p.skip <- 0.1
+#sampling.scheme <- "target.YOY"
+#sampling.scheme <- "sample.all.juvenile.ages"
+#sampling.scheme <- "sample.ALL.ages"
+
 
 
 #################### Breeding schedule ######################
+if(b.schedule == "annual"){
 #------------------------------ Annual ------------------------------
-# breeding.schedule <- "annual.breeding"
-# mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
-# non.conformists <- 0
-
+ breeding.schedule <- "annual.breeding"
+ mating.periodicity <- 1 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+ non.conformists <- 0
+ ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
+ ff
+ print("breeding schedule is annual")
+ 
+} else if(b.schedule == "biennial"){
+  
 #------------------------------ Biennial ------------------------------
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+print("breeding schedule is biennial")
 
+if(input.psi == 1){
 #============================== psi 1 ==============================
-#  breeding.schedule <- "biennial.breeding_psi1"
-#  non.conformists <- 0
+  breeding.schedule <- "biennial.breeding_psi1"
+  non.conformists <- 0
+  
+  print("psi equals 1")
+  
+  if(offcycle.breeding == "yes"){
+    
+    percent.breed_off.cycle <- p.off #Percent of off-cycle mothers that will breed each year
+    percent.skip_on.cycle <- p.skip #Percent of on-cycle mothers that will skip breeding each year
+    
+    print(paste0("There are ", percent.breed_off.cycle*100, "% of females that will breed off-cycle and ", percent.skip_on.cycle*100, "% of females that will fail when on-cycle."))
+    
+  }
+} else if(input.psi != 1){
+  
+  breeding.schedule <- paste0("biennial.breeding_psi", input.psi)
+  non.conformists <- 1 - input.psi #proportion of off-year breeders to randomly include off their breeding cycle
+  
+  print(paste0("psi equals ", 1 - input.psi))
+}
 
-#============================== psi 0.90 ==============================
- breeding.schedule <- "biennial.breeding_psi0.90"
- non.conformists <- 0.10 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+} else if(b.schedule == "triennial"){
+  
+  mating.periodicity <- 3 #number of years between mating; assigned to an individual and sticks with them through their life.
+  breeding.schedule <- "triennial.breeding_psi1"
+  non.conformists <- 0
+  
+  print("breeding schedule is triennial")
+}
 
-#============================== psi 0.75 ==============================
- #breeding.schedule <- "biennial.breeding_psi0.75"
- #non.conformists <- 0.25 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
+if(b.schedule == "biennial" | b.schedule == "triennial"){
+  # Adjust fecundity ==============================================================
+  ## for effective number of breeders each year, mating cycle, number of mates ====
+  #(from liz) ====
+  psi <- 1-non.conformists
+  ff <- mating.periodicity/(mating.periodicity-psi*mating.periodicity+psi)*f/init.prop.female/mean(num.mates)
+  ff
+}
 
-#============================== psi 0.50 ==============================
-#breeding.schedule <- "biennial.breeding_psi0.50"
-#non.conformists <- 0.50 #proportion of off-year breeders to randomly include off their breeding cycle - want to change this to non.conformists
-
-
-# Adjust fecundity ==============================================================
-## for effective number of breeders each year, mating cycle, number of mates ====
-#(from liz) ====
-psi <- 1-non.conformists
-ff <- mating.periodicity/(mating.periodicity-psi*mating.periodicity+psi)*f/init.prop.female/mean(num.mates)
-ff
-# ====
 #################### Population growth ####################
+if(input.popGrowth == "stable"){
 #------------------------------Stable------------------------------
 population.growth <- "lambda.1"
 
-#------------------------------Slight increase------------------------------
-# population.growth <- "lambda.slight.increase"
-# ff.shift <- ff+0.5 #Increase fecundity to slightly increase population growth - only works for annual breeding
+print("population growth is stable")
 
-#------------------------------Slight decrease------------------------------
-# population.growth <- "lambda.slight.decrease"
+} else if(input.popGrowth == "slight increase"){
+
+#------------------------------Slight increase------------------------------
+ population.growth <- "lambda.slight.increase"
+# ff.shift <- ff+0.5 #Increase fecundity to slightly increase population growth - only works for annual breeding
+ 
+ (Ma <- -log(Adult.survival)) #Mortality of adults
+ (Mj <- -log(juvenile.survival)) #Mortality of juveniles
+ (Sa <- exp(-Ma)) #Survival of adults
+ (Sj <- exp(-Mj)) #Survival of juveniles
+ 
+ Mx <- -0.01 #Extra mortality (make negative so it reduces mortality)
+ (Sa <- exp(-Ma - Mx)) #Survival of adults
+ (Sj <- exp(-Mj - Mx)) #Survival of juveniles
+ 
+ Adult.survival <- Sa
+ juvenile.survival <- Sj
+ 
+ cat(paste0("Adult survival is ", round(Adult.survival, 0), ";\nJuvenile survival is ", round(juvenile.survival,0), ";\nPopulation will increase in size"))
+ 
+} else if(input.popGrowth == "slight decline"){
+
+#------------------------------Slight decline------------------------------
+ population.growth <- "lambda.slight.decrease"
 # ff.shift <- ff-0.5 #Decrease fecundity to slightly decrease population growth - only works for annual breeding
+ (Ma <- -log(Adult.survival)) #Mortality of adults
+ (Mj <- -log(juvenile.survival)) #Mortality of juveniles
+ (Sa <- exp(-Ma)) #Survival of adults
+ (Sj <- exp(-Mj)) #Survival of juveniles
+ 
+ Mx <- 0.01 #Extra mortality
+ (Sa <- exp(-Ma - Mx)) #Survival of adults
+ (Sj <- exp(-Mj - Mx)) #Survival of juveniles
+ 
+ Adult.survival <- Sa
+ juvenile.survival <- Sj
+ 
+ cat(paste0("Adult survival is ", round(Adult.survival, 0), ";\nJuvenile survival is ", round(juvenile.survival,0),";\nPopulation will decrease in size"))
+ 
+} else if(input.popGrowth == "severe decline"){
 
 #------------------------------Substantial decrease------------------------------
-#population.growth <- "lambda.extreme"
+population.growth <- "lambda.extreme" #Mortality will change later inside the loop
+
+cat(paste0("Adult survival is ", round(Adult.survival,0), ";\nJuvenile survival is ", round(juvenile.survival,0),";\nPopulation will decline rapidly"))
+}
 
 
-
-
-#################### Sampling scheme ######################
-#============================== target YOY ==============================
-sampling.scheme <- "target.YOY"
-
-#============================== sample all juveniles ==============================
-#sampling.scheme <- "sample.all.juvenile.ages"
-
-#============================== sample all ages ==============================
-#sampling.scheme <- "sample.ALL.ages"
- 
 #-------------------Set date and load seeds----------------------------
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
@@ -116,7 +181,7 @@ seeds <- "Seeds2022.04.15"
 #rseeds[1]  <- 746160703
 
 #----------------------- DATA-GENERATING MODEL --------------------
-# Note on sequencing: Birthdays happen at beginning of each year, followed by mating, then death (i.e. a female who dies in year 10 can still give birth and have surviving pups in year 10)
+# Note on sequencing: Birthdays happen at beginning of each year, followed by mating, then death (i.e. a female who dies in year 10 can still give birth and have surviving pups born in year 10)
 
 #Stable age distribution
 props <- rep(NA, max.age+1)
@@ -138,12 +203,13 @@ estimation.year <- n_yrs - 5 # Set year of estimation for truth calculations
 
 #--------------------- Sampling parameters ---------------------
 sample.years <- c(n_yrs - c(3:0)) #For four years of sampling
+sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
 sample.vec.prop <- c(.5, 1, 1.5, 2)
 
 
 ####-------------- Prep simulation ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 2  # 1 just to look at output     500 #Number of iterations to loop over
+iterations <- 500  # 1 just to look at output     500 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -195,6 +261,9 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
      Mx <- runif(1, min = 0.05, max = 0.1) #Extra mortality
      (Sa <- exp(-Ma - Mx)) #Survival of adults
      (Sj <- exp(-Mj - Mx)) #Survival of juveniles
+     
+     Adult.survival <- Sa
+     juvenile.survival <- Sj
    }
    
    sim.start <- Sys.time()
@@ -252,30 +321,38 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
             mutate(sample.size = round(population_size*(sample.prop/100), 0)) %>%
             pull(sample.size)
           
-          if(sampling.scheme == "target.YOY"){ #If targeting YOY for juvenile samples
-            #Set number of samples to a specific proportion of the population
+          for(j in 1:length(sample.scheme.vec)){
             
-            #Sample YOY only for half-sib analysis
-            sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>%
-              dplyr::filter(age.x == 0) %>%
-              dplyr::slice_sample(n = sample.size) # #Sample each year WITHOUT replacement
+            #Set sampling scheme to 
+            target.samples <- sample.scheme.vec[j]
+            
+            if(target.samples == "target.YOY"){ #If targeting YOY for juvenile samples
+            
+              #Sample YOY only for half-sib analysis
+              sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
+                                                           sampling.scheme = target.samples) %>%
+                dplyr::filter(age.x == 0) %>%
+                dplyr::slice_sample(n = sample.size) # #Sample each year WITHOUT replacement
             
             
-            } else if(sampling.scheme == "sample.all.juvenile.ages"){ #If sampling juveniles
+            } else if(target.samples == "sample.all.juvenile.ages"){ #If sampling juveniles
               sample.df_temp <- loopy.list[[i]] %>% dplyr::filter(age.x < repro.age & age.x > 0) %>% 
-                mutate(capture.year = i) %>%
+                mutate(capture.year = i,
+                       sampling.scheme = target.samples) %>%
                 dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
               
               
-              } else if(sampling.scheme == "sample.ALL.ages"){
+              } else if(target.samples == "sample.ALL.ages"){
               
-              sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>%
+              sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
+                                                           sampling.scheme = target.samples) %>%
                 dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
         
       }      
 
       #Combine samples from all years
         sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
+          }
     }
     
 
@@ -288,7 +365,7 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
     #Save info for samples to examine in more detail
     sample.df_all.info <- sample.df_all.info %>% 
       mutate(sample.size.yr = sample.size,
-             sampling.scheme = sampling.scheme,
+             #sampling.scheme = sampling.scheme,
              iteration = iter,
              seed = rseed,
              sample.prop = sample.prop) %>% 
@@ -333,13 +410,13 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
   
    #-----------------------------Save major output files---------------------------------------------
  #Save detailed info about samples from population
- saveRDS(sample.info, file = paste0(output.location, sample_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_", sampling.scheme))
-
+ saveRDS(sample.info, file = paste0(output.location, sample_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))
+ 
  #Save parents tibble
- saveRDS(parents.tibble_all, file = paste0(output.location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_", sampling.scheme))
+ saveRDS(parents.tibble_all, file = paste0(output.location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))
  
  # Detailed info on population size
- saveRDS(pop.size.tibble_all, file = paste0(output.location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_", sampling.scheme))
+ saveRDS(pop.size.tibble_all, file = paste0(output.location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))
  
  # Truth
- saveRDS(truth.all, file = paste0(output.location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_", sampling.scheme))
+ saveRDS(truth.all, file = paste0(output.location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))

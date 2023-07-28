@@ -48,7 +48,7 @@ input.psi <- 1 #Can use any number here; 1 if wanting every individual to have t
 offcycle.breeding <- "yes" #Options are "yes" or "no"
 input.popGrowth <- "stable" #Options are "stable", "slight increase", "slight decline", or "severe decline"
 #sampling.scheme <- "target.YOY"
-sampling.scheme <- "sample.all.juvenile.ages"
+#sampling.scheme <- "sample.all.juvenile.ages"
 #sampling.scheme <- "sample.ALL.ages"
 
 
@@ -61,21 +61,27 @@ if(b.schedule == "annual"){
  non.conformists <- 0
  ff <- f/init.prop.female * mating.periodicity/mean(num.mates) # female fecundity per breeding cycle
  ff
+ print("breeding schedule is annual")
  
 } else if(b.schedule == "biennial"){
   
 #------------------------------ Biennial ------------------------------
 mating.periodicity <- 2 #number of years between mating; assigned to an individual and sticks with them through their life. So they're either a one or two year breeder.
+print("breeding schedule is biennial")
 
 if(input.psi == 1){
 #============================== psi 1 ==============================
   breeding.schedule <- "biennial.breeding_psi1"
   non.conformists <- 0
   
+  print("psi equals 1")
+  
   if(offcycle.breeding == "yes"){
     
     percent.breed_off.cycle <- 0.1 #Percent of off-cycle mothers that will breed each year
     percent.skip_on.cycle <- 0.1 #Percent of on-cycle mothers that will skip breeding each year
+    
+    print(paste0("There are ", percent.breed_off.cycle*100, "% of females that will breed off-cycle and ", percent.skip_on.cycle*100, "% of females that will fail when on-cycle."))
     
   }
 } else if(input.psi != 1){
@@ -83,6 +89,7 @@ if(input.psi == 1){
   breeding.schedule <- paste0("biennial.breeding_psi", input.psi)
   non.conformists <- 1 - input.psi #proportion of off-year breeders to randomly include off their breeding cycle
   
+  print(paste0("psi equals ", 1 - input.psi))
 }
 
 } else if(b.schedule == "triennial"){
@@ -90,6 +97,8 @@ if(input.psi == 1){
   mating.periodicity <- 3 #number of years between mating; assigned to an individual and sticks with them through their life.
   breeding.schedule <- "triennial.breeding_psi1"
   non.conformists <- 0
+  
+  print("breeding schedule is triennial")
 }
 
 if(b.schedule == "biennial" | b.schedule == "triennial"){
@@ -106,6 +115,7 @@ if(input.popGrowth == "stable"){
 #------------------------------Stable------------------------------
 population.growth <- "lambda.1"
 
+print("population growth is stable")
 
 } else if(input.popGrowth == "slight increase"){
 
@@ -125,6 +135,8 @@ population.growth <- "lambda.1"
  Adult.survival <- Sa
  juvenile.survival <- Sj
  
+ cat(paste0("Adult survival is ", round(Adult.survival, 0), ";\nJuvenile survival is ", round(juvenile.survival,0), ";\nPopulation will increase in size"))
+ 
 } else if(input.popGrowth == "slight decline"){
 
 #------------------------------Slight decline------------------------------
@@ -142,10 +154,14 @@ population.growth <- "lambda.1"
  Adult.survival <- Sa
  juvenile.survival <- Sj
  
+ cat(paste0("Adult survival is ", round(Adult.survival, 0), ";\nJuvenile survival is ", round(juvenile.survival,0),";\nPopulation will decrease in size"))
+ 
 } else if(input.popGrowth == "severe decline"){
 
 #------------------------------Substantial decrease------------------------------
 population.growth <- "lambda.extreme" #Mortality will change later inside the loop
+
+cat(paste0("Adult survival is ", round(Adult.survival,0), ";\nJuvenile survival is ", round(juvenile.survival,0),";\nPopulation will decline rapidly"))
 }
 
 
