@@ -136,8 +136,9 @@ moms.temp = dads.temp <- NULL
 
 for(v in 1:(burn.in + Num.years)){ #loop through all of the years in the simulation - the burn in and the years that matter
   
-  if(v > burn.in & exists("ff.shift") == TRUE){
-    ff <- ff.shift
+  if(population.growth == "lambda.extreme" & v >= n_yrs-10){
+    Adult.survival <- Sa
+    juvenile.survival <- Sj
   }
   
   data1 <- loopy.pop[loopy.pop$Survival =="S", -9] #Bring in the data from the previous iteration, but only include those that survive (and leave the column of survival out)
