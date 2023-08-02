@@ -39,7 +39,7 @@ sVec <- NULL #Make empty vector to save yearly survival rates
 for(yr in 2:length(loopy.list)){
   sVec[yr] <- length(which(loopy.list[[yr]]$Survival=='S' & loopy.list[[yr]]$age.x>=repro.age))/length(which(loopy.list[[yr]]$age.x>=repro.age))
 }
-sVec <- c(NA, sVec) #Add NA to survival vector for first year of simulation
+# <- c(NA, sVec) #Add NA to survival vector for first year of simulation
 
 length(which(loopy.list[[n_yrs]]$Survival=='S' & loopy.list[[n_yrs]]$age.x>0 & loopy.list[[n_yrs]]$age.x<repro.age))/length(which(loopy.list[[n_yrs]]$age.x>0 & loopy.list[[n_yrs]]$age.x<repro.age)) #survival of juveniles
 

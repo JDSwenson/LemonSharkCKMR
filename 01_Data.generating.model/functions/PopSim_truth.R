@@ -21,6 +21,7 @@ Dad_max <- max(pop.size.tibble$Male.adult.pop[estimation.year:n_yrs]) #Maximum N
 
 #Survival
 surv_mean <- round(mean(sVec[ref.year:n_yrs]), 4) # True adult survival over sample period
+surv_mean <- (sVec[n_yrs]/sVec[ref.year])^(1/(n_yrs - ref.year))
 surv_min <- min(sVec[ref.year:n_yrs]) #Minimum survival over sample period
 surv_max <- max(sVec[ref.year:n_yrs]) #Maximum survival over sample period
 

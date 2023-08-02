@@ -78,6 +78,8 @@ if(input.psi == 1){
   
   if(offcycle.breeding == "yes"){
     
+    breeding.schedule <- "biennial.breeding_psi1_offcycle"
+    
     percent.breed_off.cycle <- 0.1 #Percent of off-cycle mothers that will breed each year
     percent.skip_on.cycle <- 0.1 #Percent of on-cycle mothers that will skip breeding each year
     
@@ -204,7 +206,7 @@ sample.vec.prop <- c(.5, 1, 1.5, 2)
 
 ####-------------- Prep simulation ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 2  # 1 just to look at output     500 #Number of iterations to loop over
+iterations <- 1  # 1 just to look at output     500 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -325,7 +327,8 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
             
               #Sample YOY only for half-sib analysis
               sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
-                                                           sampling.scheme = target.samples) %>%
+                                                           sampling.scheme = target.samples,
+                                                           ref.year = ref.year) %>%
                 dplyr::filter(age.x == 0) %>%
                 dplyr::slice_sample(n = sample.size) # #Sample each year WITHOUT replacement
             
@@ -333,14 +336,16 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
             } else if(target.samples == "sample.all.juvenile.ages"){ #If sampling juveniles
               sample.df_temp <- loopy.list[[i]] %>% dplyr::filter(age.x < repro.age & age.x > 0) %>% 
                 mutate(capture.year = i,
-                       sampling.scheme = target.samples) %>%
+                       sampling.scheme = target.samples,
+                       ref.year = ref.year) %>%
                 dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
               
               
               } else if(target.samples == "sample.ALL.ages"){
               
               sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
-                                                           sampling.scheme = target.samples) %>%
+                                                           sampling.scheme = target.samples,
+                                                           ref.year = ref.year) %>%
                 dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
         
       }      
