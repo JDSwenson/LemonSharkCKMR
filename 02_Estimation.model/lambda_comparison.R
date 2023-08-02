@@ -12,6 +12,8 @@ library(postpack)
 library(coda)
 library(FSA)
 
+rm(list=ls())
+
 ######################### Specify common output prefixes #########################
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
