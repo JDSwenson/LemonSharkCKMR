@@ -296,6 +296,8 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
   #organize results and calculate summary statistics from the simulation
   source("./01_Data.generating.model/functions/query_results_PopSim.R")
   
+  ref.tibble <- NULL
+  
   #-----------------------Collect samples-------------------------
   #Loop over sample sizes stored in sample.vec  
   for(samps in 1:length(sample.vec.prop)){
@@ -309,50 +311,61 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
     #Sample population each year in sample.years and make dataframe of samples with all metadata
     set.seed(rseed)
     
-        for(i in sample.years){
-          
-          #Extract the relevant row from the pop size dataframe
-          pop.size.yr <- pop.size.tibble %>% dplyr::filter(year == i)
-          
-          sample.size <- pop.size.yr %>%
-            mutate(sample.size = round(population_size*(sample.prop/100), 0)) %>%
-            pull(sample.size)
-          
           for(j in 1:length(sample.scheme.vec)){
-            
+    
             #Set sampling scheme to 
             target.samples <- sample.scheme.vec[j]
-            
+    
+            for(i in sample.years){
+              
+              #Extract the relevant row from the pop size dataframe
+              pop.size.yr <- pop.size.tibble %>% dplyr::filter(year == i)
+              
+              sample.size <- pop.size.yr %>%
+                mutate(sample.size = round(population_size*(sample.prop/100), 0)) %>%
+                pull(sample.size)
+                    
             if(target.samples == "target.YOY"){ #If targeting YOY for juvenile samples
             
               #Sample YOY only for half-sib analysis
               sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
-                                                           sampling.scheme = target.samples,
-                                                           ref.year = ref.year) %>%
+                                                           sampling.scheme = target.samples) %>%
                 dplyr::filter(age.x == 0) %>%
                 dplyr::slice_sample(n = sample.size) # #Sample each year WITHOUT replacement
-            
             
             } else if(target.samples == "sample.all.juvenile.ages"){ #If sampling juveniles
               sample.df_temp <- loopy.list[[i]] %>% dplyr::filter(age.x < repro.age & age.x > 0) %>% 
                 mutate(capture.year = i,
-                       sampling.scheme = target.samples,
-                       ref.year = ref.year) %>%
+                       sampling.scheme = target.samples) %>%
                 dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
-              
               
               } else if(target.samples == "sample.ALL.ages"){
               
               sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
-                                                           sampling.scheme = target.samples,
-                                                           ref.year = ref.year) %>%
+                                                           sampling.scheme = target.samples) %>%
                 dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
-        
-      }      
 
-      #Combine samples from all years
-        sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
+              
+      }      
+              
+            #Combine samples from all years
+            sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
+          
           }
+
+            ref.year <- sample.df_all.info %>% dplyr::filter(age.x < repro.age) %>%
+              arrange(birth.year) %>%
+              slice_min(birth.year) %>%
+              distinct(birth.year) %>%
+              pull(birth.year)
+            
+            ref.temp <- tibble(sampling.scheme = target.samples, 
+                               sample.size.yr = sample.size,
+                               ref.yr = ref.year)
+            
+            ref.tibble <- bind_rows(ref.tibble, ref.temp)
+            
+                      
     }
     
 
@@ -361,7 +374,8 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
     
     #Compile results and summary statistics from simulation to compare estimates
     source("./01_Data.generating.model/functions/PopSim_truth.R")
-    
+   
+     
     #Save info for samples to examine in more detail
     sample.df_all.info <- sample.df_all.info %>% 
       mutate(sample.size.yr = sample.size,
@@ -376,6 +390,10 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
   
   } # end loop over sample sizes
 
+  ref.tibble
+  
+  sample.info <- sample.info %>% left_join(ref.tibble, by = c("sampling.scheme", "sample.size.yr"))
+  
   #-----------------Save output files iteratively--------------------
   
   sim.samples.1 <- paste0(sample.vec.prop[1], "prop.sampled")

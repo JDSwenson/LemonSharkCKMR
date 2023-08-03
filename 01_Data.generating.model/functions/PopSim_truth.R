@@ -1,10 +1,12 @@
 ########## Compile and report results #########
 #Extract reference year as earliest cohort
-ref.year <- sample.df_all.info %>% dplyr::filter(age.x < repro.age) %>% 
-  arrange(birth.year) %>% 
-  slice_min(birth.year) %>% 
-  distinct(birth.year) %>% 
-  pull(birth.year)
+# ref.year <- sample.df_all.info %>% dplyr::filter(age.x < repro.age) %>%
+#   arrange(birth.year) %>%
+#   slice_min(birth.year) %>%
+#   distinct(birth.year) %>%
+#   pull(birth.year)
+
+
 
 ####-------------------Compile results when estimating all parameters----------------
 #### TRUTH ####
