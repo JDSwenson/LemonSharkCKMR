@@ -36,7 +36,8 @@ pop.size.tibble$adult.lambda <- adult.lambda
 sVec <- NULL #Make empty vector to save yearly survival rates
 
 #Store annual survival of adults
-for(yr in 2:length(loopy.list)){
+#Survival in a year is the probability of surviving FROM that year to the next i.e. sVec[2] is the probability of surviving from year 2 - year 3
+for(yr in 1:length(loopy.list)){
   sVec[yr] <- length(which(loopy.list[[yr]]$Survival=='S' & loopy.list[[yr]]$age.x>=repro.age))/length(which(loopy.list[[yr]]$age.x>=repro.age))
 }
 # <- c(NA, sVec) #Add NA to survival vector for first year of simulation

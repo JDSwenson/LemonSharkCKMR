@@ -45,7 +45,7 @@ f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity 
 #################### Toggles for  population simulation options ####################
 b.schedule <- "annual" #annual or biennial or triennial
 input.psi <- 1 #Can use any number here; 1 if wanting every individual to have the same schedule
-offcycle.breeding <- "yes" #Options are "yes" or "no"
+offcycle.breeding <- "no" #Options are "yes" or "no"
 input.popGrowth <- "stable" #Options are "stable", "slight increase", "slight decline", or "severe decline"
 #sampling.scheme <- "target.YOY"
 #sampling.scheme <- "sample.all.juvenile.ages"
@@ -206,7 +206,7 @@ sample.vec.prop <- c(.5, 1, 1.5, 2)
 
 ####-------------- Prep simulation ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 1  # 1 just to look at output     500 #Number of iterations to loop over
+iterations <- 2  # 1 just to look at output     500 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -296,7 +296,7 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
   #organize results and calculate summary statistics from the simulation
   source("./01_Data.generating.model/functions/query_results_PopSim.R")
   
-  ref.tibble <- NULL
+  ref.tibble <- NULL #Initialize dataframe for reference years
   
   #-----------------------Collect samples-------------------------
   #Loop over sample sizes stored in sample.vec  
@@ -353,6 +353,7 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
           
           }
 
+            #Calculate the reference year for calculations of survival (which will vary depending on the samples)
             ref.year <- sample.df_all.info %>% dplyr::filter(age.x < repro.age) %>%
               arrange(birth.year) %>%
               slice_min(birth.year) %>%
@@ -361,7 +362,8 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
             
             ref.temp <- tibble(sampling.scheme = target.samples, 
                                sample.size.yr = sample.size,
-                               ref.yr = ref.year)
+                               ref.yr = ref.year,
+                               iteration = iter)
             
             ref.tibble <- bind_rows(ref.tibble, ref.temp)
             
@@ -390,9 +392,9 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
   
   } # end loop over sample sizes
 
-  ref.tibble
+  ref.tibble #just view the file
   
-  sample.info <- sample.info %>% left_join(ref.tibble, by = c("sampling.scheme", "sample.size.yr"))
+  sample.info2 <- sample.info %>% left_join(ref.tibble, by = c("sampling.scheme", "sample.size.yr", "iteration")) #Adds ref year to each sample depending on how it was collected
   
   #-----------------Save output files iteratively--------------------
   
@@ -428,13 +430,13 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
   
    #-----------------------------Save major output files---------------------------------------------
  #Save detailed info about samples from population
- saveRDS(sample.info, file = paste0(output.location, sample_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_", sampling.scheme))
+ saveRDS(sample.info2, file = paste0(output.location, sample_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))
 
  #Save parents tibble
- saveRDS(parents.tibble_all, file = paste0(output.location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_", sampling.scheme))
+ saveRDS(parents.tibble_all, file = paste0(output.location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))
  
  # Detailed info on population size
- saveRDS(pop.size.tibble_all, file = paste0(output.location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_", sampling.scheme))
+ saveRDS(pop.size.tibble_all, file = paste0(output.location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))
  
  # Truth
- saveRDS(truth.all, file = paste0(output.location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_", sampling.scheme))
+ saveRDS(truth.all, file = paste0(output.location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))
