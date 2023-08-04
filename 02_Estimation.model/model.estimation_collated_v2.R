@@ -148,7 +148,7 @@ if(sample.props == "all"){
    }
    
    #Print the model that's being used
-   jags.mod <- str_split(jags_file, pattern = "/")[[1]][8]23
+   jags.mod <- str_split(jags_file, pattern = "/")[[1]][8]
    cat(paste0("Using JAGS model: ", jags.mod, "\n"))
    
  
