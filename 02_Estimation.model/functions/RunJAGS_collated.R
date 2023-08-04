@@ -21,11 +21,15 @@ dad.n.comps <- dad_comps.all$all
 dad.positives <- dad_comps.all$yes
 dad.yrs <- nrow(dad_comps.all)
 
+cat("Preparing to use annual model")
+
 if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt")){
 #Calculate parameters for beta distribution from mean and variance for survival
  surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
  surv.alpha <- surv.betaParams[[1]]
  surv.beta <- surv.betaParams[[2]]
+ 
+ cat("Preparing for model validation with informed prior for survival")
  }
 }
 
@@ -62,6 +66,8 @@ if(model == "multiennial.model"){
     dad.positives <- dad_comps.all$yes
     dad.yrs <- nrow(dad_comps.all)
     
+    cat("Preparing to use multiennial model")
+    
     #If using a multiennial model that includes parent-offspring pairs, need to define those comparisons as well.
     if(HS.only != "yes"){ 
     #Mom
@@ -72,6 +78,8 @@ if(model == "multiennial.model"){
     mom.n.comps_PO <- mom_comps.PO$all
     mom.positives_PO <- mom_comps.PO$yes
     mom.yrs_PO <- nrow(mom_comps.PO)
+    
+    cat("Preparing to use HS only model")
   }
 }
  
@@ -104,6 +112,8 @@ if(model == "annual.model"){
       surv.beta = surv.beta
     
   )
+    
+    cat("Ready for model validation with informed survival prior")
 }
 
  #------------------------- Annual model; Diffuse prior on survival -------------------------
@@ -127,6 +137,9 @@ if(model == "annual.model"){
        dad.positives = dad.positives,
        dad.yrs = dad.yrs
    )
+     
+     cat("Ready for annual model with diffuse survival prior")
+     
  }
 }
 
@@ -163,6 +176,8 @@ if(model == "multiennial.model" & HS.only == "yes"){
     # #Breeding interval
     a = mating.periodicity
   )
+  
+  cat("Ready for multiennial HS only model")
   
 }
 
@@ -206,6 +221,9 @@ if(model == "multiennial.model" & HS.only != "yes"){
     # #Breeding interval
     a = mating.periodicity
   )   
+  
+  cat("Ready for multiennial HS + PO model")
+  
 }
 
 
@@ -224,7 +242,8 @@ if(model == "annual.model"){
      )
    }
    return(inits)
-   }
+    }
+    cat("Initial values set for annual model without lambda")
   }
   #If lambda is in the model, then specify a starting value for this parameter
   if(jags_file == paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt") | jags_file == paste0(jags.model_location, "HS.PO_wideLambda_annual_model.txt")){
@@ -240,6 +259,7 @@ if(model == "annual.model"){
       }
       return(inits)
     }
+    cat("Initial values set for annual model with lambda")
   }
 }
  
@@ -259,6 +279,7 @@ if(model == "multiennial.model"){
     }
     return(inits)
   }
+  cat("Initial values set for multiennial model")
 }
  
  

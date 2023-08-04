@@ -258,9 +258,6 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
      Mx <- runif(1, min = 0.05, max = 0.1) #Extra mortality
      (Sa <- exp(-Ma - Mx)) #Survival of adults
      (Sj <- exp(-Mj - Mx)) #Survival of juveniles
-     
-     Adult.survival <- Sa
-     juvenile.survival <- Sj
    }
    
    sim.start <- Sys.time()
@@ -361,7 +358,7 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
               pull(birth.year)
             
             ref.temp <- tibble(sampling.scheme = target.samples, 
-                               sample.size.yr = sample.size,
+                               sample.prop = sample.prop,
                                ref.yr = ref.year,
                                iteration = iter)
             
@@ -394,7 +391,7 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
 
   ref.tibble #just view the file
   
-  sample.info2 <- sample.info %>% left_join(ref.tibble, by = c("sampling.scheme", "sample.size.yr", "iteration")) #Adds ref year to each sample depending on how it was collected
+  sample.info2 <- sample.info %>% left_join(ref.tibble, by = c("sampling.scheme", "sample.prop", "iteration")) #Adds ref year to each sample depending on how it was collected
   
   #-----------------Save output files iteratively--------------------
   

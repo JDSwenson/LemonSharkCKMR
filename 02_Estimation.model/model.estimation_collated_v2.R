@@ -43,10 +43,12 @@ inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
 date.of.PopSim <- "28Jul2023"
 
 ###########Specify which simulations to focus on########################
-s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
+#s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
 sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
 objective <- 1 #Can be any number 1-5
 scenario <- "scenario_1" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
+sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
+est.yr.tests <- 1 #Can be 1 or 3. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 3, then we will estimate abundance for 10 years before that and the present as well.
 
 
 if(objective == 1){
@@ -77,6 +79,8 @@ jags_file = paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.
 HS.only <- "no" #Do we only want to filter HS relationships?
 PO.only <- "no" #Do we only want to filter PO relationships?
 
+cat(paste0("Testing model validation"))
+
 } else if(objective ==2){
 ########################## Objective 2 #########################
 #------------------------- Set input file locations -------------------------#
@@ -92,9 +96,13 @@ fixed.parameters <- "none" #List the fixed parameters here; if none, then leave 
 model <- "annual.model" #For naming output files
 source("./02_Estimation.model/functions/Obj2.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
+cat(paste0("Testing population growth"))
+
 if(scenario %in% c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3")){
 #========================= Scenario 2.1 =========================
 jags_file = paste0(jags.model_location, "HS.PO_noLambda_annual_model.txt") #Annual JAGS model w/o lambda
+
+cat(paste0("with a naive model"))
 
 if(scenario == "scenario_2.1.1"){
 #------------------------- Scenario 2.1.1: Small population decline; no lambda in model
@@ -103,6 +111,8 @@ if(scenario == "scenario_2.1.1"){
  jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
 
+ cat(paste0("and a slightly decreasing population."))
+ 
  } else if(scenario == "scenario_2.1.2"){
 
 #------------------------- Scenario 2.1.2: Small population growth; no lambda in model
@@ -111,6 +121,8 @@ if(scenario == "scenario_2.1.1"){
  jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
 
+ cat(paste0("and a slightly increasing population."))
+ 
  } else if(scenario == "scenario_2.1.3"){
 
 #------------------------- Scenario 2.1.3: Substantial population decline; no lambda in model
@@ -118,11 +130,16 @@ if(scenario == "scenario_2.1.1"){
  scenario<- "scenario_2.1.3" #For naming output files
  jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("and a severely decreasing population."))
+ 
  }
 } else if(scenario %in% c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3")){
 
 #========================= Scenario 2.2 =========================
 jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
+
+cat(paste0("with an adapted model and narrow prior"))
 
 if(scenario == "scenario_2.2.1"){
 #------------------------- Scenario 2.2.1: Small population decline; lambda in model w/ tight prior
@@ -131,6 +148,8 @@ if(scenario == "scenario_2.2.1"){
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
 
+ cat(paste0("and a slightly decreasing population."))
+ 
 } else if(scenario == "scenario_2.2.2"){
 #------------------------- Scenario 2.2.2: Small population growth; lambda in model w/ tight prior
  PopSim.lambda <- "lambda.slight.increase"
@@ -138,18 +157,25 @@ if(scenario == "scenario_2.2.1"){
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
 
-} else if(scenario == "scenario_2.3.2"){
+ cat(paste0("and a slightly increasing population."))
+ 
+} else if(scenario == "scenario_2.2.3"){
  
 #------------------------- Scenario 2.2.3: Substantial population decline; lambda in model w/ tight prior
  PopSim.lambda <- "lambda.extreme" 
  scenario<- "scenario_2.2.3" #For naming output files
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("and a severely decreasing population."))
+ 
  }
 } else if(scenario %in% c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3")){
 
 #========================= Scenario 2.3 =========================
 jags_file = paste0(jags.model_location, "HS.PO_wideLambda_annual_model.txt")
+
+cat(paste0("with an adapted model and diffuse prior"))
 
 if(scenario == "scenario_2.3.1"){
 #------------------------- Scenario 2.3.1: Small population decline; lambda in model w/ wide prior
@@ -158,6 +184,8 @@ if(scenario == "scenario_2.3.1"){
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
 
+ cat(paste0("and a slightly decreasing population."))
+ 
 } else if(scenario == "scenario_2.3.2"){
  
 #------------------------- Scenario 2.3.2: Small population growth; lambda in model w/ wide prior
@@ -165,6 +193,8 @@ if(scenario == "scenario_2.3.1"){
  scenario<- "scenario_2.3.2" #For naming output files
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("and a slightly increasing population."))
 
 } else if(scenario == "scenario_2.3.3"){
  
@@ -173,6 +203,8 @@ if(scenario == "scenario_2.3.1"){
  scenario<- "scenario_2.3.3" #For naming output files
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("and a severely decreasing population."))
  }
 }
 
@@ -191,6 +223,8 @@ PopSim.lambda <- "lambda.1"
 source("./02_Estimation.model/functions/Obj3.functions.R") #Changed name of script that includes pairwise comparison and other functions
 mating.periodicity <- 2 #Overwrite below if triennial breeding
 
+cat(paste0("Testing multiennial breeding"))
+
 if(scenario == "scenario_3.1.1"){
 #========================= Scenario 3.1 =========================
 #------------------------- Scenario 3.1.1: Biennial breeding; psi = 1; annual model
@@ -200,6 +234,8 @@ if(scenario == "scenario_3.1.1"){
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
  jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
+ 
+ cat(paste0("with 100% biennial breeders \nand a naive model."))
 
 } else if(scenario == "scenario_3.1.2"){
 #------------------------- Scenario 3.1.2: Biennial breeding; psi = 1; multiennial model
@@ -209,6 +245,8 @@ if(scenario == "scenario_3.1.1"){
  jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
  jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") #Specify the HS only model as the model for now. If the likelihood should include POPs, then we will override the model when we select the sampling scheme several lines down.
+ 
+ cat(paste0("with 100% biennial breeders \nand a multiennial model."))
 
 } else if(scenario == "scenario_3.2.1"){
 #========================= Scenario 3.2 =========================
@@ -219,6 +257,8 @@ if(scenario == "scenario_3.1.1"){
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
  jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
+ 
+ cat(paste0("with 90% biennial breeders \nand a naive model."))
 
 } else if(scenario == "scenario_3.2.2"){
  
@@ -229,6 +269,8 @@ if(scenario == "scenario_3.1.1"){
  jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
  jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") #Specify the HS only model as the model for now. If the likelihood should include POPs, then we will override the model when we select the sampling scheme several lines down
+ 
+ cat(paste0("with 90% biennial breeders \nand a multiennial model."))
 
 } else if(scenario == "scenario_3.3.1"){
 #========================= Scenario 3.3 =========================
@@ -240,6 +282,8 @@ if(scenario == "scenario_3.1.1"){
  estimated.parameters <- paste0(jags_params, collapse = ",")
 jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
 
+cat(paste0("with 75% biennial breeders \nand a naive model."))
+
 } else if(scenario == "scenario_3.3.2"){
 #------------------------- Scenario 3.3.2: Biennial breeding; psi = 0.75; multiennial model
  PopSim.breeding.schedule <- "biennial.breeding_psi0.75" #Can be annual.breeding or biennial.breeding
@@ -248,6 +292,8 @@ jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
  jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
  jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") #Specify the HS only model as the model for now. If the likelihood should include POPs, then we will override the model when we select the sampling scheme several lines down
+ 
+ cat(paste0("with 75% biennial breeders \nand a multiennial model."))
 
 } else if(scenario == "scenario_3.4.1"){
 
@@ -259,6 +305,8 @@ jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
  jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
+ 
+ cat(paste0("with 50% biennial breeders \nand a naive model."))
 
 } else if(scenario == "scenario_3.4.2"){
  
@@ -269,6 +317,8 @@ jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
  jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
  jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") #Specify the HS only model as the model for now. If the likelihood should include POPs, then we will override the model when we select the sampling scheme several lines down
+ 
+ cat(paste0("with 50% biennial breeders \nand a multiennial model."))
 
 } else if(scenario == "scenario_3.5.1"){
 #========================= Scenario 3.5: Triennial breeding =========================
@@ -281,6 +331,8 @@ jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
 jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
 mating.periodicity <- 3
 
+cat(paste0("with 100% triennial breeders \nand a naive model."))
+
 } else if(scenario == "scenario_3.5.2"){
 
 #------------------------- Scenario 3.5.2: Triennial breeding; psi = 1; multiennial model
@@ -291,6 +343,8 @@ mating.periodicity <- 3
  estimated.parameters <- paste0(jags_params, collapse = ",")
  jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") #Specify the HS only model as the model for now. If the likelihood should include POPs, then we will override the model when we select the sampling scheme several lines down
  mating.periodicity <- 3
+ 
+ cat(paste0("with 100% triennial breeders \nand a multiennial model."))
 
 } else if(scenario == "scenario_3.6.1"){
  
@@ -303,6 +357,7 @@ mating.periodicity <- 3
   estimated.parameters <- paste0(jags_params, collapse = ",")
   jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
   
+  cat(paste0("with stochastic biennial breeders \nand a naive model."))
 
 } else if(scenario == "scenario_3.6.2"){
 #------------------------- Scenario 3.6.2: Biennial breeding; psi = 1; multiennial model; 10% on-cycle breeders fail to breed; 10% off-cycle breeders do breed.
@@ -314,6 +369,8 @@ jags_params = c("Nf", "psi", "Nm", "survival", "lambda", "Nfb1", "Nfb2") #List t
 estimated.parameters <- paste0(jags_params, collapse = ",")
 jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") #Specify the HS only model as the model for now. If the likelihood should include POPs, then we will override the model when we select the sampling scheme several lines down.
 derived.quantities = "yes"
+
+cat(paste0("with stochastic biennial breeders \nand a multiennial model."))
 }
 
 } else if(objective ==4){
@@ -330,6 +387,8 @@ derived.quantities = "yes"
  PopSim.lambda <- "lambda.1"
  source("./02_Estimation.model/functions/Obj4.functions.R") #Changed name of script that includes pairwise comparison and other functions
 
+ cat(paste0("Testing aging error"))
+ 
 if(scenario == "scenario_4.1"){
  
 #------------------------- Scenario 4.1: Biennial breeding; psi = 1; aging error 5% CV
@@ -341,6 +400,8 @@ mating.periodicity <- 2
  jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
 
+ cat(paste0("with biennial breeders and 5% CV."))
+ 
 }else if(scenario == "scenario_4.2"){
  
 #------------------------- Scenario 4.2: Biennial breeding; psi = 1; aging error 10% CV
@@ -351,6 +412,8 @@ mating.periodicity <- 2
  model <- "multiennial.model"
  jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("with biennial breeders and 10% CV."))
 
 }else if(scenario == "scenario_4.3"){
   
@@ -362,6 +425,8 @@ mating.periodicity <- 2
  model <- "multiennial.model"
  jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("with biennial breeders and 20% CV."))
 
 }else if(scenario == "scenario_4.4"){
  
@@ -373,6 +438,8 @@ mating.periodicity <- 1
  model <- "annual.model"
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("with annual breeders and 5% CV."))
 
 }else if(scenario == "scenario_4.5"){
 
@@ -384,6 +451,8 @@ mating.periodicity <- 1
  model <- "annual.model"
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("with annual breeders and 10% CV."))
 
 }else if(scenario == "scenario_4.6"){
 
@@ -395,29 +464,43 @@ mating.periodicity <- 1
  model <- "annual.model"
  jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
  estimated.parameters <- paste0(jags_params, collapse = ",")
+ 
+ cat(paste0("with annual breeders and 20% CV."))
 }
 }
 
 
 ########################## Read in sampling and other dataframes #########################
 #Read in sample dataframe and filter for the relevant sampling scheme
-samples.df <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule)) %>% 
-  dplyr::filter(sampling.scheme == s.scheme)
+samples.df_all <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
 #Check that the sample dataframe was appropriately filtered
-samples.df %>% group_by(sampling.scheme) %>% summarize(n())
-samples.df %>% group_by(age.x) %>% summarize(n())
+samples.df_all %>% group_by(sampling.scheme, age.x) %>% summarize(n())
 
 #Read in dataframe with population size
 pop_size.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
 #Should be 500
-pop_size.df %>% dplyr::filter(year == 85)
+pop_size.df %>% dplyr::filter(year == 85) %>% nrow()
+n_yrs <- max(pop_size.df$year)
 
 #Read in dataframe with true values (most of these will be recalculated later)
 truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
-n_yrs <- max(pop_size.df$year)
+
+
+#### TO DO: ADJUST CALCULATIONS FOR TRUTH DATAFRAME ####
+# New truth dataframes are just survival and psi; want to: 
+# 1) make tibble with reference years and iterations (and sampling scheme?),
+# 2) subset pop_size.df for estimation years and pivot to long format, making the values in column "parameter" Nf, Nm, Nfb and Nmb.
+# 3) add column for estimation year (ref.yr + 1 - call it "year"),
+# 4) left_join with pop_size.df based on columns "iteration" and "year" and pull out true M and F abundance and breed abundance and store in columns all.truth and breed.truth.
+#THEN
+# 5) loop over each estimation year and calculate the true value of lambda
+# 6) make any necessary df adjustments and add these values to the tibble
+
+
+
 
 ########################## MCMC & model parameters #########################
 ni <- 40000 # number of post-burn-in samples per chain
@@ -425,21 +508,21 @@ nb <- 50000 # number of burn-in samples
 nt <- 20     # thinning rate
 nc <- 2      # number of chains
 
-
-########################## Start simulation loop #########################
-(iterations <- max(samples.df$iteration))
+(iterations <- max(samples.df_all$iteration))
 
 if(sample.props == "all"){
 #Run with all sample sizes
-(sample.prop_vec <- samples.df %>% distinct(sample.prop) %>% pull(sample.prop))
-  (sim.samples.1 <- paste0(sample.prop_vec[1], "_prop.sampled"))
-  (sim.samples.2 <- paste0(sample.prop_vec[2], "_prop.sampled"))
-  (sim.samples.3 <- paste0(sample.prop_vec[3], "_prop.sampled"))
-  (sim.samples.4 <- paste0(sample.prop_vec[4], "_prop.sampled"))
+(sample.prop_vec <- samples.df_all %>% distinct(sample.prop) %>% pull(sample.prop))
+  sim.samples.1 <- paste0(sample.prop_vec[1], "_prop.sampled")
+  sim.samples.2 <- paste0(sample.prop_vec[2], "_prop.sampled")
+  sim.samples.3 <- paste0(sample.prop_vec[3], "_prop.sampled")
+  sim.samples.4 <- paste0(sample.prop_vec[4], "_prop.sampled")
+  
+  cat(paste0("Will run model with all sampling intensities"))
   
   } else if(is.numeric(sample.props) == TRUE){
 #Run with just one sample size
-    (sample.prop_vec <- samples.df %>%
+    (sample.prop_vec <- samples.df_all %>%
        distinct(sample.prop) %>%
        dplyr::filter(sample.prop == sample.props) %>%
        pull(sample.prop)) 
@@ -448,7 +531,11 @@ if(sample.props == "all"){
     sim.samples.2 <- NULL
     sim.samples.3 <- NULL
     sim.samples.4 <- NULL
+    
+    cat(paste0("Will run model with sampling intensity of ", sample.props, "%", " per year."))
     }
+
+########################## Start simulation loop #########################
 
 # Initialize arrays for saving results
  results <- NULL
@@ -459,11 +546,29 @@ if(sample.props == "all"){
  mom.comps.tibble <- NULL
  dad.comps.tibble <- NULL
 
- for(est in 1:length(estimation.years)){
-   #Set estimation year to 10 years in the past, or 0
-   estimation.year <- estimation.years[est]
+ # for(est in 1:length(estimation.years)){
+ #   #Set estimation year to 10 years in the past, or 0
+ #   estimation.year <- estimation.years[est]
+ #   
+ 
+ #iterations <- 2
    
-   iterations <- 2
+ for(s.scheme in sample.scheme.vec){
+   
+   #Subset for samples from focal sampling scheme
+   samples.df <- samples.df_all %>% dplyr::filter(sampling.scheme == s.scheme)
+   
+   #First iteration gives NA for reference year, but we can infer what it should be.
+   if(s.scheme %in% c("sample.all.juvenile.ages", "sample.ALL.ages")){
+     samples.df %>% replace_na(list(ref.yr = 76))
+
+   } else {
+     samples.df %>% replace_na(list(ref.yr = 87))
+     
+   }
+ 
+   #Should just be one sampling scheme represented
+   samples.df %>% dplyr::count(sampling.scheme)  
    
  for(iter in 1:iterations) {
    #  set.seed(rseeds[iter])
@@ -471,11 +576,19 @@ if(sample.props == "all"){
    #rseed <- sample(1:1000000,1)
    set.seed(rseeds[iter])
    rseed <- rseeds[iter]
-
+   
    for(s in 1:length(sample.prop_vec)){
      
      sample.proportion <- sample.prop_vec[s]
      sample.df_all.info <- samples.df %>% dplyr::filter(iteration == iter, sample.prop == sample.proportion)
+     
+     #Save estimation year
+     est.year.calibrate <- sample.df_all.info %>% distinct(ref.yr) %>% 
+       mutate(estimation.yr = ref.yr + 1) %>% 
+       pull(estimation.yr)
+     
+     #Make vector of estimation years
+     estimation.years <- c(est.year.calibrate - 10, est.year.calibrate, n_yrs)
      
      #Save total sample size
      sample.size.iter <- sample.df_all.info %>% 
@@ -500,6 +613,14 @@ if(sample.props == "all"){
     PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
     HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings
     NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample PO samples if needed
+    full.sibs <- filter1.out[[4]] #Full siblings
+    diff.cohort.sibs <- filter1.out[[5]] #Full siblings from different cohorts
+    
+    
+    #Loop over estimation years
+    for(est in 1:est.yr.tests){
+      estimation.year <- estimation.years[est]
+    
     
     #-------------Construct pairwise comparison matrix--------------
     #Input is 1) a list of potential parents and offspring for each offspring birth year, and 2) a dataframe with all samples, filtered to remove full siblings
@@ -560,19 +681,48 @@ if(sample.props == "all"){
       set.seed(rseed)
       source("./02_Estimation.model/functions/RunJAGS_collated.R")
 
-      #Calculate truth
-      Nf.truth <- pop_size.df %>% dplyr::filter(iteration == iter,                   
-                                                year >= ref.year.mom) %>% 
-        summarize(females = round(mean(Female.adult.pop), 0)) %>% 
-        pull(females)
+########### Calculate truth ###################
+      #Calculate truth for lambda
+      lambda.pop.df <- pop_size.df %>% dplyr::filter(iteration == iter)
       
-      Nm.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
-                                                year >= ref.year.dad) %>% 
-        summarize(males = round(mean(Male.adult.pop), 0)) %>% 
-        pull(males)
+      lambda.truth <- (lambda.pop.df$Total.adult.pop[n_yrs]/lambda.pop.df$Total.adult.pop[estimation.year])^(1/(n_yrs - estimation.year))
+      
+      lambda.truth.df <- tibble(estimation.year = estimation.year,
+                                iteration = iter,
+                                seed = rseed,
+                                parameter = "lambda",
+                                all.truth = lambda.truth)
+      
+      
+      #Make dataframe of truth
+      truth.iter <- pop_size.df %>% dplyr::filter(iteration == iter,
+                                                year == estimation.year) %>% 
+        mutate(Nfb1 = Num.mothers,
+               Nmb1 = Num.fathers) %>%
+        dplyr::select(Nf = Female.adult.pop,
+                      Nfb1,
+                      Nfb2 = Num.mothers,
+                      Nm = Male.adult.pop,
+                      Nmb1,
+                      Nmb2 = Num.fathers,
+                      estimation.year = year,
+                      iteration = iteration,
+                      seed = seed) %>% 
+        pivot_longer(cols = starts_with("N"),
+                     names_to = "parameter",
+                     values_to = "all.truth") %>% 
+        bind_rows(lambda.truth.df) %>% 
+        mutate(sampling.scheme = s.scheme, 
+               sample.prop = sample.proportion)
       
     #Calculate expectations
-    pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
+      #Define Nf and Nm as objects for calculations
+      Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf") %>% pull(all.truth)
+      
+      Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm") %>% pull(all.truth)
+      
+      #Subset for just the present iteration
+      pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
     Exp <- calc.Exp(mom_comps.all, dad_comps.all)
     mom.Exp.HS <- Exp[[1]]
     mom.Exp.PO <- Exp[[2]]
@@ -587,30 +737,46 @@ if(sample.props == "all"){
        scenario == "scenario_2.1.1" | 
        scenario == "scenario_2.1.2" | 
        scenario == "scenario_2.1.3"){
-    #Make truth equal to mean over years
-    truth.iter <- truth.df %>% dplyr::filter(iteration == iter) %>% 
-      mutate(all.truth = ifelse(parameter == "Nf", Nf.truth,
-                                ifelse(parameter == "Nm", Nm.truth, all.truth)))
-    } else {
-      truth.iter <- truth.df %>% dplyr::filter(iteration == iter)
-    }
-
-    #If running with derived quantities    
-    if(derived.quantities == "yes"){
-      Nfb1.temp <- truth.iter %>% dplyr::filter(parameter == "Nf") %>% 
-        mutate(parameter = "Nfb1", all.truth = breed.truth)
+    
+      #Make truth equal to mean over years
+      Nf.truth <- pop.size.tibble %>% dplyr::filter(year >= estimation.year) %>% 
+        summarize(mean.female.pop = mean(Female.adult.pop)) %>% 
+        pull(mean.female.pop)
       
-      Nfb2.temp <- truth.iter %>% dplyr::filter(parameter == "Nf") %>% 
-        mutate(parameter = "Nfb2", all.truth = breed.truth)
+      Nfb.truth <- pop.size.tibble %>% dplyr::filter(year >= estimation.year) %>% 
+        summarize(mean.mothers = mean(Num.mothers)) %>% 
+        pull(mean.mothers)
       
-      truth.iter <- truth.iter %>% bind_rows(Nfb1.temp, Nfb2.temp)
+      Nm.truth <- pop.size.tibble %>% dplyr::filter(year >= estimation.year) %>% 
+        summarize(mean.male.pop = mean(Male.adult.pop)) %>% 
+        pull(mean.male.pop)
+      
+      Nmb.truth <- pop.size.tibble %>% dplyr::filter(year >= estimation.year) %>% 
+        summarize(mean.fathers = mean(Num.fathers)) %>% 
+        pull(mean.fathers)
+      
+      truth.iter <- truth.iter %>% mutate(all.truth = ifelse(parameter == "Nf", Nf.truth, 
+                                               ifelse(parameter == "Nfb1" | parameter == "Nfb2", Nfb.truth, 
+                                                      ifelse(parameter == "Nm", Nm.truth, 
+                                                             ifelse(parameter == "Nmb1" | parameter == "Nmb2", Nmb.truth, all.truth)))))
     }
+    
+    
+    
+    (truth.iter_all.params <- truth.df %>% dplyr::filter(sampling.scheme == s.scheme,
+                               iteration == iter,
+                               sample.prop == sample.proportion) %>% 
+      mutate(estimation.year = ref.yr + 1) %>% 
+      dplyr::select(-c(ref.yr, surv_min, surv_max, surv_AM, population.growth)) %>% 
+      bind_rows(truth.iter) %>% 
+      dplyr::select(parameter, all.truth, estimation.year, iteration, sampling.scheme, sample.prop, seed) %>% #Change order of columns
+      dplyr::arrange(parameter))
 
-    #Save some values related to samples so they can be added to the dataframe of results
-      samples.iter <- samples.df %>% dplyr::filter(iteration == iter, sample.prop == sample.proportion) %>% 
-      distinct(seed, iteration, sample.prop = sample.proportion, sample.size.total)
 
-          
+      ##### PICK UP HERE ON 8/4/2023
+    #Need to merge model.summary2 and truth.iter_all.params
+    #Also export some of the bigger chunks of code to another script and source
+    
     results.temp <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
       left_join(samples.iter, by = c("iteration", "seed"))
     
@@ -693,28 +859,29 @@ if(sample.props == "all"){
                                               seed = rseed)
     dad.comps.tibble <- rbind(dad.comps.tibble, dad_comps.all)
     
-  } # End if/else statement
-  } # end loop over sample sizes
+  } # End if/else statement to account for no yes comparisons
+  } #end loop over estimation years
+   } #end loop over sample sizes
     
   #-----------------Save output files iteratively--------------------
    if(iter %% 100 == 0){
      
 #Results
-    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+    write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", s.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 # 
 #    #Model output for diagnostics
-     saveRDS(sims.list.1, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
+     saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model, "_", s.scheme))
 # 
-     saveRDS(sims.list.2, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
+     saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", model, "_", s.scheme))
 # # 
-     saveRDS(sims.list.3, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
+     saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", model, "_", s.scheme))
 # #    
-     saveRDS(sims.list.4, file = paste0(temp_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme))
-# 
+     saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", model, "_", s.scheme))
+
 #    #Save pairwise comparisons matrices
-    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
+    saveRDS(mom.comps.tibble, file = paste0(temp_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", s.scheme))
 #    
-    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
+    saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", s.scheme))
 
    }
     
@@ -722,8 +889,8 @@ if(sample.props == "all"){
    
    iter.time <- round(as.numeric(difftime(sim.end, sim.start, units = "mins")), 1)
    cat(paste0("\n Finished iteration ", iter, ". \n Took ", iter.time, " minutes \n\n"))
-   } # end loop over iterations
- }# end loop over estimation years
+   } # end loop over sampling schemes
+ }# end loop over iterations
   
 
     #If using all individuals for Nf truth, instead of breeders
@@ -745,25 +912,25 @@ results2 %>% group_by(sample.prop, parameter) %>%
  #Home computer: Dell Precision
  
  #Save model estimates
-write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
  
  #Save draws from posterior for model diagnostics 
- saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme)) #Sample size 1
+ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 1
  
-  saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme)) #Sample size 2
+  saveRDS(sims.list.2, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.2, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 2
  # 
-  saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme)) #Sample size 3
+  saveRDS(sims.list.3, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.3, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 3
  # 
-  saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", model, "_", sampling.scheme)) #Sample size 4
+  saveRDS(sims.list.4, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.4, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 4
  
  #Save final pairwise comparison matrices
- saveRDS(mom.comps.tibble, file = paste0(results_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
+ saveRDS(mom.comps.tibble, file = paste0(results_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model))
  
- saveRDS(dad.comps.tibble, file = paste0(results_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
+ saveRDS(dad.comps.tibble, file = paste0(results_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model))
 
  if(exists("age.cv") == TRUE){
    #Save samples dataframe with misassigned ages
-   saveRDS(samples.miss, file = paste0(results_location, samples.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", sampling.scheme))
+   saveRDS(samples.miss, file = paste0(results_location, samples.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model))
 }
 #-------------Quick viz of results--------------#
 #Box plot of relative bias

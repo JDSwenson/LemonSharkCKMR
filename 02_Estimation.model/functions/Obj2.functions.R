@@ -100,7 +100,7 @@ filter.samples <- function(samples){
     dplyr::filter(age.x < repro.age) #Only use juveniles for half-sib model
     
   print(paste0("There are ", total.sibs, " pairs of full siblings in the dataset, ", dif.cohort.sibs, " of these pairs were born in different years."))
-  return(list(PO.samps.list, HS.samps.df, NoFullSibs.df)) #Return list of possible parents and offspring for each year, and dataframe of potential half-sibs
+  return(list(PO.samps.list, HS.samps.df, NoFullSibs.df, total.sibs, dif.cohort.sibs)) #Return list of possible parents and offspring for each year, and dataframe of potential half-sibs
 
 }
 
