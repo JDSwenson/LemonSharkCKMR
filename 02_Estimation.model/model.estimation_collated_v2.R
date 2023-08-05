@@ -173,7 +173,7 @@ if(sample.props == "all"){
        pull(estimation.yr)
      
      #Make vector of estimation years
-     estimation.years <- c(est.year.calibrate, est.year.calibrate - 10, n_yrs)
+     estimation.years <- c(est.year.calibrate, est.year.calibrate - 10, n_yrs - 5, n_yrs)
      
      #Save total sample size
      sample.size.iter <- sample.df_all.info %>% 
