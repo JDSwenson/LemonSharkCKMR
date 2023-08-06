@@ -1,6 +1,8 @@
 ####--------------------Split individual recaptures into first and last occasion------------------####
 split.dups <- function(samples){
   
+  #Double-checked code on 08/06/2023
+  
   #Identify duplicates
   dups.first.capture <- samples %>% group_by(indv.name) %>% 
     filter(n() > 1) %>% 
@@ -29,10 +31,12 @@ split.dups <- function(samples){
 #Filters for full sibs, but also identifies appropriate sample sets for each offspring birth year (for PO) and each younger sib birth year (for half-sib)
 filter.samples <- function(samples){
 
+  #Double-checked code on 08/06/2023
+  
   #------------------Filter 1: full siblings----------------------
     NoFullSibs.df <- samples %>% distinct(mother.x, father.x, .keep_all = TRUE) %>%
     as_tibble() #If there is more than one individual with the same mother AND father, then only keep one.
-    total.sibs <- nrow(samples) - nrow(NoFullSibs.df)
+    total.sibs <- nrow(samples) - nrow(NoFullSibs.df) #Calculate number of full sibs
       
     dif.cohort.sibs <- samples %>% group_by(mother.x, father.x) %>%
       filter(n() > 1) %>% 
@@ -108,6 +112,9 @@ filter.samples <- function(samples){
 
 ####--------------Build pairwise comparison matrices------------####
 #Input is the filtered list from above for POs, and the filtered dataframe for HS
+
+#Double-checked code 08/06/2023
+
 build.pairwise <- function(filtered.samples.PO.list, filtered.samples.HS.df){
 
 #Different birth years for abundance estimate
@@ -123,6 +130,7 @@ build.pairwise <- function(filtered.samples.PO.list, filtered.samples.HS.df){
   PO.dad.pairwise.list <- list()
   HS.dad.pairwise.list <- list()
   
+  #Double-checked PO pairwise comparison code 08/06/2023
   
   #Loop over each dataframe corresponding to the offspring birth year
   for(y in 1:length(filtered.samples.PO.list)){
@@ -137,10 +145,20 @@ build.pairwise <- function(filtered.samples.PO.list, filtered.samples.HS.df){
       pull(indv.name)
     
     #generate pairwise comparison matrix for all potential parents and offspring for the year
-    pairwise.df.PO <- expand.grid(PO.parents, PO.offspring) 
+    pairwise.df.PO <- expand.grid(PO.parents, PO.offspring, stringsAsFactors = FALSE) %>% as_tibble()
     colnames(pairwise.df.PO) <- c("indv.name", "offspring.name") #Rename columns so they can easily be joined
   
 head(pairwise.df.PO)
+
+#Prep a second dataframe that reverses the comparison columns
+pwdf.check <- pairwise.df.PO %>% dplyr::rename(offspring.name = indv.name, indv.name = offspring.name) 
+pwdf.check2 <- pwdf.check %>% bind_rows(pairwise.df.PO)
+
+#Check that there are no duplicate comparisons - should be TRUE
+nrow(pairwise.df.PO) == pwdf.check2 %>% distinct(indv.name, offspring.name) %>% nrow()/2
+
+#Check that no individuals are being compared against themselves - should be TRUE
+nrow(pairwise.df.PO %>% dplyr::filter(indv.name == offspring.name)) == 0
 
 #Create dataframe that will be used to extract the birth years for the potential offspring from each comparison using joins.
 Offspring_birthyears.PO <- filtered.samples.PO.list[[y]] %>%
@@ -238,7 +256,8 @@ PO.dad.pairwise.list[[y]] <- dad_comps.PO
   
 #--------------Half sibling--------------------------
 filtered.samples.HS.df <- filtered.samples.HS.df %>% dplyr::arrange(birth.year) #Arrange so older sib always comes first in pairwise comparison matrix
-pairwise.df.HS <- data.frame(t(combn(filtered.samples.HS.df$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
+pairwise.df.HS <- data.frame(t(combn(filtered.samples.HS.df$indv.name, m=2))) %>% 
+  as_tibble() # generate all combinations of the elements of x, taken m at a time.
 colnames(pairwise.df.HS) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
 
 #Create dataframe of pairwise comparisons with just individual IDs
@@ -297,26 +316,53 @@ dad_positives.HS <- positives.HS %>% filter(shared.parent == "father")  %>%
   rename(yes = freq)
 
 
-#Make dataframes for negative comparisons
-hsp.negs <- pairwise.df_HS.filt %>%
-  dplyr::filter(younger.sib.mom != older.sib.mom & younger.sib.dad != older.sib.dad) %>% 
-  dplyr::select(older.sib.birth, younger.sib.birth) %>% 
-  plyr::count() %>% 
-  as_tibble()
+#-------- Make dataframes for negative comparisons -- Discount possibility of finding half-sibs when there are full sibs ------
+ hsp.negs <- pairwise.df_HS.filt %>%
+   dplyr::filter(younger.sib.mom != older.sib.mom & younger.sib.dad != older.sib.dad) %>%
+   dplyr::select(older.sib.birth, younger.sib.birth) %>%
+   plyr::count() %>%
+   as_tibble()
 
-mom_comps.HS <- hsp.negs %>% 
-  dplyr::rename(no = freq) %>% 
-  left_join(mom_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
-  mutate(yes = replace_na(yes, 0)) %>% 
-  mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
-  mutate(all = yes + no)
+ mom_comps.HS <- hsp.negs %>%
+   dplyr::rename(no = freq) %>%
+   left_join(mom_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>%
+   mutate(yes = replace_na(yes, 0)) %>%
+   mutate(year_gap = younger.sib.birth - older.sib.birth) %>%
+   mutate(all = yes + no)
 
-dad_comps.HS <- hsp.negs %>% 
-  dplyr::rename(no = freq) %>% 
-  left_join(dad_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
-  mutate(yes = replace_na(yes, 0)) %>% 
-  mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
-  mutate(all = yes + no)
+ dad_comps.HS <- hsp.negs %>%
+   dplyr::rename(no = freq) %>%
+   left_join(dad_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>%
+   mutate(yes = replace_na(yes, 0)) %>%
+   mutate(year_gap = younger.sib.birth - older.sib.birth) %>%
+   mutate(all = yes + no)
+
+#-------- Make dataframes for negative comparisons -- include possibility of finding half-sibs when there are full sibs ------
+# mom.hsp.negs <- pairwise.df_HS.filt %>%
+#   dplyr::filter(younger.sib.mom != older.sib.mom) %>% 
+#   dplyr::select(older.sib.birth, younger.sib.birth) %>% 
+#   plyr::count() %>% 
+#   as_tibble()
+# 
+# mom_comps.HS <- mom.hsp.negs %>% 
+#   dplyr::rename(no = freq) %>% 
+#   left_join(mom_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+#   mutate(yes = replace_na(yes, 0)) %>% 
+#   mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
+#   mutate(all = yes + no)
+# 
+# dad.hsp.negs <- pairwise.df_HS.filt %>%
+#   dplyr::filter(younger.sib.dad != older.sib.dad) %>% 
+#   dplyr::select(older.sib.birth, younger.sib.birth) %>% 
+#   plyr::count() %>% 
+#   as_tibble()
+# 
+# dad_comps.HS <- dad.hsp.negs %>% 
+#   dplyr::rename(no = freq) %>% 
+#   left_join(dad_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+#   mutate(yes = replace_na(yes, 0)) %>% 
+#   mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
+#   mutate(all = yes + no)
 
 
 # HS.mom.pairwise.list[[y]] <- mom_comps.HS
@@ -357,6 +403,7 @@ HS.dad.pairwise.df <- dad_comps.HS %>%
   mutate(type = "HS",
          parent = "father")
 
+#SWITCHED ref.year and estimation.year in pop growth calculation
 #Combine PO and HS dataframes for each sex
 mom_comps.all <- bind_rows(HS.mom.pairwise.df, PO.mom.pairwise.df) %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) %>% 

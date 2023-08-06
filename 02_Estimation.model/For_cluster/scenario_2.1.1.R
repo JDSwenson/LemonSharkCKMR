@@ -43,11 +43,11 @@ date.of.PopSim <- "03Aug2023"
 
 ###########Specify which simulations to focus on########################
 #s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
-sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
-objective <- 4 #Can be any number 1-5
-scenario <- "scenario_1_model.validation" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
+sample.props <- 1.5 #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
+objective <- 2 #Can be any number 1-5
+scenario <- "scenario_2.1.1" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
 sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
-est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present.
+est.yr.tests <- 4 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present.
 
 #Specify simulation details based on inputs above
 source("./02_Estimation.model/functions/specify.simulation.R")
@@ -433,7 +433,7 @@ if(sample.props == "all"){
    } #end loop over sample sizes
     
   #-----------------Save output files iteratively--------------------
-   #if(iter %% 100 == 0){
+   if(iter %% 100 == 0){
      
 #Results
     write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", s.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
@@ -452,7 +452,7 @@ if(sample.props == "all"){
 #    
     saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", s.scheme))
 
-#   }
+   }
     
       sim.end <- Sys.time()
    

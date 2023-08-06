@@ -688,9 +688,15 @@ misassign.ages <- function(samples){
                              sd.length = sd.vec) %>% #Name as mean.1 and mean.2 to allow for join later
     mutate(age.x = ages)
 
+  #Save vonBert parameters
+  Linf_val <- 317.65
+  t0_val <- -2.302
+  K_val <- 0.057
+  
   #Assign lengths using VonBert function
   samples.int <- samples %>% left_join(length.at.age_df, by = "age.x") %>% 
     mutate(indv.length = rnorm(n = nrow(samples), mean = mean.length, sd = sd.length)) %>% 
+    mutate(indv.length = ifelse(indv.length >= Linf_val, Linf_val - 1, indv.length)) %>% 
     dplyr::select(-c(mean.length, sd.length))
 
   #Specify reverse VonBert function that will assign ages based on length
@@ -700,7 +706,7 @@ misassign.ages <- function(samples){
   }
 
   #Misassign ages from function specified above
-  samples.miss <- samples.int %>% mutate(age.miss = rev.VonBert(t0 = -2.302, Linf = 317.65, K = 0.057, Lt = indv.length)) %>% 
+  samples.miss <- samples.int %>% mutate(age.miss = rev.VonBert(t0 = t0_val, Linf = Linf_val, K = K_val, Lt = indv.length)) %>% 
     mutate(age.miss = ifelse(age.miss < 0, 0, age.miss)) %>% 
     mutate(birth.year.miss = capture.year - age.miss)  
     

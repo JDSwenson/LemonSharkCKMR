@@ -295,6 +295,12 @@ jags_dims = c(
 
 MCMC.settings <- paste0("thin", jags_dims[names(jags_dims) == "nt"], "_draw", jags_dims[names(jags_dims) == "ni"], "_burn", jags_dims[names(jags_dims) == "nb"])
 
+#Print the model that's being used
+jags.mod.temp <- str_split(jags_file, pattern = "/")
+last.element <- length(jags.mod.temp[[1]])
+jags.mod <- jags.mod.temp[[1]][last.element]
+cat(paste0("Using JAGS model: ", jags.mod, "\n"))
+
 #---------------- STEP 6: RUN JAGS ---------------#
 post = jagsUI::jags(data = jags_data, #If using postpack from AFS workshop
                           

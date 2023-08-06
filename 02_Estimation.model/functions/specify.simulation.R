@@ -41,7 +41,7 @@ if(objective == 1){
   survival.prior.mean <- adult.survival
   survival.prior.cv <- 0.05
   survival.prior.sd <- survival.prior.mean * survival.prior.cv
-  scenario <- "objective_1_model.validation" #For naming output files and calculating truth.
+  scenario <- "scenario_1_model.validation" #For naming output files and calculating truth.
   model <- "annual.model" #For naming output files
   
   source("./02_Estimation.model/functions/Obj123.functions.R")
@@ -187,7 +187,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
 
     
   } else if(scenario == "scenario_3.2.1"){
@@ -207,7 +207,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "biennial.breeding_psi0.90" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
     
     
   } else if(scenario == "scenario_3.3.1"){
@@ -226,7 +226,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "biennial.breeding_psi0.75" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
     
     
   } else if(scenario == "scenario_3.4.1"){
@@ -246,7 +246,7 @@ if(objective == 1){
 
     PopSim.breeding.schedule <- "biennial.breeding_psi0.50" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
 
     
   } else if(scenario == "scenario_3.5.1"){
@@ -266,7 +266,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "triennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
     mating.periodicity <- 3
     
     
@@ -276,7 +276,8 @@ if(objective == 1){
     #------------------------- Scenario 3.6.1: Biennial breeding; psi = 1; annual model; 10% on-cycle breeders fail to breed; 10% off-cycle breeders do breed.
     cat(paste0(" with stochastic biennial breeders and a naive model."))
     
-    PopSim.breeding.schedule <- "biennial.breeding_psi1_stochasticCycles" #Can be annual.breeding or biennial.breeding
+    PopSim.breeding.schedule <- "biennial.breeding_psi1_offcycle" #Can be annual.breeding or biennial.breeding
+    model <- "annual.model"
     jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
     
     
@@ -284,9 +285,9 @@ if(objective == 1){
     #------------------------- Scenario 3.6.2: Biennial breeding; psi = 1; multiennial model; 10% on-cycle breeders fail to breed; 10% off-cycle breeders do breed.
     cat(paste0(" with stochastic biennial breeders and a multiennial model."))
     
-    PopSim.breeding.schedule <- "biennial.breeding_psi1_stochasticCycles" #Can be annual.breeding or biennial.breeding
+    PopSim.breeding.schedule <- "biennial.breeding_psi1_offcycle" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda", "Nfb1", "Nfb2") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
 
   }
   
@@ -312,7 +313,7 @@ if(objective == 1){
     mating.periodicity <- 2
     PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
 
     
   }else if(scenario == "scenario_4.2"){
@@ -323,7 +324,7 @@ if(objective == 1){
     mating.periodicity <- 2
     PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
 
     
   }else if(scenario == "scenario_4.3"){
@@ -335,7 +336,7 @@ if(objective == 1){
     mating.periodicity <- 2
     PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
     
   }else if(scenario == "scenario_4.4"){
     
@@ -344,7 +345,7 @@ if(objective == 1){
     
     age.cv <- 0.05
     mating.periodicity <- 1
-    PopSim.breeding.schedule <- "annual_breeding" #Can be annual.breeding or biennial.breeding
+    PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
     model <- "annual.model"
     jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
     
