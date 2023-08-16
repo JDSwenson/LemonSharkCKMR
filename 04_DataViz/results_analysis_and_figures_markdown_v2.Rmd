@@ -69,7 +69,6 @@ results %>% dplyr::count(sample.prop)
 results %>% dplyr::count(sampling.scheme)
 results %>% dplyr::count(estimation.sim)
 results %>% dplyr::count(is.na(relative_bias))
-results %>% dplyr::count(in_interval)
 results %>% dplyr::count(scenario) %>% View()
 results %>% dplyr::filter(scenario == "scenario_1_model.validation") %>% 
   count(estimation.sim)
@@ -87,11 +86,14 @@ results %>% dplyr::count(parameter)
 
 results %>% group_by(parameter, scenario, sampling.scheme, estimation.sim) %>% 
   summarize(median(relative_bias)) %>% 
-  dplyr::filter(parameter == "Nf") %>% 
+  dplyr::filter(parameter %in% c("Nf", "Nm", "survival")) %>% 
   View()
 
 results %>% group_by(model, estimation.sim) %>% 
   summarize(median(relative_bias))
+
+results %>% group_by(model, estimation.sim) %>% 
+  dplyr::count(in_interval)
 ```
 
 
@@ -231,31 +233,74 @@ ggarrange(fig2.a, fig2.b, fig2.c, fig2.d, common.legend = TRUE, nrow = 2, ncol =
 
 ```
 
+```{r Obj2 analysis and dataframe prep}
+#---------------------Prep results---------------------------------
+#Set up vectors of population growth scenarios
+slight_decline_scenarios <- c("scenario_2.1.1", "scenario_2.2.1", "scenario_2.3.1")
+slight_increase_scenarios <- c("scenario_2.1.2", "scenario_2.2.2", "scenario_2.3.2")
+severe_decline_scenarios <- c("scenario_2.1.3", "scenario_2.2.3", "scenario_2.3.3")
+stable_popgrowth_scenarios <- c("scenario_2.1.4", "scenario_2.2.4", "scenario_2.3.4") #Need to run these simulations
+
+
+#Set up vectors of lambda priors
+no_lambda_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4")
+narrow_lambda_scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4")
+diffuse_lambda_scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")
+
+
+obj2_results <- results %>% dplyr::filter(objective == "objective2") %>% 
+  mutate(population.growth = ifelse(scenario %in% stable_popgrowth_scenarios, "stable",
+                                    ifelse(scenario %in% slight_decline_scenarios, "slight decline",
+                                           ifelse(scenario %in% slight_increase_scenarios, "slight increase",
+                                                  ifelse(scenario %in% severe_decline_scenarios, "severe decline", NA))))) %>% 
+  mutate(model.label = ifelse(scenario %in% no_lambda_scenarios, "naive",
+                              ifelse(scenario %in% narrow_lambda_scenarios, "adapted (narrow lambda prior)", 
+                                     ifelse(scenario %in% diffuse_lambda_scenarios, "adapted (diffuse lambda prior)", NA)))) %>% 
+  mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>%
+    mutate(model.label = factor(model.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
+  mutate(estimation.sim.label = factor(estimation.sim, levels = c("T0-10", "T0", "present-5", "present"))) %>% 
+  mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
+                                      ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample all juveniles", 
+                                             ifelse(sampling.scheme == "target.YOY", "target YOY", NA))))
+
+#-----------------------Prep samples-----------------------------
+#Specify sample file and read in -- just use stable population growth for now. Age distribution of samples should be similar across the simulations.
+sampFile.stable <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Peer_review/sample.info_03Aug2023_Seeds2022.04.15_lambda.1_annual.breeding"
+  
+samples.df_all <- readRDS(file = sampFile.stable)
+
+samples.df_all <- samples.df_all %>% 
+   mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
+                                      ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample all juveniles", 
+                                             ifelse(sampling.scheme == "target.YOY", "target YOY", NA))))
+
+
+#Get numbers of samples of each age class
+(sample.ages <- samples.df_all %>% group_by(sampling.scheme, age.x) %>% summarize(number = n()))
+  
+```
 
 ```{r Obj2, echo=FALSE, out.width = "120%"}
 colnames(results)
-
-obj2_results <- results %>% dplyr::filter(objective == "objective2")
-
+options(scipen = 100000)
+  
 #Palette I want to use
 brewer.pal.info #See different palette options from Rcolorbrewer
 cp2 <- brewer.pal(3, "RdYlBu") #Choose palette + number of colors
 scales::show_col(cp2)
 
-#-------------------Objective 2 Density plots-------------------------#
-(fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
-    mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>% 
-    mutate(lam.label = ifelse(lambda.prior == "none", "naive",
-                          ifelse(lambda.prior == "diffuse (0.80 - 1.20)", "adapted (diffuse lambda prior)", "adapted (narrow lambda prior)"))) %>% 
-    mutate(lam.label = factor(lam.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
+
+
+#-------------------Figure 3-------------------------#
+(fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>%
   ggplot(aes(x = relative_bias,
-             y = est.yr.lab, 
-             fill = lam.label)) + 
+             y = estimation.sim.label, 
+             fill = model.label)) + 
   geom_density_ridges(alpha = 0.6) + 
   labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
   #facet_wrap(~sampling.scheme) + 
-  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme)) +
+  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme.label)) +
   #theme(strip.text.y = element_blank()) + 
   xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
@@ -270,25 +315,20 @@ scales::show_col(cp2)
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20))
 
-      ggsave("Figure_3a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+      ggsave("Figure_3.1_2023.08.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
-#Very pretty histogram but not sure what to do with it ...
-# (fig3.b <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
-#   geom_histogram(binwidth = 1,
-#                  alpha = 0.6,
-#                  position = "identity",
-#                  lwd = 0.75,
-#                  linetype = 1,
-#                  colour = "black") +
-#   labs(x="Reference year gap") +
-#   theme(legend.position = "none") +
-#   facet_grid(rows = vars(est.yr.lab), cols = vars(sampling.scheme)) +
-# #  facet_wrap(~est.yr.lab) +
-#   scale_fill_manual(values = plot.colors.fig1,
-#                     name = "Sampling scheme")) +
-#   theme_bw()
-#   #geom_density(alpha = 0.6) +
-  
+
+#Histogram of ages
+num.bins <- length(min(samples.df_all$birth.year):max(samples.df_all$birth.year))
+
+samples.df_all %>% gghistogram(x = "birth.year", bins = num.bins, facet.by = "sampling.scheme.label", color = "darkslategray4", fill = "darkslategray4", ggtheme = theme_bw()) +
+  geom_vline(aes(xintercept= ref.yr), color = "coral4", linetype = "solid", size = 1.1) +
+  geom_vline(aes(xintercept = ref.yr - 10), color = "coral3", linetype = "dashed", size = 1.1, alpha = 0.6) +
+  geom_vline(xintercept = c(85, 90), color = "coral2", linetype = "dashed", size = 1.1, alpha = 0.6) +
+  scale_y_continuous(labels = label_comma(), expand = expansion(mult = c(0.01, .05)))
+
+ggsave("Figure_3.2_2023.08.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 6, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
       
       #---------Figure S1----------------------------
 #Show model performance when there is an informed vs diffuse prior on lambda and "extreme" population decline
@@ -324,7 +364,7 @@ scales::show_col(plot.colors.figS1)
   #xlim(-100, 200) +
   scale_fill_manual(values = cp))
 
-ggsave("Figure_S1_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_S1_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 #--------------------------------Figure S2-------------------------------------
@@ -367,7 +407,7 @@ scales::show_col(plot.colors.fig3.2)
         legend.title = element_blank())
 
 
-ggsave("Figure_S2_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 9, units = "in")
+#ggsave("Figure_S2_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 9, units = "in")
 
 ```
 
