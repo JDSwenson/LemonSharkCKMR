@@ -149,6 +149,42 @@ obj1_results <- results %>% dplyr::filter(objective == "objective1") %>%
 
 obj1_results %>% dplyr::group_by(sample.prop.lab, sampling.scheme, parameter) %>% 
   summarize(n())
+
+
+#-----------------------Prep samples-----------------------------
+#Specify sample file and read in -- just use stable population growth for now. Age distribution of samples should be similar across the simulations.
+sampFile.stable <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Peer_review/sample.info_03Aug2023_Seeds2022.04.15_lambda.1_annual.breeding"
+  
+samples.df_all <- readRDS(file = sampFile.stable)
+
+samples.test <- samples.df_all %>% dplyr::filter(sampling.scheme == "sample.ALL.ages", 
+                                 sample.prop == 1.5,
+                                 iteration > 490) %>%
+  distinct(indv.name, .keep_all = TRUE) #Remove individual recaptures or they'll be identified as full sibs below
+
+#### NEED TO PAUSE HERE 8/18/2023 16:12
+#store parents of full siblings
+(sib.rents <- samples.test %>% 
+  group_by(mother.x, father.x) %>% 
+  summarize(n = n()) %>% 
+  dplyr::filter(n > 1) %>% 
+  arrange(desc(n)))
+
+#Filter sample dataframe to only include sampled full sibs
+full.sibs.df <- samples.test %>% dplyr::filter(mother.x %in% sib.rents$mother.x & father.x %in% sib.rents$father.x)
+
+#Now, let's see if any of these individuals had sampled offspring
+samples.test %>% dplyr::filter((mother.x %in% full.sibs.df$indv.name | father.x %in% full.sibs.df$indv.name))
+
+full.sibs.df %>% inner_join(full.sibs.df, by = c("mother.x", "father.x")) %>% 
+  dplyr::filter(indv.name.x != indv.name.y) %>% 
+  dplyr::select(put.aunt.1 = indv.name.x, put.aunt.2 = indv.name.y) #Note it says aunt but could be uncle as well
+
+#The code below helped me realize there are individual recaptures that register as full sibs to this point IF WE DON'T remove duplicate individuals (which we now do)
+# full.sibs.df %>% inner_join(full.sibs.df, by = c("mother.x", "father.x")) %>% 
+#   dplyr::filter(mother.x == sib.rents$mother.x[1] & father.x == sib.rents$father.x[1]) %>% 
+#   dplyr::select(indv.name.x, indv.name.y, capture.year.x, capture.year.y)
+
 ```
 
 ```{r Obj 1 viz}
