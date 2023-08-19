@@ -110,6 +110,7 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
  mom.comps.tibble <- NULL
  dad.comps.tibble <- NULL
  truth.all <- NULL
+ decoy_HSPs <- NULL
 
  sim.samples.1 <- paste0(sample.vec.prop[1], "prop.sampled")
  sim.samples.2 <- paste0(sample.vec.prop[2], "prop.sampled")
@@ -193,6 +194,7 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
     #Initialize sample dataframes
     sample.df_all.info <- NULL
     sample.df_temp <- NULL
+    aunt.unc_niece.nephew_pw.comps.all <- NULL
     
     #Sample population each year in sample.years and make dataframe of samples with all metadata
     set.seed(rseed)
@@ -253,8 +255,9 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
             
             ref.tibble <- bind_rows(ref.tibble, ref.temp)
             
-                      
-    }
+            #Identify aunt|uncle / niece|nephew pairs. Will save to be imported later.
+            aunt.unc_niece.nephew_pw.comps.all_temp <- find_aunt.uncle_nephew.niece_pairs(sample.info = sample.df_all.info, loopy.list = loopy.list)                      
+    } #End loop over sampling schemes
     
 
     sampled.mothers <- unique(sample.df_all.info$mother.x)
@@ -275,8 +278,12 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
     
     sample.info <- rbind(sample.info, sample.df_all.info) %>% 
       as_tibble()
+
+    #Combine into one df at the level of sample proportion
+    aunt.unc_niece.nephew_pw.comps.all  <-  aunt.unc_niece.nephew_pw.comps.all %>% 
+      bind_rows(aunt.unc_niece.nephew_pw.comps.all_temp)
   
-  } # end loop over sample sizes
+  } # end loop over sample proportions
 
   ref.tibble #just view the file
   
@@ -302,6 +309,8 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
   #True values
   truth.all <- bind_rows(truth.all, true.values)
   
+  decoy_HSPs <-  bind_rows(decoy_HSPs, aunt.unc_niece.nephew_pw.comps.all)
+  
 #  saveRDS(truth.all, file = paste0(temp_location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
   
 # Detailed info on samples and parents to examine in more detail
@@ -326,3 +335,6 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
  
  # Truth
  saveRDS(truth.all, file = paste0(output.location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))
+ 
+ #Charlatan HSPs
+ saveRDS(decoy_HSPs, file = paste0(output.location, "aunt.uncle_niece.nephews_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule))

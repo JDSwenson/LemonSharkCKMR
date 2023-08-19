@@ -97,7 +97,7 @@ charlatan_HSPs <- aunt.unc_niece.nephew_pw.comps.all %>%
   
 #See what would happen if we filtered them by age difference
 charlatan_HSPs %>% dplyr::filter(younger.sib.birth - older.sib.birth < 12)
-  
+
 #Seems like we could basically eliminate them. Probably a function of the four year sampling scheme ... we'll see how the full simulations turn out ... 
   
   

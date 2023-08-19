@@ -44,10 +44,12 @@ date.of.PopSim <- "03Aug2023"
 ###########Specify which simulations to focus on########################
 #s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
 sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
-objective <- 4 #Can be any number 1-5
+objective <- 1 #Can be any number 1-5
 scenario <- "scenario_1_model.validation" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
 sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
+#sample.scheme.vec <- c("sample.ALL.ages")
 est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present.
+test.decoys <- "yes"
 
 #Specify simulation details based on inputs above
 source("./02_Estimation.model/functions/specify.simulation.R")
@@ -74,6 +76,12 @@ truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_"
 truth.df %>% group_by(sampling.scheme, sample.prop, parameter) %>% 
   summarize(n())
 
+if(test.decoys ="yes"){
+
+  #Read in dataframe with aunt|uncle/niece|nephew pairs masquerading as half-sibs
+  imposters.df <- readRDS(file = paste0(PopSim.location, "aunt.uncle_niece.nephews_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
+  
+}
 
 ########################## MCMC & model parameters #########################
 ni <- 40000 # number of post-burn-in samples per chain
@@ -217,6 +225,17 @@ if(sample.props == "all"){
     dad_comps.all <- pairwise.out[[2]]
     positives.HS <- pairwise.out[[3]]
 
+    
+    ###### NEED TO PICK UP FROM HERE AFTER 08/19/2023
+    #Key conundrum to solve is how to treat aunt/niece, aunt/nephew, uncle/niece, uncle/nephew relationships in terms of the pairwise comparison matrix. Which are indistinguishable from MHSPs and which from PHSPs? We need to add the positives to the place where they would be imposters. Think about allele frequencies, and how that relates to mtDNA. 
+    #Then adapt the script below to add imposters where they belong.
+    if(test.decoys ="yes"){
+      
+      fake.HSPs <- identify_imposters(imposters.df)
+      positives.HS
+    
+      }
+    
     head(mom_comps.all)
     head(dad_comps.all)
     
