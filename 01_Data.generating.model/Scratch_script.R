@@ -82,20 +82,23 @@ sampled_nieces_or_nephews_maternal.df <- sample.info_w_grandparents %>% dplyr::f
     dplyr::select(niece.nephew = indv.name, #Rename for join
                   shared.relation, 
                   niece.nephew_paternal.grandmother = dad.grandmother, 
-                  niece.nephew_paternal.grandfather = dad.grandfather) %>% 
+                  niece.nephew_paternal.grandfather = dad.grandfather,
+                  niece.nephew_birth.year = birth.year) %>% 
     full_join(sampled_nieces_or_nephews_maternal.df) #Join with maternal nieces and nephews. If related through grandparents in the maternal line, then the paternal line will be NA and vice versa.
 
   #Combine niece/nephew dataframe with aunt/uncle dataframe
-  aunt.unc_niece.nephew_pw_comps <- sampled_aunts_or_uncs.df %>% 
-    full_join(all_sampled_nieces_or_nephews.df, by = c("shared.relation")) %>% #
-    dplyr::select(aunt.unc, niece.nephew, shared.relation, aunt.unc_mother, aunt.unc_father, niece.nephew_maternal.grandmother, niece.nephew_maternal.grandfather, niece.nephew_paternal.grandmother, niece.nephew_paternal.grandfather)
+  aunt.unc_niece.nephew_pw.comps.all <- sampled_aunts_or_uncs.df %>% 
+    full_join(all_sampled_nieces_or_nephews.df, by = c("shared.relation")) #This is the key join. It makes a dataframe where we join by the shared relation, and then we should have the aunt/uncle and niece/nephew name and information in one dataframe, with the positives linked up.
+
+#GOT EM
+charlatan_HSPs <- aunt.unc_niece.nephew_pw.comps.all %>% 
+    dplyr::select(older.sib.birth = aunt.unc_birth.year,
+                  younger.sib.birth = niece.nephew_birth.year)
   
+#See what would happen if we filtered them by age difference
+charlatan_HSPs %>% dplyr::filter(younger.sib.birth - older.sib.birth < 12)
   
-  
-  
-  
-  
-  
+#Seems like we could basically eliminate them. Probably a function of the four year sampling scheme ... we'll see how the full simulations turn out ... 
   
   
   
