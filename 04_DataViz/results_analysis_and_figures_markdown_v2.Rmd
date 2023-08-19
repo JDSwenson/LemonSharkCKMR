@@ -150,6 +150,9 @@ obj1_results <- results %>% dplyr::filter(objective == "objective1") %>%
 obj1_results %>% dplyr::group_by(sample.prop.lab, sampling.scheme, parameter) %>% 
   summarize(n())
 
+#Get pedigree info
+rentFile.stable <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Peer_review/parents.breakdown_03Aug2023_Seeds2022.04.15_lambda.1_annual.breeding"
+
 
 #-----------------------Prep samples-----------------------------
 #Specify sample file and read in -- just use stable population growth for now. Age distribution of samples should be similar across the simulations.
