@@ -55,7 +55,6 @@ input.popGrowth <- "stable" #Options are "stable", "slight increase", "slight de
 #Specify simulation details based on above input
 source("./01_Data.generating.model/functions/specify.simulation.R")
 
-
 #-------------------Set date and load seeds----------------------------
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
 date.of.simulation <- today
@@ -105,6 +104,7 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
  sims.list.3 <- NULL
  sims.list.4 <- NULL
  sample.info <- NULL
+ aunt.unc_nephew.niece_info <- NULL
  parents.tibble_all <- NULL
  pop.size.tibble_all <- NULL
  mom.comps.tibble <- NULL
@@ -119,7 +119,7 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
 
  #
  #---------------------Initialize array from previous checkpoint--------------------------
-#Results
+# Results
 #  results <- read_csv(paste0(results_location, results_prefix, "_", date.of.simulation, "_", seeds, "_", purpose, "_iter_", iter, ".csv"))
 # # 
 # # #Model output for diagnostics
@@ -148,7 +148,8 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
      Mx <- runif(1, min = 0.05, max = 0.1) #Extra mortality
      (Sa <- exp(-Ma - Mx)) #Survival of adults
      (Sj <- exp(-Mj - Mx)) #Survival of juveniles
-   }
+     
+   } #End lambda.extreme conditional statement
    
    sim.start <- Sys.time()
    rseed <- rseeds[iter]
@@ -192,71 +193,40 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
     sample.prop <- sample.vec.prop[samps]
     
     #Initialize sample dataframes
-    sample.df_all.info <- NULL
-    sample.df_temp <- NULL
-    aunt.unc_niece.nephew_pw.comps.all <- NULL
+    sample.df_all.info <- NULL #Final df with info from ALL sampling schemes, for ALL years
+    aunt.unc_niece.nephew_pw.comps.all <- NULL #Final df with info from ALL sampling schemes, for ALL years
+    sample.df_all.info_temp <- NULL
+    aunt.unc_niece.nephew_pw.comps.all_temp <- NULL
+    
     
     #Sample population each year in sample.years and make dataframe of samples with all metadata
     set.seed(rseed)
     
           for(j in 1:length(sample.scheme.vec)){
-    
-            #Set sampling scheme to 
+            
+            #Set sampling scheme to current "target.samples"
             target.samples <- sample.scheme.vec[j]
-    
-            for(i in sample.years){
-              
-              #Extract the relevant row from the pop size dataframe
-              pop.size.yr <- pop.size.tibble %>% dplyr::filter(year == i)
-              
-              sample.size <- pop.size.yr %>%
-                mutate(sample.size = round(population_size*(sample.prop/100), 0)) %>%
-                pull(sample.size)
-                    
-            if(target.samples == "target.YOY"){ #If targeting YOY for juvenile samples
             
-              #Sample YOY only for half-sib analysis
-              sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
-                                                           sampling.scheme = target.samples) %>%
-                dplyr::filter(age.x == 0) %>%
-                dplyr::slice_sample(n = sample.size) # #Sample each year WITHOUT replacement
+            #Sample over every sampling year with the chosen sampling scheme
             
-            } else if(target.samples == "sample.all.juvenile.ages"){ #If sampling juveniles
-              sample.df_temp <- loopy.list[[i]] %>% dplyr::filter(age.x < repro.age & age.x > 0) %>% 
-                mutate(capture.year = i,
-                       sampling.scheme = target.samples) %>%
-                dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
-              
-              } else if(target.samples == "sample.ALL.ages"){
-              
-              sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
-                                                           sampling.scheme = target.samples) %>%
-                dplyr::slice_sample(n = sample.size) #Sample each year WITHOUT replacement (doesn't affect cross-year sampling since it's in a loop)
-
-              
-      }      
-              
-            #Combine samples from all years
-            sample.df_all.info <- rbind(sample.df_all.info, sample.df_temp)
-          
-          }
-
-            #Calculate the reference year for calculations of survival (which will vary depending on the samples)
-            ref.year <- sample.df_all.info %>% dplyr::filter(age.x < repro.age) %>%
-              arrange(birth.year) %>%
-              slice_min(birth.year) %>%
-              distinct(birth.year) %>%
-              pull(birth.year)
+            samples.out <- draw.samples(target.samples = target.samples)
             
-            ref.temp <- tibble(sampling.scheme = target.samples, 
-                               sample.prop = sample.prop,
-                               ref.yr = ref.year,
-                               iteration = iter)
+            sample.df_all.info_temp1 <- samples.out[[1]] %>% 
+              as_tibble()
             
-            ref.tibble <- bind_rows(ref.tibble, ref.temp)
+            aunt.unc_niece.nephew_pw.comps.all_temp1 <- samples.out[[2]] %>% 
+              as_tibble()
             
-            #Identify aunt|uncle / niece|nephew pairs. Will save to be imported later.
-            aunt.unc_niece.nephew_pw.comps.all_temp <- find_aunt.uncle_nephew.niece_pairs(sample.info = sample.df_all.info, loopy.list = loopy.list)                      
+            sample.size <- samples.out[[3]]
+            
+            
+            #Calculate reference year
+            ref.tibble <- calculate.ref.year()
+            
+            sample.df_all.info_temp <- bind_rows(sample.df_all.info_temp, sample.df_all.info_temp1) #Iteratively save sample info from each sampling scheme
+            
+            aunt.unc_niece.nephew_pw.comps.all_temp <- bind_rows(aunt.unc_niece.nephew_pw.comps.all_temp, aunt.unc_niece.nephew_pw.comps.all_temp1) #Iteratively save aunt/niece info from each sampling scheme
+            
     } #End loop over sampling schemes
     
 
@@ -268,7 +238,7 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
    
      
     #Save info for samples to examine in more detail
-    sample.df_all.info <- sample.df_all.info %>% 
+    sample.df_all.info <- sample.df_all.info_temp %>% 
       mutate(sample.size.yr = sample.size,
              #sampling.scheme = sampling.scheme,
              iteration = iter,
@@ -281,7 +251,13 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
 
     #Combine into one df at the level of sample proportion
     aunt.unc_niece.nephew_pw.comps.all  <-  aunt.unc_niece.nephew_pw.comps.all %>% 
-      bind_rows(aunt.unc_niece.nephew_pw.comps.all_temp)
+      bind_rows(aunt.unc_niece.nephew_pw.comps.all_temp) %>% 
+      mutate(iteration = iter,
+             seed = rseed,
+             sample.prop = sample.prop)
+    
+    aunt.unc_nephew.niece_info <- rbind(aunt.unc_nephew.niece_info, aunt.unc_niece.nephew_pw.comps.all) %>% 
+      as_tibble()
   
   } # end loop over sample proportions
 
@@ -309,7 +285,7 @@ iterations <- 1  # 1 just to look at output     500 #Number of iterations to loo
   #True values
   truth.all <- bind_rows(truth.all, true.values)
   
-  decoy_HSPs <-  bind_rows(decoy_HSPs, aunt.unc_niece.nephew_pw.comps.all)
+  decoy_HSPs <-  bind_rows(decoy_HSPs, aunt.unc_nephew.niece_info)
   
 #  saveRDS(truth.all, file = paste0(temp_location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
   

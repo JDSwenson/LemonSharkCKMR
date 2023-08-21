@@ -1,3 +1,13 @@
+##Need to see why we are getting a bunch of aunt/uncles in targe.YOY scenario, all with NA for birth.year
+#Am I looping over things at the wrong level? It's finding none in the target.YOY scenario ... might need to reset a variable? Try looping over sampling schemes one sample proportion and one iteration at a time.
+
+decoy_HSPs %>% dplyr::count(sampling.scheme, iteration)
+
+decoy_HSPs %>% dplyr::filter(sampling.scheme == "target.YOY") %>% 
+  dplyr::select(niece.nephew_birth.year, aunt.unc_birth.year) %>% 
+  View()
+
+
 #Find aunt/niece pairs
 #Make dataframe of sampled individuals parents and the sampled indv's birth year (so we can subset from loopy.list). Preserve column names for join
 #Would have to insert this into the sampling scheme loop ... 
