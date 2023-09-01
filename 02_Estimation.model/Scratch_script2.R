@@ -1,3 +1,20 @@
+imp.df <- imposters.df %>% mutate(lineage = ifelse(is.na(niece.nephew_maternal.grandmother) == TRUE & is.na(niece.nephew_maternal.grandfather) == TRUE, "maternal",
+                                         ifelse(is.na(niece.nephew_paternal.grandmother) == TRUE & is.na(niece.nephew_paternal.grandfather) == TRUE, "paternal", NA))) %>% 
+  dplyr::select(aunt.unc_relation, aunt.unc_sex, niece.nephew_relation, niece.nephew_sex, lineage, niece.nephew_paternal.grandmother, niece.nephew_paternal.grandfather, niece.nephew_maternal.grandmother, niece.nephew_maternal.grandfather, aunt.unc, niece.nephew, shared.relation, iteration, seed, sample.prop)
+
+imp.df %>% View()
+
+imp.df %>% dplyr::filter(is.na(lineage) == TRUE) %>% View()
+
+#Seems like there might be a correlation between aunt/uncle and being related through the maternal or paternal line ... 
+imp.df %>% dplyr::count(aunt.unc_relation, lineage)
+
+
+
+charlatan_HSPs %>% dplyr::count(sampling.scheme, iteration, sample.prop)
+charlatan_HSPs %>% dplyr::arrange(shared.relation) %>% View()
+charlatan_HSPs %>% distinct(.keep_all = TRUE)
+charlatan_HSPs %>% duplicated() %>% sum()
 
 
 build.pairwise <- function(filtered.samples.PO.list, filtered.samples.HS.df){

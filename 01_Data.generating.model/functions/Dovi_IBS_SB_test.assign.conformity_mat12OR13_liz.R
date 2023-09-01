@@ -378,7 +378,7 @@ find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_
            both.mom.grandparents = paste0(mom.grandmother, mom.grandfather),
            both.dad.grandparents = paste0(dad.grandmother, dad.grandfather)) %>% 
     group_by(mother, father, birth.year) %>% #Filter for full sibs 
-    slice_sample(n = 1) %>% #Keep one sibling. The pairwise comparison script just keeps one indv from each litter, so we can do that here too.
+    slice_sample(n = 1) %>% #Keep one sibling. The pairwise comparison script just keeps one indv from each litter, so we can do that here too. #QUESTION for JDS: is this appropriate? I think it is ... 
     ungroup()
   
   #Q for Ben or Anthony: is it good that we're only keeping one indv from each litter? Or can we easily integrate full sibs into the likelihood?
@@ -394,7 +394,7 @@ find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_
   both.dad.grandparents.vec<- sample.info_w_grandparents$both.dad.grandparents
   
   #Save dataframe of sampled aunt/uncles
-  sampled_aunts_or_uncs.df <- sample.info_w_grandparents %>% dplyr::filter(both.rents %in%  both.mom.grandparents.vec | both.rents %in% both.dad.grandparents.vec) %>% #If the sampled individual's parents are the grandparents of another sampled individual, then this is indv is an aunt or uncle.
+  sampled_aunts_or_uncs.df <- sample.info_w_grandparents %>% dplyr::filter(both.rents %in%  both.mom.grandparents.vec | both.rents %in% both.dad.grandparents.vec) %>% #If this individual's parents are the grandparents of another sampled individual, then this indv is an aunt or uncle to another sampled indv.
     mutate(shared.relation = both.rents) %>% #Save the shared relation for joins
     dplyr::select(aunt.unc = indv.name, #Rename columns for joins
                   aunt.unc_mother = mother, 
@@ -424,7 +424,6 @@ find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_
                   niece.nephew_paternal.grandmother = dad.grandmother, 
                   niece.nephew_paternal.grandfather = dad.grandfather,
                   niece.nephew_birth.year = birth.year,
-                  niece.nephew_sex = sex,
                   niece.nephew_sex = sex,
                   sampling.scheme) %>% 
     full_join(sampled_nieces_or_nephews_maternal.df) #Join with maternal nieces and nephews. If related through grandparents in the maternal line, then the paternal line will be NA and vice versa.

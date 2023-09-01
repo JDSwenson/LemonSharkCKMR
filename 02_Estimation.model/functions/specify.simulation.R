@@ -1,10 +1,10 @@
 ##########Specify which model to use ###################################
 
 specify.model <- function(){
-noLambda_model.validation.scenarios <- c("scenario_1_model.validation")
-noLambda_annual.model.scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3")
-narrowLambda_annual.model.scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_4.4", "scenario_4.5", "scenario_4.6")
-wideLambda_annual.model.scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3")
+noLambda_model.validation.scenarios <- c("scenario_1_model.validation") #Includes a tight prior for survival; no lambda
+noLambda_annual.model.scenarios <- c("scenario_1.2.1", "scenario_1.2.2", "scenario_1.2.3", "scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4") #Includes a uniform prior for survival; no lambda
+narrowLambda_annual.model.scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_3.7.1", "scenario_4.4", "scenario_4.5", "scenario_4.6")
+wideLambda_annual.model.scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")
 narrowLambda_skip.model.scenarios <- c("scenario_3.1.2", "scenario_3.2.2", "scenario_3.3.2", "scenario_3.4.2", "scenario_3.5.2", "scenario_3.6.2", "scenario_4.1", "scenario_4.2", "scenario_4.3")
 
 if(scenario %in% noLambda_model.validation.scenarios){
@@ -24,7 +24,7 @@ return(jags_file)
 
 if(objective == 1){
   ########################## Objective 1 #########################
-  #------------------------- Set input file locations -------------------------#
+  #------------------------- Set input file parameters from population simulation -------------------------#
   PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
   PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
   mating.periodicity <- 1 #number of years between mating for females
@@ -36,17 +36,41 @@ if(objective == 1){
   
   #------------------------- Objective 1 common settings -------------------------#
   jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
+  source("./02_Estimation.model/functions/Obj123.functions.R")
+  model <- "annual.model" #For naming output files
   
+
+  if(scenario %in% c("scenario_1_model.validation")){
+    #========================= Scenario 2.1 =========================
+    
   #Set up informed prior for survival
   survival.prior.mean <- adult.survival
   survival.prior.cv <- 0.05
   survival.prior.sd <- survival.prior.mean * survival.prior.cv
   scenario <- "scenario_1_model.validation" #For naming output files and calculating truth.
-  model <- "annual.model" #For naming output files
   
-  source("./02_Estimation.model/functions/Obj123.functions.R")
-  
-  cat(paste0("Testing model validation (objective 1)"))
+  } else if(scenario %in% c("scenario_1.2.1", "scenario_1.2.2", "scenario_1.2.3")){
+    
+    cat(paste0("Testing base-case CKMR model with diffuse survival prior"))
+    
+    if(scenario == "scenario_1.2.2"){
+      
+      cat(paste0(" and include aunt|uncle niece|nephew relationships as imposter HSPs"))
+      test.decoys <- "yes" #Do we include aunt|uncle niece|nephew pairs as HSPs? Only include as "yes" if explicitly testing; otherwise blank or no.
+      filter.decoys <- "no" #Do we filter aunt|uncle niece|nephew pairs based on a year-gap criterion? Should only be "yes" when test.decoys is also "yes". Will also require a threshold to be set below.
+      
+    
+  } else if(scenario == "scenario_1.2.3"){
+    
+    test.decoys <- "yes" #Do we include aunt|uncle niece|nephew pairs as HSPs? Only include as "yes" if explicitly testing; otherwise blank or no.
+    filter.decoys <- "yes" #Do we filter aunt|uncle niece|nephew pairs based on a year-gap criterion? Should only be "yes" when test.decoys is also "yes". Will also require a threshold to be set below.
+    year.gap.threshold <- repro.age #Set a maximum number of years HSPs can be separated by to be included as HSPs. Goal is to have an empirical threshold for removing potential aunt|uncle niece|nephew pairs. 
+    
+    cat(paste0(" and include aunt|uncle niece|nephew relationships as imposter HSPs but filter by age gap: cannot have more than ", year.gap.threshold, " between birth years to be included as HSPs."))
+    
+    
+  }
+  }
   
 } else if(objective ==2){
   ########################## Objective 2 #########################
@@ -64,7 +88,7 @@ if(objective == 1){
   
   source("./02_Estimation.model/functions/Obj123.functions.R")
   
-  if(scenario %in% c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3")){
+  if(scenario %in% c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4")){
     #========================= Scenario 2.1 =========================
     
     cat(paste0(" with a naive model"))
@@ -94,8 +118,16 @@ if(objective == 1){
       PopSim.lambda <- "lambda.extreme" 
       jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
 
+    } else if(scenario == "scenario_2.1.4"){
+      
+      #------------------------- Scenario 2.1.3: Substantial population decline; no lambda in model
+      cat(paste0(" and a stable population."))
+
+      PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
+      jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
+      
     }
-  } else if(scenario %in% c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3")){
+  } else if(scenario %in% c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4")){
     
     #========================= Scenario 2.2 =========================
     cat(paste0(" with an adapted model and narrow prior"))
@@ -123,8 +155,17 @@ if(objective == 1){
       jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
       
       
+    } else if(scenario == "scenario_2.2.4"){
+      
+      #------------------------- Scenario 2.2.3: Substantial population decline; lambda in model w/ tight prior
+      cat(paste0(" and a stable population."))
+      
+      PopSim.lambda <- "lambda.1" 
+      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+      
+      
     }
-  } else if(scenario %in% c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3")){
+  } else if(scenario %in% c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")){
     
     #========================= Scenario 2.3 =========================
     cat(paste0(" with an adapted model and diffuse prior"))
@@ -153,6 +194,14 @@ if(objective == 1){
       cat(paste0(" and a severely decreasing population."))
       
       PopSim.lambda <- "lambda.extreme" 
+      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+      
+    } else if(scenario == "scenario_2.3.4"){
+      
+      #------------------------- Scenario 2.3.3: Substantial population decline; lambda in model w/ wide prior
+      cat(paste0(" and a stable population."))
+      
+      PopSim.lambda <- "lambda.1" 
       jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
       
     }
@@ -289,6 +338,26 @@ if(objective == 1){
     model <- "multiennial.model"
     jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
 
+  } else if(scenario == "scenario_3.7.1"){
+    #========================= Scenario 3.7: Annual breeding =========================
+    #------------------------- Scenario 3.7.1: Annual breeding; psi = 1; annual model
+    cat(paste0(" with 100% annual breeders and an annual model."))
+    
+    PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+    model <- "annual.model"
+    jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+    mating.periodicity <- 1
+    
+  } else if(scenario == "scenario_3.7.2"){
+    
+    #------------------------- Scenario 3.7.2: Annual breeding; psi = 1; multiennial model
+    cat(paste0(" with 100% annual breeders and a multiennial model."))
+    
+    PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+    model <- "multiennial.model"
+    jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+    mating.periodicity <- 1
+    
   }
   
 } else if(objective ==4){

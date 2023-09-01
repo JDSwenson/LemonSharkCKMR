@@ -39,17 +39,17 @@ n_yrs <- 90 #Number of years the simulation was run for
 
 ############Specify common input prefixes####################
 inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
-date.of.PopSim <- "03Aug2023"
+date.of.PopSim <- "03Aug2023" #Most common date for population simulations: 03Aug2023
+date.of.PopSim <- "22Aug2023" #On 22Aug2023 I re-ran the stable population growth/annual breeding simulation, but identified aunt/niece and uncle/nephew pairs.
 
 ###########Specify which simulations to focus on########################
 #s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
 sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
-objective <- 1 #Can be any number 1-5
-scenario <- "scenario_1_model.validation" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
+objective <- 1 #Can be any number for the objectives (1-5)
+scenario <- "scenario_1.2.2" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
 sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
 #sample.scheme.vec <- c("sample.ALL.ages")
-est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present.
-test.decoys <- "yes"
+est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
 
 #Specify simulation details based on inputs above
 source("./02_Estimation.model/functions/specify.simulation.R")
@@ -68,8 +68,9 @@ pop_size.df %>% dplyr::filter(year == 85) %>% nrow() #Should be 500
 n_yrs <- max(pop_size.df$year) #Save number of simulation years
 
 pop_size.df %>% tail(15)
+pop_size.df %>% tail(15) %>% dplyr::select(adult.lambda)
 
-#Read in dataframe with true values (most of these will be recalculated later)
+#Read in dataframe with true values (some of these will be recalculated later)
 truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
 #Double-check that things are cool - everything should be 500
@@ -79,7 +80,8 @@ truth.df %>% group_by(sampling.scheme, sample.prop, parameter) %>%
 if(test.decoys ="yes"){
 
   #Read in dataframe with aunt|uncle/niece|nephew pairs masquerading as half-sibs
-  imposters.df <- readRDS(file = paste0(PopSim.location, "aunt.uncle_niece.nephews_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
+  imposters.df <- readRDS(file = paste0(PopSim.location, "aunt.uncle_niece.nephews_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule)) %>% 
+    dplyr::distinct(.keep_all = TRUE)
   
 }
 
@@ -142,7 +144,7 @@ if(sample.props == "all"){
    #Subset for samples from focal sampling scheme
    samples.df <- samples.df_all %>% dplyr::filter(sampling.scheme == s.scheme)
 
-   HS.only <- "yes" #Specify that we'll only use half-siblings. Will change if the sampling scheme includes adults.
+   HS.only <- "yes" #Specify that we'll only use half-siblings. Will change below if the sampling scheme includes adults.
    PO.only <- "no"
       
    #First iteration gives NA for reference year, but we can infer what it should be based on the sampling scheme
@@ -156,7 +158,7 @@ if(sample.props == "all"){
    if(s.scheme == "sample.ALL.ages"){
      HS.only <- "no"
      if(model == "multiennial.model"){
-       jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt")
+       jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt") #We are not testing the multiennial model with a changing population so we do not need to have a scenario where we use a wide lambda prior.
      }
    }
    
@@ -180,7 +182,7 @@ if(sample.props == "all"){
        mutate(estimation.yr = ref.yr + 1) %>% 
        pull(estimation.yr)
      
-     #Make vector of estimation years
+     #Make vector of estimation years: t0, t0-10, five years into the past, present
      estimation.years <- c(est.year.calibrate, est.year.calibrate - 10, n_yrs - 5, n_yrs)
      
      #Save total sample size
@@ -203,8 +205,8 @@ if(sample.props == "all"){
         
  
     PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
-    HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings
-    NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample
+    HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings i.e. kept one of the two
+    NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample if desired
     full.sibs <- filter1.out[[4]] #Number of full siblings
     diff.cohort.sibs <- filter1.out[[5]] #Number of full siblings from different cohorts
     
@@ -226,14 +228,18 @@ if(sample.props == "all"){
     positives.HS <- pairwise.out[[3]]
 
     
-    ###### NEED TO PICK UP FROM HERE AFTER 08/19/2023
-    #Key conundrum to solve is how to treat aunt/niece, aunt/nephew, uncle/niece, uncle/nephew relationships in terms of the pairwise comparison matrix. Which are indistinguishable from MHSPs and which from PHSPs? We need to add the positives to the place where they would be imposters. Think about allele frequencies, and how that relates to mtDNA. 
-    #Then adapt the script below to add imposters where they belong.
-    if(test.decoys ="yes"){
+    ###### NEED TO PICK UP FROM HERE AFTER 09/01/2023
+    #Need to adjust function to split out into maternal and paternal lines so I can alter the appropriate df (mom_comps.all or dad_comps.all).
+    #First, need to review the function that identifies aunt|uncle / niece|nephew pairs and see how it's determining aunt or uncle and which line they are related through. Also, why all the duplicates in the output files for these comparisons?
+    
+    if(test.decoys == "yes"){
       
       fake.HSPs <- identify_imposters(imposters.df)
+      
+      
+      
       positives.HS
-    
+      
       }
     
     head(mom_comps.all)

@@ -721,17 +721,20 @@ estBetaParams <- function(mu, var) {
 #GOT EM
 identify_imposters <- function(imposters.df = imposters.df){
 
-  cat(paste0("Working on iteration ", iter, " for sampling scheme ", s.scheme, " with sampling intensity ", sample.proportion, " and estimation year ", estimation.year, "\n"))
-  
    charlatan_HSPs <- imposters.df %>%
      dplyr::filter(iteration == iter,
-                   sampling.scheme == sampling.scheme,
-                   sample.prop == sample.prop)
+                   sampling.scheme == s.scheme,
+                   sample.prop == sample.proportion) %>% 
      dplyr::select(older.sib.birth = aunt.unc_birth.year,
                    younger.sib.birth = niece.nephew_birth.year)
-  
-  #See what would happen if we filtered them by age difference
-  charlatan_HSPs %>% dplyr::filter(younger.sib.birth - older.sib.birth < 12)
+   
+   if(filter.decoys == "yes"){
+     
+     #See what would happen if we filtered them by age difference
+     charlatan_HSPs <- charlatan_HSPs %>% dplyr::filter(younger.sib.birth - older.sib.birth < year.gap.threshold)
 
+   }
+   
   return(charlatan_HSPs)
-}
+
+   }
