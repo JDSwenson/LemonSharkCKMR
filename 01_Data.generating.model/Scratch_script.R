@@ -1,11 +1,93 @@
+decoy_HSPs %>% dplyr::count(lineage, aunt.unc_sex)
+
+decoy_HSPs %>% dplyr::select(aunt.unc, niece.nephew, lineage, aunt.unc_relation, niece.nephew_relation, shared.relation, niece.nephew_mother, niece.nephew_father, niece.nephew_birth.year, niece.nephew_maternal.grandmother, niece.nephew_maternal.grandfather, niece.nephew_paternal.grandmother, niece.nephew_paternal.grandfather) %>%
+  View()
+
+
+#dplyr::filter(!indv.name %in% sample.info_w_grandparents$mother & !indv.name %in% sample.info_w_grandparents$father) %>% 
+
+
+maternal.sex.ratios.df <- loopy.list[[90]] %>% as_tibble() %>% 
+  group_by(mother.x) %>% 
+  dplyr::summarize(prop_female_offspring = sum(sex == "F")/n(),
+                   total_offspring = n())
+
+maternal.sex.ratios.df %>% summarize(mean(prop_female_offspring))
+maternal.sex.ratios.df %>% gghistogram("prop_female_offspring")
+  
+paternal.sex.ratios.df <- loopy.list[[90]] %>% as_tibble() %>% 
+  group_by(father.x) %>% 
+  dplyr::summarize(prop_female_offspring = sum(sex == "F")/n(),
+                   total_offspring = n())
+
+paternal.sex.ratios.df %>% summarize(mean(prop_female_offspring))
+paternal.sex.ratios.df %>% gghistogram("prop_female_offspring")
+
+
+### Why is there a correlation with lineage (maternal vs paternal) and sex of the aunt/uncle?
+sampled_aunts.uncs_maternal.df <- sample.info_w_grandparents %>% dplyr::filter(both.rents %in%  both.mom.grandparents.vec) %>% #If this individual's parents are the grandparents of another sampled individual, then this indv is an aunt or uncle to another sampled indv.
+  mutate(shared.relation = both.rents,
+         lineage = "maternal") %>% #Save the shared relation for joins
+  dplyr::select(aunt.unc = indv.name, #Rename columns for joins
+                aunt.unc_mother = mother, 
+                aunt.unc_father = father, 
+                shared.relation,
+                aunt.unc_birth.year = birth.year,
+                aunt.unc_sex = sex,
+                sampling.scheme)
+
+sampled_aunts.uncs_paternal.df <- sample.info_w_grandparents %>% dplyr::filter(both.rents %in%  both.dad.grandparents.vec) %>% #If this individual's parents are the grandparents of another sampled individual, then this indv is an aunt or uncle to another sampled indv.
+  mutate(shared.relation = both.rents,
+         lineage = "paternal") %>% #Save the shared relation for joins
+  dplyr::select(aunt.unc = indv.name, #Rename columns for joins
+                aunt.unc_mother = mother, 
+                aunt.unc_father = father, 
+                shared.relation,
+                aunt.unc_birth.year = birth.year,
+                aunt.unc_sex = sex,
+                sampling.scheme)
+
 ##Need to see why we are getting a bunch of aunt/uncles in targe.YOY scenario, all with NA for birth.year
 #Am I looping over things at the wrong level? It's finding none in the target.YOY scenario ... might need to reset a variable? Try looping over sampling schemes one sample proportion and one iteration at a time.
+# Can get duplicated comparisons if any individual was sampled more than once.
 
 decoy_HSPs %>% dplyr::count(sampling.scheme, iteration)
 
-decoy_HSPs %>% dplyr::filter(sampling.scheme == "target.YOY") %>% 
-  dplyr::select(niece.nephew_birth.year, aunt.unc_birth.year) %>% 
+#Identify duplicate rows (see https://stackoverflow.com/questions/12495345/find-indices-of-duplicated-rows)
+which(duplicated(decoy_HSPs) | duplicated(decoy_HSPs, fromLast = TRUE))
+
+decoy_HSPs %>% dplyr::filter(sampling.scheme == "sample.ALL.ages", iteration == 5, sample.prop == 2) %>% 
+  dplyr::arrange(shared.relation, iteration) %>% 
   View()
+
+decoy_HSPs.test <- decoy_HSPs %>% mutate(lineage = ifelse(is.na(niece.nephew_maternal.grandmother) == TRUE & is.na(niece.nephew_maternal.grandfather) == TRUE, "maternal",
+                            ifelse(is.na(niece.nephew_paternal.grandmother) == TRUE & is.na(niece.nephew_paternal.grandfather) == TRUE, "paternal", NA))) %>% 
+  dplyr::select(aunt.unc_relation, aunt.unc_sex, niece.nephew_relation, niece.nephew_sex, lineage, niece.nephew_paternal.grandmother, niece.nephew_paternal.grandfather, niece.nephew_maternal.grandmother, niece.nephew_maternal.grandfather, aunt.unc, niece.nephew, shared.relation, iteration, seed, sample.prop)
+
+decoy_HSPs.test %>% dplyr::filter(is.na(lineage) == TRUE)
+
+#Seems like there might be a correlation between aunt/uncle and being related through the maternal or paternal line ... 
+decoy_HSPs.test %>% distinct() %>% dplyr::count(aunt.unc_relation, lineage)
+
+
+
+moms.vec <- unique(c(sampled.indvs.rents.df$mother.x))
+dads.vec <- unique(c(sampled.indvs.rents.df$father.x))
+
+m <- bind_rows(loopy.list[b.y:n_yrs]) %>%
+  distinct(indv.name, .keep_all = TRUE) %>% #Only keep one copy of each individual
+  dplyr::filter(indv.name %in% moms.vec) %>% #Only keep individuals that are parents of sampled individuals
+  as_tibble() %>% 
+  rename(grandmother = mother.x, grandfather = father.x) #The parents of the sampled indvidual's parents are the grandparents of the sampled individuals
+
+d <- bind_rows(loopy.list[b.y:n_yrs]) %>%
+  distinct(indv.name, .keep_all = TRUE) %>% #Only keep one copy of each individual
+  dplyr::filter(indv.name %in% dads.vec) %>% #Only keep individuals that are parents of sampled individuals
+  as_tibble() %>% 
+  rename(grandmother = mother.x, grandfather = father.x) #The parents of the sampled indvidual's parents are the grandparents of the sampled individuals
+
+
+
 
 
 #Find aunt/niece pairs

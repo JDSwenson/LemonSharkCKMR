@@ -18,6 +18,8 @@ library(postpack)
 library(coda)
 
 rm(list=ls())
+options(dplyr.summarise.inform = FALSE)
+
 
 #source("functions/Dovi_IBS_SB_test.assign.conformity_mat12.R") #All biennial breeders reproduce for the first time at age 12
 source("./01_Data.generating.model/functions/Dovi_IBS_SB_test.assign.conformity_mat12OR13_liz.R") #Half of biennial breeders reproduce for the first time at age 12; the other half at age 13.
@@ -91,10 +93,9 @@ sample.years <- c(n_yrs - c(3:0)) #For four years of sampling
 sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
 sample.vec.prop <- c(.5, 1, 1.5, 2)
 
-
 ####-------------- Prep simulation ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 2  # 1 just to look at output     500 #Number of iterations to loop over
+iterations <- 500  # 1 just to look at output     500 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -213,13 +214,17 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
             #Set sampling scheme to current "target.samples"
             target.samples <- sample.scheme.vec[j]
             
+            #Reset dataframes that will be used within sample functions to save info from EACH sampling scheme for ALL years
+            sample.df_all.info_temp1 <- NULL
+            aunt.unc_niece.nephew_pw.comps.all_temp1 <- NULL
+            
             #Sample over every sampling year with the chosen sampling scheme. Output is the combined samples from all years.
             samples.out <- draw.samples(target.samples = target.samples) #Saves a list of output files
             
-            sample.df_all.info_temp1 <- samples.out[[1]] %>% #Saves all samples from this sampling scheme from ALL sampling years
+            sample.df_all.info_temp1 <- samples.out[[1]] %>% #Saves all samples from THIS sampling scheme and THIS sample proportion from ALL sampling years
               as_tibble()
             
-            aunt.unc_niece.nephew_pw.comps.all_temp1 <- samples.out[[2]] %>% #Saves all aunt|uncle / niece|nephew pairs from this sampling scheme from ALL sampling years
+            aunt.unc_niece.nephew_pw.comps.all_temp1 <- samples.out[[2]] %>% #Saves all aunt|uncle / niece|nephew pairs from THIS sampling scheme and THIS sample proportion from ALL sampling years
               as_tibble()
             
             sample.size <- samples.out[[3]] #Sames object sample.size for later use
@@ -240,7 +245,7 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
     #Compile results and summary statistics from simulation to compare estimates
     source("./01_Data.generating.model/functions/PopSim_truth.R")
    
-    #Contains sample info for ALL samples from ALL sampling schemes for this iteration
+    #Contains sample info for ALL samples from ALL sampling schemes for this iteration.
     #Rename columns for row bind with sample.info.
     sample.df_all.info <- sample.df_all.info_temp %>% 
       mutate(sample.size.yr = sample.size,
@@ -250,11 +255,11 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
              sample.prop = sample.prop) %>% 
       mutate(sample.size.total = sample.size.yr * length(sample.years))
     
-    #Save info from ALL sampling schemes over ALL sampling years from every iteration. Output object contains sample info from ALL sampling schemes over ALL sampling years over ALL iterations.
+    #Save info from ALL sampling schemes over ALL sampling years from every iteration. Output object contains sample info from ALL sampling schemes over ALL sampling years over ALL sample proportions.
     sample.info <- rbind(sample.info, sample.df_all.info) %>% 
       as_tibble()
 
-    #Contains sample info for ALL samples from ALL sampling schemes for this iteration
+    #Contains sample info for ALL samples from ALL sampling schemes for this iteration.
     #Add columns for row bind with sample.info.
     aunt.unc_niece.nephew_pw.comps.all  <-  aunt.unc_niece.nephew_pw.comps.all %>% 
       bind_rows(aunt.unc_niece.nephew_pw.comps.all_temp) %>% 
@@ -262,7 +267,7 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
              seed = rseed,
              sample.prop = sample.prop)
     
-    #Save info from ALL sampling schemes over ALL sampling years from every iteration. Output object contains aunt|uncle / niece|nephew comparisons and info from ALL sampling schemes over ALL sampling years over ALL iterations.
+    #Save info from ALL sampling schemes over ALL sampling years from every iteration. Output object contains aunt|uncle / niece|nephew comparisons and info from ALL sampling schemes over ALL sampling years over ALL sample proportions for ALL iterations.
     aunt.unc_nephew.niece_info <- rbind(aunt.unc_nephew.niece_info, aunt.unc_niece.nephew_pw.comps.all) %>% 
       as_tibble()
   
@@ -280,21 +285,21 @@ iterations <- 2  # 1 just to look at output     500 #Number of iterations to loo
   sim.samples.3 <- paste0(sample.vec.prop[3], "prop.sampled")
   sim.samples.4 <- paste0(sample.vec.prop[4], "prop.sampled")
   
-  #Save parents tibble from ALL sample proportions
+  #Save parents tibble from ALL sample proportions for EACH iteration
   parents.tibble_all <- bind_rows(parents.tibble_all, parents.tibble)
   
 #  saveRDS(parents.tibble_all, file = paste0(temp_location, parents_prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
   
-  # Detailed info on population size from ALL sample proportions
+  # Detailed info on population size for each iteration
   pop.size.tibble_all <- bind_rows(pop.size.tibble_all, pop.size.tibble)
   
 #  saveRDS(pop.size.tibble_all, file = paste0(temp_location, pop.size.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
 
-  #True values from ALL sample proportions
+  #True values for each iteration
   truth.all <- bind_rows(truth.all, true.values)
 
-  #Aunt|uncle / nice|nephew comparisons and info from ALL sample proportions  
-  decoy_HSPs <-  bind_rows(decoy_HSPs, aunt.unc_nephew.niece_info)
+  #Save Aunt|uncle / nice|nephew comparisons with different name  
+  decoy_HSPs <- aunt.unc_nephew.niece_info
   
 #  saveRDS(truth.all, file = paste0(temp_location, truth.prefix, "_", date.of.simulation, "_", seeds, "_", population.growth, "_", breeding.schedule, "_iter_", iter))
   

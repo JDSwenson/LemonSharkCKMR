@@ -236,8 +236,6 @@ if(sample.props == "all"){
       
       fake.HSPs <- identify_imposters(imposters.df)
       
-      
-      
       positives.HS
       
       }

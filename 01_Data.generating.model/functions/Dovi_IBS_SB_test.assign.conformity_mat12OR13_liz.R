@@ -323,17 +323,17 @@ return(invisible(list(loopy.list, pop.size, parents.tibble)))
 
 ###------------------ Create function to identify aunt|uncle/niece|nephew pairs----------------
 #Find aunt|uncle/niece|nephew pairs
-find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_temp1, 
-                                               loopy.list = loopy.list){
+find_aunt.uncle_nephew.niece_pairs <- function(input.sample.info = sample.df_all.info_temp1, loopy.list = loopy.list){
+  
   #Make dataframe of sampled individuals parents and the sampled indv's birth year (so we can subset from loopy.list). Preserve column names for join
   #Would have to insert this into the sampling scheme loop ... 
-  sampled.indvs.rents.df <- sample.info %>% 
+  sampled.indvs.rents.df <- input.sample.info %>% 
     dplyr::select(mother.x, father.x, birth.year) %>% 
     arrange(birth.year)
   
   #Make a vector with all unique parents
   rents.vec <- unique(c(sampled.indvs.rents.df$mother.x, sampled.indvs.rents.df$father.x))
-  
+  length(rents.vec) #How many unique parents for sampled individuals?
   
   #Make a dataframe of all loopy.list dataframes from the oldest sampled indv's birth year until present
   b.y <- min(sampled.indvs.rents.df$birth.year)
@@ -346,21 +346,22 @@ find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_
     as_tibble() %>% 
     rename(grandmother = mother.x, grandfather = father.x) #The parents of the sampled indvidual's parents are the grandparents of the sampled individuals
   
-  #Split into separate dfs for maternal and paternal lineages. Keep the sampeld indv as the reference point.
-  mothers.grandparents.df <- loopy.list.merged.df %>% dplyr::filter(sex == "F") %>% 
+  #Split into separate dfs for maternal and paternal lineages. Keep the sampled indv as the reference point.
+  mothers.grandparents.df <- loopy.list.merged.df %>% dplyr::filter(sex == "F") %>%
     dplyr::select(mother = indv.name, 
                   mom.grandmother = grandmother, 
                   mom.grandfather = grandfather)
   
-  fathers.grandparents.df <- loopy.list.merged.df %>% dplyr::filter(sex == "M") %>% 
+  fathers.grandparents.df <- loopy.list.merged.df %>% dplyr::filter(sex == "M") %>%
     dplyr::select(father = indv.name,
                   dad.grandmother = grandmother,
                   dad.grandfather = grandfather)
   
   #Add grandparents to each sample dataframe
-  sample.info_w_grandparents <- sample.info %>% 
+  sample.info_w_grandparents <- input.sample.info %>% 
     as_tibble() %>% 
     rename(mother = mother.x, father = father.x) %>% 
+    distinct(indv.name, .keep_all = TRUE) %>% #Don't want individuals that were captured more than once, or they will be duplicated below
     inner_join(mothers.grandparents.df, by = "mother") %>% #add maternal grandmother info to the df, joining by mom
     inner_join(fathers.grandparents.df, by = "father") %>% #add paternal grandmother info to the df, joining by dad
     dplyr::select(indv.name, 
@@ -376,22 +377,25 @@ find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_
                   sampling.scheme) %>% #Keep most columns but remove the x from mother and father
     mutate(both.rents = paste0(mother, father), #Reduce parents to one variable
            both.mom.grandparents = paste0(mom.grandmother, mom.grandfather),
-           both.dad.grandparents = paste0(dad.grandmother, dad.grandfather)) %>% 
-    group_by(mother, father, birth.year) %>% #Filter for full sibs 
-    slice_sample(n = 1) %>% #Keep one sibling. The pairwise comparison script just keeps one indv from each litter, so we can do that here too. #QUESTION for JDS: is this appropriate? I think it is ... 
-    ungroup()
+           both.dad.grandparents = paste0(dad.grandmother, dad.grandfather)) 
+  
+  
+  ### 09/05/2023: REMOVED the below filter, which keeps just one indv from each litter.
+  #%>% group_by(mother, father, birth.year) %>% #Filter for full sibs 
+#    slice_sample(n = 1) %>% #Keep one sibling. The pairwise comparison script just keeps one indv from each litter, so we can do that here too. #QUESTION for JDS: is this appropriate? I think it is ... 
+#    ungroup()
   
   #Q for Ben or Anthony: is it good that we're only keeping one indv from each litter? Or can we easily integrate full sibs into the likelihood?
   #Check how many full sibs there are after filtering (should be 0)
-  sample.info_w_grandparents %>% 
-    group_by(mother, father, birth.year) %>%
-    summarize(n=n()) %>%
-    dplyr::filter(n>1)
+  # sample.info_w_grandparents %>% 
+  #   group_by(mother, father, birth.year) %>%
+  #   summarize(n=n()) %>%
+  #   dplyr::filter(n>1)
   
   #Save each combos of parents as vector objects to ease code later
-  both.parents.vec <- sample.info_w_grandparents$both.rents
-  both.mom.grandparents.vec <- sample.info_w_grandparents$both.mom.grandparents
-  both.dad.grandparents.vec<- sample.info_w_grandparents$both.dad.grandparents
+  both.parents.vec <- sample.info_w_grandparents$both.rents %>% unique()
+  both.mom.grandparents.vec <- sample.info_w_grandparents$both.mom.grandparents %>% unique()
+  both.dad.grandparents.vec<- sample.info_w_grandparents$both.dad.grandparents %>% unique()
   
   #Save dataframe of sampled aunt/uncles
   sampled_aunts_or_uncs.df <- sample.info_w_grandparents %>% dplyr::filter(both.rents %in%  both.mom.grandparents.vec | both.rents %in% both.dad.grandparents.vec) %>% #If this individual's parents are the grandparents of another sampled individual, then this indv is an aunt or uncle to another sampled indv.
@@ -406,9 +410,13 @@ find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_
   
   #Save dataframe of sampled nieces/nephews. Easier to split maternal and paternal and then join. First focus on maternal line.
   sampled_nieces_or_nephews_maternal.df <- sample.info_w_grandparents %>% dplyr::filter(both.mom.grandparents %in% both.parents.vec) %>% #If the indvidual's maternal grandparents are the parents to another sampled individual, then this is a niece/nephew
-    mutate(shared.relation = both.mom.grandparents) %>% #Save the shared relation for joins and for double-checking code
+    mutate(shared.relation = both.mom.grandparents,
+           lineage = "maternal") %>% #Save the shared relation for joins and for double-checking code
     dplyr::select(niece.nephew = indv.name, #Rename columns for joins
-                  shared.relation, 
+                  lineage,
+                  shared.relation,
+                  niece.nephew_mother = mother,
+                  niece.nephew_father = father,
                   niece.nephew_maternal.grandmother= mom.grandmother, 
                   niece.nephew_maternal.grandfather = mom.grandfather,
                   niece.nephew_birth.year = birth.year,
@@ -416,21 +424,28 @@ find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_
                   sampling.scheme)
   
   #Isolate paternal nieces and nephews, then join with maternal niece/nephews
-  all_sampled_nieces_or_nephews.df <- sample.info_w_grandparents %>% 
+  sampled_nieces_or_nephews_paternal.df <- sample.info_w_grandparents %>% 
     dplyr::filter(both.dad.grandparents %in% both.parents.vec) %>%  #If the individual's paternal grandparents are the parents to another sampled individual, then this is a niece/nephew
-    mutate(shared.relation = both.dad.grandparents) %>% #Save shared relation for join
+    mutate(shared.relation = both.dad.grandparents,
+           lineage = "paternal") %>% #Save shared relation for join
     dplyr::select(niece.nephew = indv.name, #Rename for join
-                  shared.relation, 
+                  lineage,
+                  shared.relation,
+                  niece.nephew_mother = mother,
+                  niece.nephew_father = father,
                   niece.nephew_paternal.grandmother = dad.grandmother, 
                   niece.nephew_paternal.grandfather = dad.grandfather,
                   niece.nephew_birth.year = birth.year,
                   niece.nephew_sex = sex,
-                  sampling.scheme) %>% 
-    full_join(sampled_nieces_or_nephews_maternal.df) #Join with maternal nieces and nephews. If related through grandparents in the maternal line, then the paternal line will be NA and vice versa.
+                  sampling.scheme) 
+  
+  all_sampled_nieces_or_nephews.df <- sampled_nieces_or_nephews_maternal.df %>% 
+    full_join(sampled_nieces_or_nephews_paternal.df, by = c("niece.nephew", "shared.relation", "niece.nephew_birth.year", "niece.nephew_sex", "sampling.scheme", "lineage", "niece.nephew_mother", "niece.nephew_father")) #Join with maternal nieces and nephews. If related through grandparents in the maternal line, then the paternal line will be NA and vice versa.
   
   #Combine niece/nephew dataframe with aunt/uncle dataframe
   aunt.unc_niece.nephew_pw.comps.all <- sampled_aunts_or_uncs.df %>% 
-    full_join(all_sampled_nieces_or_nephews.df) %>% #This is the key join. It makes a dataframe where we join by the shared relation, and then we should have the aunt/uncle and niece/nephew name and information in one dataframe, with the positives linked up.
+    full_join(all_sampled_nieces_or_nephews.df, by = c("shared.relation", "sampling.scheme")) %>% #This is the key join. It makes a dataframe where we join by the shared relation, and then we should have the aunt/uncle and niece/nephew name and information in one dataframe, with the positives linked up.
+    dplyr::filter(aunt.unc != niece.nephew_mother & aunt.unc != niece.nephew_father) %>% #Remove POPs
     mutate(aunt.unc_relation = as.character(ifelse(aunt.unc_sex == "F", "aunt", 
                                       ifelse(aunt.unc_sex == "M", "uncle", NA))),
            niece.nephew_relation = as.character(ifelse(niece.nephew_sex == "F", "niece",
@@ -441,12 +456,9 @@ find_aunt.uncle_nephew.niece_pairs <- function(sample.info = sample.df_all.info_
 
 draw.samples <- function(target.samples = target.samples){
 
-  sample.df_all.info_temp1 <- NULL #Dataframe with info for all years from EACH sampling scheme for ALL years
-  aunt.unc_niece.nephew_pw.comps.all_temp1 <- NULL #Dataframe with info for EACH sampling scheme for ALL years
-  
   for(i in sample.years){
   
-    sample.df_temp <- NULL #Df with sample info for EACH sampling scheme for EACH year
+    sample.df_temp <- NULL #Df with sample info for EACH sampling scheme for EACH year. So, reset at the beginning of each sampling year.
     
   #Extract the relevant row from the pop size dataframe
   pop.size.yr <- pop.size.tibble %>% dplyr::filter(year == i)
@@ -461,7 +473,7 @@ draw.samples <- function(target.samples = target.samples){
     sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i,
                                                  sampling.scheme = target.samples) %>%
       dplyr::filter(age.x == 0) %>%
-      dplyr::slice_sample(n = sample.size) %>%  # #Sample each year WITHOUT replacement
+      dplyr::slice_sample(n = sample.size) %>%  #Sample each year WITHOUT replacement
       as_tibble()
     
   } else if(target.samples == "sample.all.juvenile.ages"){ #If sampling juveniles
@@ -489,7 +501,7 @@ draw.samples <- function(target.samples = target.samples){
   
   
   #Identify aunt|uncle / niece|nephew pairs. Will save to be imported later.
-  aunt.unc_niece.nephew_pw.comps.all_temp1 <- find_aunt.uncle_nephew.niece_pairs(sample.info = sample.df_all.info_temp1, loopy.list = loopy.list)
+  aunt.unc_niece.nephew_pw.comps.all_temp1 <- find_aunt.uncle_nephew.niece_pairs(input.sample.info = sample.df_all.info_temp1, loopy.list = loopy.list) #Looks for aunt|uncle / nephew|niece pairs from EACH sampling scheme for EACH sample proportion over ALL sampling years
    
   return(invisible(list(sample.df_all.info_temp1, 
                         aunt.unc_niece.nephew_pw.comps.all_temp1,
