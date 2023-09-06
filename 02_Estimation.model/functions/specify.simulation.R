@@ -5,7 +5,7 @@ noLambda_model.validation.scenarios <- c("scenario_1_model.validation") #Include
 noLambda_annual.model.scenarios <- c("scenario_1.2.1", "scenario_1.2.2", "scenario_1.2.3", "scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4") #Includes a uniform prior for survival; no lambda
 narrowLambda_annual.model.scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_3.7.1", "scenario_4.4", "scenario_4.5", "scenario_4.6")
 wideLambda_annual.model.scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")
-narrowLambda_skip.model.scenarios <- c("scenario_3.1.2", "scenario_3.2.2", "scenario_3.3.2", "scenario_3.4.2", "scenario_3.5.2", "scenario_3.6.2", "scenario_4.1", "scenario_4.2", "scenario_4.3")
+narrowLambda_skip.model.scenarios <- c("scenario_3.1.2", "scenario_3.2.2", "scenario_3.3.2", "scenario_3.4.2", "scenario_3.5.2", "scenario_3.6.2", "scenario_3.7.2", "scenario_4.1", "scenario_4.2", "scenario_4.3")
 
 if(scenario %in% noLambda_model.validation.scenarios){
   jags_file = paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt") #Annual model w/o lambda but with informed prior on survival
@@ -28,11 +28,6 @@ if(objective == 1){
   PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
   PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
   mating.periodicity <- 1 #number of years between mating for females
-  
-  #------------------------- Set output file locations -------------------------#
-  MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.output/"
-  results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Model.results/"
-  
   
   #------------------------- Objective 1 common settings -------------------------#
   jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
@@ -77,11 +72,7 @@ if(objective == 1){
   #------------------------- Set input file locations -------------------------#
   PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
   mating.periodicity <- 1 #number of years between mating for females
-  
-  #------------------------- Set output file locations -------------------------# 
-  MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Nov2022/Model.output/"
-  results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Nov2022/Model.results/"
-  
+
   #------------------------- Objective 2 common settings -------------------------#
   cat(paste0("Testing population growth (Objective 2)"))
   model <- "annual.model" #For naming output files
@@ -92,14 +83,14 @@ if(objective == 1){
     #========================= Scenario 2.1 =========================
     
     cat(paste0(" with a naive model"))
+    jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
     
     if(scenario == "scenario_2.1.1"){
       #------------------------- Scenario 2.1.1: Small population decline; no lambda in model
       cat(paste0(" and a slightly decreasing population."))
       
       PopSim.lambda <- "lambda.slight.decrease"
-      jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
-      
+
       
     } else if(scenario == "scenario_2.1.2"){
       
@@ -107,8 +98,7 @@ if(objective == 1){
       cat(paste0(" and a slightly increasing population."))
       
       PopSim.lambda <- "lambda.slight.increase"
-      jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
-
+      
       
     } else if(scenario == "scenario_2.1.3"){
       
@@ -116,7 +106,6 @@ if(objective == 1){
       cat(paste0(" and a severely decreasing population."))
       
       PopSim.lambda <- "lambda.extreme" 
-      jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
 
     } else if(scenario == "scenario_2.1.4"){
       
@@ -124,27 +113,28 @@ if(objective == 1){
       cat(paste0(" and a stable population."))
 
       PopSim.lambda <- "lambda.1" # Can be lambda.1 or lambda.variable
-      jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
       
     }
   } else if(scenario %in% c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4")){
     
     #========================= Scenario 2.2 =========================
     cat(paste0(" with an adapted model and narrow prior"))
+    jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+    
     
     if(scenario == "scenario_2.2.1"){
       #------------------------- Scenario 2.2.1: Small population decline; lambda in model w/ tight prior
       cat(paste0(" and a slightly decreasing population."))
       
       PopSim.lambda <- "lambda.slight.decrease"
-      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+      
       
     } else if(scenario == "scenario_2.2.2"){
       #------------------------- Scenario 2.2.2: Small population growth; lambda in model w/ tight prior
       cat(paste0(" and a slightly increasing population."))
       
       PopSim.lambda <- "lambda.slight.increase"
-      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+      
       
     } else if(scenario == "scenario_2.2.3"){
       
@@ -152,8 +142,7 @@ if(objective == 1){
       cat(paste0(" and a severely decreasing population."))
       
       PopSim.lambda <- "lambda.extreme" 
-      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
-      
+
       
     } else if(scenario == "scenario_2.2.4"){
       
@@ -161,21 +150,23 @@ if(objective == 1){
       cat(paste0(" and a stable population."))
       
       PopSim.lambda <- "lambda.1" 
-      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
-      
-      
+
+            
     }
   } else if(scenario %in% c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")){
     
+    
     #========================= Scenario 2.3 =========================
     cat(paste0(" with an adapted model and diffuse prior"))
+    jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+    
     
     if(scenario == "scenario_2.3.1"){
       #------------------------- Scenario 2.3.1: Small population decline; lambda in model w/ wide prior
       cat(paste0(" and a slightly decreasing population."))
       
       PopSim.lambda <- "lambda.slight.decrease"
-      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+      
       
       
     } else if(scenario == "scenario_2.3.2"){
@@ -184,7 +175,7 @@ if(objective == 1){
       cat(paste0(" and a slightly increasing population."))
       
       PopSim.lambda <- "lambda.slight.increase"
-      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+      
       
 
       
@@ -194,7 +185,7 @@ if(objective == 1){
       cat(paste0(" and a severely decreasing population."))
       
       PopSim.lambda <- "lambda.extreme" 
-      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+      
       
     } else if(scenario == "scenario_2.3.4"){
       
@@ -202,16 +193,13 @@ if(objective == 1){
       cat(paste0(" and a stable population."))
       
       PopSim.lambda <- "lambda.1" 
-      jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+      
       
     }
   }
   
 } else if(objective == 3){
   ########################## Objective 3 #########################
-  #------------------------- Set output file locations -------------------------#
-  MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.output/"
-  results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.results/"
 
   #------------------------- Objective 3 common settings -------------------------#
   PopSim.lambda <- "lambda.1"
@@ -362,9 +350,6 @@ if(objective == 1){
   
 } else if(objective ==4){
   ########################## Objective 4 #########################
-  #------------------------- Set output file locations ------------------------- 
-  MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.output/"
-  results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/"
 
   #------------------------- Objective 4 common settings -------------------------
   cat(paste0("Testing aging error (Objective 4)"))

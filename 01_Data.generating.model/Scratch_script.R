@@ -1,7 +1,11 @@
 decoy_HSPs %>% dplyr::count(lineage, aunt.unc_sex)
 
-decoy_HSPs %>% dplyr::select(aunt.unc, niece.nephew, lineage, aunt.unc_relation, niece.nephew_relation, shared.relation, niece.nephew_mother, niece.nephew_father, niece.nephew_birth.year, niece.nephew_maternal.grandmother, niece.nephew_maternal.grandfather, niece.nephew_paternal.grandmother, niece.nephew_paternal.grandfather) %>%
-  View()
+decoy_HSPs %>% dplyr::select(aunt.unc, niece.nephew, lineage, aunt.unc_relation, niece.nephew_relation, shared.relation, niece.nephew_mother, niece.nephew_father, niece.nephew_birth.year, niece.nephew_maternal.grandmother, niece.nephew_maternal.grandfather, niece.nephew_paternal.grandmother, niece.nephew_paternal.grandfather)
+
+decoy_HSPs %>% dplyr::filter(sampling.scheme == "sample.ALL.ages", sample.prop == 2) %>% 
+  dplyr::count(iteration) %>% 
+  summarize(mean(n))
+  
 
 
 #dplyr::filter(!indv.name %in% sample.info_w_grandparents$mother & !indv.name %in% sample.info_w_grandparents$father) %>% 
