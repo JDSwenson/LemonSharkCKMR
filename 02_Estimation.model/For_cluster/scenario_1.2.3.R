@@ -41,20 +41,20 @@ n_yrs <- 90 #Number of years the simulation was run for
 
 ############Specify common input prefixes####################
 inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
-date.of.PopSim <- "03Aug2023" #Most common date for population simulations: 03Aug2023
+#date.of.PopSim <- "03Aug2023" #Most common date for population simulations: 03Aug2023
 date.of.PopSim <- "06Sep2023" #On 22Aug2023 I re-ran the stable population growth/annual breeding simulation, but identified aunt/niece and uncle/nephew pairs. Re-ran AGAIN on 06Sep2023 to iron out glitches with the code.
 
 ###########Specify which simulations to focus on########################
 #s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
 sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
 objective <- 1 #Can be any number for the objectives (1-5)
-scenario <- "scenario_1.2.2" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
+scenario <- "scenario_1.2.3" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
 sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
 #sample.scheme.vec <- c("sample.ALL.ages") #If wanting to just run one
 est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
 
-#Assume we're not including aunt/niece pairs, but need to define the object. The specify.simulation code will adjust this setting if we are including aunt/niece pairs.
-test.decoys <- "no"
+#Assume we're not including aunt/niece pairs, but need to define the object. The specify.simulation code will adjust this setting if we are including aunt/niece pairs and if we want to filter based on age at repro.
+test.decoys <- "yes"
 
 #Specify simulation details based on inputs above
 source("./02_Estimation.model/functions/specify.simulation.R")
@@ -223,6 +223,7 @@ if(sample.props == "all"){
     
     #-------------Construct pairwise comparison matrix--------------
     #Input is 1) a list of potential parents and offspring for each offspring birth year, and 2) a dataframe with all samples, filtered to remove full siblings
+      #ADDED inclusion of aunt|uncle and niece|nephew pairs 09/08/2023 to the build.pairwise function. Will only run if test.decoys = "yes"
     pairwise.out <- build.pairwise(filtered.samples.PO.list = PO.samps.list, filtered.samples.HS.df = HS.samps.df)
     
     #Save output as different dataframes; includes both HS and PO relationships (but can filter below)
@@ -230,19 +231,7 @@ if(sample.props == "all"){
     dad_comps.all <- pairwise.out[[2]]
     positives.HS <- pairwise.out[[3]]
 
-    
-    ###### NEED TO PICK UP FROM HERE AFTER 09/01/2023
-    #Need to adjust function to split out into maternal and paternal lines so I can alter the appropriate df (mom_comps.all or dad_comps.all).
-    #First, need to review the function that identifies aunt|uncle / niece|nephew pairs and see how it's determining aunt or uncle and which line they are related through.
-    
-    if(test.decoys == "yes"){
-      
-      fake.HSPs <- identify_imposters(imposters.df)
-      
-      positives.HS
-      
-      }
-    
+
     head(mom_comps.all)
     head(dad_comps.all)
     

@@ -303,6 +303,17 @@ positives.HS <- pairwise.df_HS.filt %>% filter(older.sib.mom == younger.sib.mom 
   mutate(shared.parent = ifelse(older.sib.mom == younger.sib.mom, "mother", "father"))
 #nrow(positives)
 
+
+if(test.decoys == "yes"){
+  
+  fake.HSPs <- identify_imposters(imposters.df)
+  positives.HS <- positives.HS %>% bind_rows(fake.HSPs)
+  
+}
+
+
+
+
 ####----------------Split dataframes into final form for model----------####
 #Sex-specific half-sib
 mom_positives.HS <- positives.HS %>% filter(shared.parent == "mother") %>% 
@@ -724,9 +735,25 @@ identify_imposters <- function(imposters.df = imposters.df){
    charlatan_HSPs <- imposters.df %>%
      dplyr::filter(iteration == iter,
                    sampling.scheme == s.scheme,
-                   sample.prop == sample.proportion) %>% 
-     dplyr::select(older.sib.birth = aunt.unc_birth.year,
-                   younger.sib.birth = niece.nephew_birth.year)
+                   sample.prop == sample.proportion) %>%
+     mutate(shared.parent = as.character(ifelse(lineage == "maternal", "mother", 
+                                   ifelse(lineage == "paternal", "father", NA))),
+            older.sib.age = as.numeric(NA), #Need this column for row bind, but it's not used for any calculation
+            younger.sib.age = as.numeric(NA) #Need this column for row bind, but it's not used for any calculation
+     ) %>% 
+     dplyr::select(older.sib = aunt.unc,
+                   older.sib.birth = aunt.unc_birth.year,
+                   older.sib.age,
+                   younger.sib = niece.nephew,
+                   younger.sib.birth.year = niece.nephew_birth.year,
+                   younger.sib.age,
+                   older.sib.mom = aunt.unc_mother,
+                   younger.sib.mom = aunt.unc_mother, #Not true, but need to make sure we get the right number of positives and negatives, so need this to be the same for the aunt|uncle and niece|nephew.
+                   older.sib.dad = aunt.unc_father,
+                   younger.sib.dad = aunt.unc_father, #Not true, but need to make sure we get the right number of positives and negatives, so need this to be the same for the aunt|uncle and niece|nephew.
+                   older.sib.birth = aunt.unc_birth.year,
+                   younger.sib.birth = niece.nephew_birth.year,
+                   shared.parent)
    
    if(filter.decoys == "yes"){
      
@@ -737,4 +764,129 @@ identify_imposters <- function(imposters.df = imposters.df){
    
   return(charlatan_HSPs)
 
-   }
+}
+
+
+
+
+
+
+calc.truth <- function(truth.df = truth.df){
+  #If there's no lambda in the model, then the true value of abundance is the mean over the estimated years. Here, we make this correction for the scenarios that do not include lambda in the model; for those that do, the values in truth.df are correct.
+  if(scenario == "scenario_1_model.validation" | 
+     scenario == "scenario_1.2.1" | 
+     scenario == "scenario_1.2.2" | 
+     scenario == "scenario_1.2.3"){
+    
+    #Make truth equal to mean over years
+    #est.year.calibrate is the first year of data aka T0. This is different than the object estimation.year, which is what we loop over and change.
+    Nf.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
+      summarize(mean.female.pop = mean(Female.adult.pop)) %>% 
+      pull(mean.female.pop)
+    
+    Nfb.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
+      summarize(mean.mothers = mean(Num.mothers)) %>% 
+      pull(mean.mothers)
+    
+    Nm.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
+      summarize(mean.male.pop = mean(Male.adult.pop)) %>% 
+      pull(mean.male.pop)
+    
+    Nmb.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
+      summarize(mean.fathers = mean(Num.fathers)) %>% 
+      pull(mean.fathers)
+    
+    truth.iter <- truth.iter %>% mutate(all.truth = ifelse(parameter == "Nf", Nf.truth, 
+                                                           ifelse(parameter == "Nfb1" | parameter == "Nfb2", Nfb.truth, 
+                                                                  ifelse(parameter == "Nm", Nm.truth, 
+                                                                         ifelse(parameter == "Nmb1" | parameter == "Nmb2", Nmb.truth, all.truth)))))
+    cat("\nUsing average abundance for truth\n")
+  } else cat("\nUsing year-specific truth, rather than average.\n")
+  
+  
+  
+  (truth.iter_all.params <- truth.df %>% dplyr::filter(sampling.scheme == s.scheme,
+                                                       iteration == iter,
+                                                       sample.prop == sample.proportion) %>% 
+      mutate(estimation.year = estimation.year) %>% 
+      dplyr::mutate(T0 = ref.yr + 1) %>% 
+      dplyr::select(-c(surv_min, surv_max, population.growth)) %>% 
+      bind_rows(truth.iter) %>% 
+      dplyr::select(parameter, all.truth, estimation.year, T0, iteration, sampling.scheme, sample.prop, seed) %>% #Change order of columns
+      dplyr::arrange(parameter))
+  
+  
+  results.temp <- model.summary2 %>% left_join(truth.iter_all.params, by = c("parameter", "iteration", "seed")) %>% 
+    dplyr::select(parameter,
+                  Q50,
+                  all.truth,
+                  HPD2.5,
+                  HPD97.5,
+                  mean,
+                  sd,
+                  Q2.5,
+                  Q97.5,
+                  Rhat,
+                  estimation.year,
+                  T0,
+                  sampling.scheme,
+                  iteration,
+                  neff,
+                  sample.prop,
+                  seed) %>% 
+    mutate(estimation.sim = ifelse(est == 1, "T0", 
+                                   ifelse(est == 2, "T0-10",
+                                          ifelse(est == 3, "present-5",
+                                                 ifelse(est == 4, "present", NA))))) %>% 
+    mutate(full.siblings = full.sibs,
+           diff.cohort_full.siblings = diff.cohort.sibs,
+           imposters = as.numeric(NA))
+  
+  if(test.decoys == "yes"){
+    
+    charlatan_HSPs <- imposters.df %>%
+      dplyr::filter(iteration == iter,
+                    sampling.scheme == s.scheme,
+                    sample.prop == sample.proportion)
+    
+    if(filter.decoys == "yes"){
+      
+      #See what would happen if we filtered them by age difference
+      charlatan_HSPs <- charlatan_HSPs %>% dplyr::filter(niece.nephew_birth.year - aunt.unc_birth.year < year.gap.threshold)
+      
+    }
+    
+    results.temp <- results.temp %>% mutate(imposters = nrow(charlatan_HSPs))
+
+  }
+  
+
+  
+  if(HS.only == "yes"){
+    
+    results.temp <- results.temp %>% 
+      mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.HSPs, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.HSPs, mom.HSPs + dad.HSPs)),
+             HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.HS, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
+             POPs_detected = NA,
+             POPs_expected = NA,
+             scenario = scenario)
+    
+  } else if(HS.only != "yes"){
+    
+    results.temp <- results.temp %>% 
+      mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.HSPs, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.HSPs, mom.HSPs + dad.HSPs)),
+             HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.HS, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
+             POPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.POPs, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.POPs, mom.POPs + dad.POPs)),
+             POPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.PO, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.PO, mom.Exp.PO + dad.Exp.PO)),
+             scenario = scenario)
+    
+  }
+  
+  return(results.temp)
+}
