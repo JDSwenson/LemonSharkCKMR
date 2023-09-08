@@ -1,3 +1,10 @@
+###NEXT TO DO: 
+# 1) Dig into the code in detail. Think the five year code is almost there.
+# 2) Make code that uses entire dataset to estimate abundance in each year
+# 2b) Might need to include a derived quantity that estimates Nt using N0 * lambda ^ t
+# 3) Run five year code on a loop
+
+
 #Load packages
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
 library(MASS)
@@ -45,6 +52,7 @@ samples.prefix <- "samples/samples.missassigned"
 PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
 model <- "multiennial.model"
 jags_params = c("Nf", "Nfb1", "Nfb2", "psi", "Nm", "survival", "lambda") #List the parameters to be estimated
+HS.only <- "yes"
 
 ########################## MCMC & model parameters #########################
 ni <- 40000 # number of post-burn-in samples per chain
@@ -56,15 +64,12 @@ jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt")
 
 
 #################### Simulation parameters ####################
-init.adult.pop.size <-
-  100 # CHANGED FROM 3000; Initial adult population size
-init.prop.female <-
-  0.5 # proportion of the initial population size that is female
-birth.sex.ratio <-
-  c(0.5, 0.5) # The probability that each baby is F:M - has to add up to 1
+init.adult.pop.size <- 100 # CHANGED FROM 3000; Initial adult population size
+init.prop.female <- 0.5 # proportion of the initial population size that is female
+birth.sex.ratio <- c(0.5, 0.5) # The probability that each baby is F:M - has to add up to 1
 YOY.survival <- 0.7 # CHANGED FROM 0.8; young of year survival
 juvenile.survival <- 0.8 # CHANGED FROM 0.9; juvenile survival
-Adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
+Adult.survival = adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 max.age <- maxAge <- 50 #set the maximum age allowed in the simulation
 
 repro.age <- 12 # set age of reproductive maturity
@@ -108,12 +113,12 @@ Num.years <- 50 # The number of years to run in the simulation beyond the burn i
 n_yrs <- burn.in + Num.years #Total number of simulation years
 
 #--------------------- Sampling parameters ---------------------
-sample.years <- c(n_yrs - c(20:0)) #Twenty years of sampling
+sample.years <- c(n_yrs - c(25:0)) #Twenty years of sampling
 
 
 ####-------------- Prep simulation ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 5  # 1 just to look at output     500 #Number of iterations to loop over
+iterations <- 2  # 1 just to look at output     500 #Number of iterations to loop over
 
 
 # Initialize arrays for saving results
@@ -200,93 +205,51 @@ for (iter in 1:iterations) {
   
   #Sample over every sampling year with the chosen sampling scheme. Output is the combined samples from all years.
   samples.out <- draw.samples(target.samples = target.samples) #Saves a list of output files
+  sample.size <- samples.out[[3]]
   
-  sample.df_all.info_temp1 <- samples.out[[1]] %>% #Saves all samples from THIS sampling scheme and THIS sample proportion from ALL sampling years
-    as_tibble()
+  sample.info <- samples.out[[1]] %>%
+    as_tibble() %>% 
+    mutate(
+      sample.size.yr = sample.size,
+      iteration = iter,
+      seed = rseed,
+      sample.prop = sample.prop
+    ) %>%
+    mutate(sample.size.total = sample.size.yr * length(sample.years))
   
-  aunt.unc_niece.nephew_pw.comps.all_temp1 <- samples.out[[2]] %>% #Saves all aunt|uncle / niece|nephew pairs from THIS sampling scheme and THIS sample proportion from ALL sampling years
-    as_tibble()
-  
-  sample.size <- samples.out[[3]] #Sames object sample.size for later use
-  
-  
-  #Calculate reference year
-  ref.year <- calculate.ref.year()
-  est.year.calibrate <- ref.year + 1
-  
-  sample.df_all.info_temp <- bind_rows(sample.df_all.info_temp, sample.df_all.info_temp1) #Iteratively stores sample info from EACH sampling scheme. Output object contains sample info for ALL samples from ALL sampling schemes for this iteration.
-  
-  aunt.unc_niece.nephew_pw.comps.all_temp <-
-    bind_rows(
-      aunt.unc_niece.nephew_pw.comps.all_temp,
-      aunt.unc_niece.nephew_pw.comps.all_temp1
-    ) #Iteratively stores aunt/niece info from EACH sampling scheme. Output object contains sample info for ALL samples from ALL sampling schemes for this iteration.
+  aunt.unc_niece.nephew_pw.comps.all <- samples.out[[2]] %>% 
+    as_tibble() %>% 
+    mutate(iteration = iter,
+           seed = rseed,
+           sample.prop = sample.prop)
+
 
 sampled.mothers <- unique(sample.df_all.info$mother.x)
 sampled.fathers <- unique(sample.df_all.info$father.x)
 
-#Compile results and summary statistics from simulation to compare estimates
-source("./03_Lemon_shark_data/functions/PopSim_truth.R")
 
-#Contains sample info for ALL samples from ALL sampling schemes for this iteration.
-#Rename columns for row bind with sample.info.
-sample.df_all.info <- sample.df_all.info_temp %>%
-  mutate(
-    sample.size.yr = sample.size,
-    #sampling.scheme = sampling.scheme,
-    iteration = iter,
-    seed = rseed,
-    sample.prop = sample.prop
-  ) %>%
-  mutate(sample.size.total = sample.size.yr * length(sample.years))
+#UPDATE 09/08/2023 Need to include a model fit to the full dataset either before or after the loop, then integrate the results.
 
-#Save info from ALL sampling schemes over ALL sampling years from every iteration. Output object contains sample info from ALL sampling schemes over ALL sampling years over ALL sample proportions.
-sample.info <- rbind(sample.info, sample.df_all.info) %>%
-  as_tibble()
-
-#Contains sample info for ALL samples from ALL sampling schemes for this iteration.
-#Add columns for row bind with sample.info.
-aunt.unc_niece.nephew_pw.comps.all  <-
-  aunt.unc_niece.nephew_pw.comps.all %>%
-  bind_rows(aunt.unc_niece.nephew_pw.comps.all_temp) %>%
-  mutate(iteration = iter,
-         seed = rseed,
-         sample.prop = sample.prop)
-
-#Save info from ALL sampling schemes over ALL sampling years from every iteration. Output object contains aunt|uncle / niece|nephew comparisons and info from ALL sampling schemes over ALL sampling years over ALL sample proportions for ALL iterations.
-aunt.unc_nephew.niece_info <-
-  rbind(aunt.unc_nephew.niece_info,
-        aunt.unc_niece.nephew_pw.comps.all) %>%
-  as_tibble()
-
-#Adds ref year to each sample depending on how it was collected
-samples.df <- sample.info %>% mutate(ref.yr = ref.year)
-
-estimation.years <- c(n_yrs-20, n_yrs - 10, n_yrs - 5, n_yrs)
-
-for(croc in 1:length(estimation.years)){
+#------------ Run loop of sampling over five year interval ------------------#
+for(block in 70:n_yrs){
   
-  block <- estimation.years[croc]
+  samples.df <- sample.info %>% dplyr::filter(capture.year >= block - 4 & capture.year <= block)
   
-  samples.df2 <- samples.df %>% dplyr::filter(capture.year > block - 5 & capture.year <= block)
+  #Calculate reference year
+  ref.year <- calculate.ref.year(sample.info = samples.df)
+  est.year.calibrate <- ref.year + 1
   
-  noDups.list <- split.dups(samples.df2)
-  first.capture <- noDups.list[[1]]
-  later.capture <- noDups.list[[2]]
+  #Compile results and summary statistics from simulation to compare estimates
+  source("./03_Lemon_shark_data/functions/PopSim_truth.R")
   
-  filter1.out <- filter.samples(later.capture) #Filter for full sibs
-  
-  PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
-  HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings i.e. kept one of the two
-  NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample if desired
-  full.sibs <- filter1.out[[4]] #Number of full siblings
-  diff.cohort.sibs <- filter1.out[[5]] #Number of full siblings from different cohorts
+  #Adds ref year to each sample depending on how it was collected
+  samples.df <- samples.df %>% mutate(ref.yr = ref.year)
   
   estimation.year <- block
   
   #-------------Construct pairwise comparison matrix--------------
   #Input is 1) a list of potential parents and offspring for each offspring birth year, and 2) a dataframe with all samples, filtered to remove full siblings
-  pairwise.out <- build.pairwise(filtered.samples.PO.list = PO.samps.list, filtered.samples.HS.df = HS.samps.df)
+  pairwise.out <- build.pairwise(filtered.samples.HS.df = samples.df)
   
   #Save output as different dataframes; includes both HS and PO relationships (but can filter below)
   mom_comps.all <- pairwise.out[[1]]  
@@ -347,11 +310,8 @@ for(croc in 1:length(estimation.years)){
                  names_to = "parameter",
                  values_to = "all.truth") %>% 
     bind_rows(lambda.truth.df) %>% 
-    mutate(sampling.scheme = s.scheme, 
-           sample.prop = sample.proportion,
-           T0 = est.year.calibrate)
+    mutate(T0 = est.year.calibrate)
   
-  #Calculate expectations
   #Define Nf and Nm as objects for calculations
   Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf") %>% pull(all.truth)
   
@@ -371,7 +331,6 @@ for(croc in 1:length(estimation.years)){
   (truth.iter_all.params <- truth.iter %>% 
       mutate(estimation.year = estimation.year) %>% 
       dplyr::mutate(T0 = ref.year + 1) %>% 
-      dplyr::select(-c(surv_min, surv_max)) %>% 
       dplyr::select(parameter, all.truth, estimation.year, T0, iteration, seed) %>% #Change order of columns
       dplyr::arrange(parameter))
   
@@ -389,21 +348,14 @@ for(croc in 1:length(estimation.years)){
                   Rhat,
                   estimation.year,
                   T0,
-                  sampling.scheme,
                   iteration,
                   neff,
-                  sample.prop,
                   seed) %>% 
-    mutate(estimation.sim = ifelse(est == 1, "T0", 
-                                   ifelse(est == 2, "T0-10",
-                                          ifelse(est == 3, "present-5", "present")))) %>% 
+    mutate(estimation.yr = block) %>% 
     mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.HSPs, 
                                     ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.HSPs, mom.HSPs + dad.HSPs)),
              HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.HS, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
-             POPs_detected = NA,
-             POPs_expected = NA,
-             scenario = scenario)
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)))
     
   results <- rbind(results, results.temp)
   
