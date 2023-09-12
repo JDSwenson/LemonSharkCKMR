@@ -89,6 +89,16 @@ results.raw %>% group_by(scenario) %>%
   mutate(percent_failed = (failed/(failed+passed))*100) %>% 
   arrange(desc(percent_failed))
 
+#What percent of convergence failures come from scenario2.3?
+results.raw %>% group_by(scenario) %>% 
+  summarize(failed = sum(Rhat > 1.01), 
+            passed = sum(Rhat <= 1.01)) %>% 
+  mutate(percent_failed = (failed/(failed+passed))*100) %>% 
+  arrange(desc(percent_failed)) %>% 
+  summarize(total.failed = sum(failed),
+            scenario2.3.failed = sum(failed[scenario %in% c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")])) %>% 
+  summarize(percent.failed.from.scenario2.3 = scenario2.3.failed/total.failed)
+
 #Filter out instances that failed to converge
 results <- results.raw %>% dplyr::filter(Rhat <= 1.01)
 ```
@@ -128,8 +138,6 @@ results %>% dplyr::filter(parameter %in% c("survival", "lambda")) %>%
 
 This is the initial model validation graph, where lambda was approximately stable in the population simulations and the model didn't include lambda, but rather averaged over abundance values.
 Still need to bring in aunt-niece pairs (09/06/2023)
-
-
 ```{r Obj1 data format and analysis, echo=FALSE, out.width = "120%"}
 colnames(results)
 results %>% dplyr::count(sample.prop)
@@ -139,10 +147,25 @@ obj1_results <- results %>% dplyr::filter(objective == "objective1") %>%
                                   ifelse(sample.prop == 1, "1.0% sampled",
                                          ifelse(sample.prop == 1.5, "1.5% sampled", 
                                                 ifelse(sample.prop == 2, "2.0% sampled", NA))))) %>% 
-  mutate(cv = (sd/mean) * 100)
+  mutate(cv = (sd/mean) * 100) %>% 
+  mutate(aunt.label = ifelse(scenario == "scenario_1.2.2", "Include aunt/niece",
+                             ifelse(scenario == "scenario_1.2.3", "Filter aunt/niece by age", "No aunt/niece")))
 
 obj1_results %>% dplyr::group_by(sample.prop.lab, sampling.scheme, parameter) %>% 
   summarize(n())
+
+
+obj1_results %>% dplyr::count(sample.prop)
+
+obj1_results %>% dplyr::count(imposters, scenario) %>% View()
+
+obj1_results %>% group_by(scenario, sampling.scheme) %>% 
+  summarize(median_rel.bias = median(relative_bias)) %>% 
+  arrange(desc(median_rel.bias))
+
+
+
+
 
 #-----------------------Prep samples-----------------------------
 #Specify sample file and read in -- just use stable population growth for now. Age distribution of samples should be similar across the simulations.
@@ -183,6 +206,22 @@ samples.df_all <- readRDS(file = sampFile.stable)
 #   dplyr::filter(mother.x == sib.rents$mother.x[1] & father.x == sib.rents$father.x[1]) %>% 
 #   dplyr::select(indv.name.x, indv.name.y, capture.year.x, capture.year.y)
 
+
+#-----------------------Quick graph check to change as needed--------------------------
+obj1_results %>% dplyr::filter(scenario == "scenario_1.2.1",
+                                         parameter == "survival") %>% 
+  ggplot(aes(x = relative_bias,
+             fill = sampling.scheme)) + 
+  geom_density(alpha = 0.6) + 
+  labs(x="Relative bias", y="Parameter") +
+#  theme_ridges() + 
+  facet_wrap(~sample.prop.lab) + 
+  theme_bw() +
+#  xlim(-100, 100) +
+  scale_fill_manual(values = cp) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+  theme_bw() +
+  theme(legend.position = "bottom")
 ```
 
 ```{r Obj 1 viz}
@@ -193,7 +232,8 @@ scales::show_col(cp)
 
 
 #-------------------Objective 1 Density plots-------------------------#
-fig2.a <- obj1_results %>% dplyr::filter(parameter != "survival") %>% 
+fig2.a <- obj1_results %>% dplyr::filter(scenario == "scenario_1.2.1",
+                                         parameter != "survival") %>% 
   ggplot(aes(x = relative_bias,
              y = parameter, 
              fill = sampling.scheme)) + 
@@ -206,20 +246,16 @@ fig2.a <- obj1_results %>% dplyr::filter(parameter != "survival") %>%
   scale_fill_manual(values = cp) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
   theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        plot.title = element_text(size=25),
-        legend.title = element_blank(),
+  theme(legend.title = element_blank(),
         legend.position = "none")
-
+  
+  
 fig2.a
 
-#ggsave("Figure_1a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
-fig2.b <- obj1_results %>% dplyr::filter(parameter != "survival") %>% 
+
+fig2.b <- obj1_results %>% dplyr::filter(scenario == "scenario_1.2.1",
+                                         parameter != "survival") %>% 
 ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
   geom_violin(aes(y=cv), draw_quantiles = 0.5) +
   #ylim(-50, 160) +
@@ -233,21 +269,19 @@ ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
   theme() +
   scale_y_log10() +
   theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        plot.title = element_text(size=25),
-        legend.title = element_blank(),
+  theme(legend.title = element_blank(),
         legend.position = "none")
 
 fig2.b
 
-#ggsave("Figure_1b_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 
-fig2.c <- obj1_results %>% dplyr::filter(parameter != "survival") %>% 
+breaks.2c = seq(50, 400, by = 50)
+labels.2c <- sprintf("%.0f", breaks.2c)
+labels.2c[c(1, 3, 5, 7)] <- ""
+
+fig2.c <- obj1_results %>% dplyr::filter(scenario == "scenario_1.2.1",
+                                         parameter != "survival") %>% 
   ggplot(aes(x = HSPs_detected, fill = sampling.scheme)) +
     geom_density(alpha = 0.6) + 
 #    ggtitle("C)") + 
@@ -257,23 +291,19 @@ fig2.c <- obj1_results %>% dplyr::filter(parameter != "survival") %>%
     scale_fill_manual(values = cp) +
     scale_color_manual(values = cp) +
     facet_wrap(~sample.prop.lab, scales = "free_y") + 
-  scale_x_continuous(breaks = c(50, 100, 150, 200, 250, 300, 350)) +
+  scale_x_continuous(breaks = breaks.2c,
+                     labels = labels.2c) +
+  scale_y_continuous(labels = scales::number_format(accuracy = 0.001)) +
   theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        plot.title = element_text(size=25),
-        legend.title = element_blank(),
-          legend.position = "bottom")
-
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
+  
+  
 fig2.c
 
-#ggsave("Figure_1c_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
-
-fig2.d <- obj1_results %>% dplyr::filter(parameter != "survival") %>% 
+fig2.d <- obj1_results %>% dplyr::filter(scenario == "scenario_1.2.1",
+                                         parameter != "survival") %>% 
   ggplot(aes(x = POPs_detected, fill = sampling.scheme)) +
     geom_density(alpha = 0.6) + 
     #ggtitle("D)") + 
@@ -285,28 +315,109 @@ fig2.d <- obj1_results %>% dplyr::filter(parameter != "survival") %>%
     scale_color_manual(values = cp) +
       ylab("Density") +
     facet_wrap(~sample.prop.lab, scales = "free_y") +
-   theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        plot.title = element_text(size=25),
-        legend.title = element_blank(),
-          legend.position = "bottom")
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
+
+#Old theme   
+# theme(axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size = 15),
+#         strip.text.y = element_text(size = 15),
+#         legend.text = element_text(size = 15),
+#         plot.title = element_text(size=25),
+#         legend.title = element_blank(),
+#           legend.position = "bottom")
 
 fig2.d
 
-ggsave("Figure_1d_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+#ggsave("Figure_1d_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
 
 
 ggarrange(fig2.a, fig2.b, fig2.c, fig2.d, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom") #OK to ignore warnings; the first two are values > the x axis limit in 1A); the 7998 missing values are from plotting POPs
 
-#ggsave("Figure_2ALL_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 500, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 5000, height = 3000, units = "px")
+ggsave("Figure_2ALL_2023.09.12.tiff", plot = last_plot(), device = "tiff", dpi = 500, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 5000, height = 3000, units = "px")
 
+
+
+#-------------------Aunt|uncle / niece|nephew comparison-------------------------#
+p_aunt.niece.bias <- obj1_results %>% dplyr::filter(aunt.label != "No aunt/niece",
+                               parameter == "Nf",
+                               sample.prop == 2) %>% 
+  mutate(aunt.label = factor(aunt.label, levels = c("Include aunt/niece", "Filter aunt/niece by age"))) %>% 
+  ggplot(aes(x = relative_bias,
+             fill = aunt.label)) + 
+  geom_density(alpha = 0.7) + 
+  labs(x="Relative bias", y="Density") +
+#  theme_ridges() + 
+  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) + 
+  theme_bw() +
+  xlim(-100, 100) +
+  scale_fill_manual(values = cp) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
+
+p_aunt.niece.bias
+
+#Plot of numbers of aunt/niece pairs in dataset
+bin.num <- obj1_results %>% summarize(max(imposters, na.rm = TRUE))
+
+p_aunt.niece.count <- obj1_results %>% dplyr::filter(aunt.label != "No aunt/niece",
+                               parameter == "Nf",
+                               imposters > 0) %>% 
+  mutate(aunt.label = factor(aunt.label, levels = c("Include aunt/niece", "Filter aunt/niece by age"))) %>% 
+  ggplot(aes(x = imposters,
+             fill = aunt.label)) + 
+  geom_histogram(alpha = 0.7, color = "black", binwidth = 1) + 
+  labs(x="Number of aunt/nice pairs", y="Iterations") +
+  facet_grid(rows = vars(sample.prop.lab), cols = vars(sampling.scheme)) + 
+  theme_bw() +
+#  xlim(-100, 100) +
+  scale_fill_manual(values = cp) +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        legend.position = "bottom")
+  
+p_aunt.niece.count
+
+ggarrange(p_aunt.niece.count, p_aunt.niece.bias, common.legend = TRUE, nrow = 2, legend = "bottom", heights = c(2, 1))
+
+ggsave("SuppFigure1_2023.09.12.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 2200, units = "px")
+
+
+#Table for aunt/niece comparisons
+obj1_results %>% dplyr::filter(aunt.label != "No aunt/niece",
+                               sample.prop == 2) %>% 
+  group_by(sampling.scheme, aunt.label) %>% 
+  summarize(median.relative.bias = median(relative_bias),
+            mean.imposters = round(mean(imposters, na.rm = TRUE), 0))
 
 ```
 
+
+
+
+
 ```{r Obj2 analysis and dataframe prep}
+#Read in truth values -- need to recalculate for naive scenarios
+truth.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Peer_review/Obj2.truth/" #Location of population simulation output files
+
+obj2truth.slight.decline <- readRDS(paste0(truth.location, "pop.size_03Aug2023_Seeds2022.04.15_lambda.slight.decrease_annual.breeding")) %>% 
+  mutate(population.growth = "slight decline")
+
+obj2truth.slight.increase <- readRDS(paste0(truth.location, "pop.size_03Aug2023_Seeds2022.04.15_lambda.slight.increase_annual.breeding")) %>% 
+  mutate(population.growth = "slight increase")
+
+obj2truth.severe.decline <- readRDS(paste0(truth.location, "pop.size_03Aug2023_Seeds2022.04.15_lambda.extreme_annual.breeding")) %>% 
+  mutate(population.growth = "severe decline")
+
+
+truth.obj2 <- bind_rows(obj2truth.slight.decline, obj2truth.slight.increase, obj2truth.severe.decline) %>% 
+  mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>% 
+  mutate(estimation.year = year)
+
+
 #---------------------Prep results---------------------------------
 #Set up vectors of population growth scenarios
 slight_decline_scenarios <- c("scenario_2.1.1", "scenario_2.2.1", "scenario_2.3.1")
@@ -333,8 +444,35 @@ obj2_results <- results %>% dplyr::filter(objective == "objective2") %>%
     mutate(model.label = factor(model.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
   mutate(estimation.sim.label = factor(estimation.sim, levels = c("T0-10", "T0", "present-5", "present"))) %>% 
   mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
-                                      ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample all juveniles", 
+                                      ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample juveniles", 
                                              ifelse(sampling.scheme == "target.YOY", "target YOY", NA))))
+
+#Update truth values for naive scenarios for changing population simulations
+obj2.naive.results.wrong.truth <- obj2_results %>% 
+  dplyr::filter(model.label == "naive", 
+                population.growth != "stable") %>% 
+  mutate(surv.truth = all.truth) %>% 
+  dplyr::select(-all.truth)
+
+obj2.naive.results.right.truth <- truth.obj2 %>% 
+  dplyr::filter(estimation.year %in% obj2.naive.results.wrong.truth$estimation.year) %>% 
+  dplyr::select(Male.adult.pop, Female.adult.pop, estimation.year, iteration, population.growth)
+
+
+obj2_results2 <- obj2.naive.results.wrong.truth %>%
+  left_join(obj2.naive.results.right.truth, by = c("population.growth", "iteration", "estimation.year")) %>% 
+  mutate(all.truth = ifelse(parameter == "Nf", Female.adult.pop,
+                            ifelse(parameter == "Nm", Male.adult.pop, 
+                                   ifelse(parameter == "survival", surv.truth, NA)))) %>% 
+  dplyr::select(-c(Male.adult.pop, Female.adult.pop)) %>% 
+  mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1))
+  
+
+obj2_results <- obj2_results %>% dplyr::filter(!scenario %in% c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3")) %>% 
+  bind_rows(obj2_results2) %>% 
+  mutate(model = ifelse(scenario %in% naive_scenarios, "naive", "adapted")) %>% 
+  mutate(model = factor(model, levels = c("naive", "adapted"), labels = c("naive", "adapted")))
+
 
 #-----------------------Prep samples-----------------------------
 #Specify sample file and read in -- just use stable population growth for now. Age distribution of samples should be similar across the simulations.
@@ -352,7 +490,23 @@ samples.df_all <- samples.df_all %>%
 
 #Get numbers of samples of each age class
 (sample.ages <- samples.df_all %>% group_by(sampling.scheme, age.x) %>% summarize(number = n()))
+
+
+#Calculate percent of lambda estimates that were correct in direction
+lambda.df <- obj2_results %>% dplyr::filter(parameter == "lambda",
+                                            scenario %in% narrow_lambda_scenarios) %>% 
+  mutate(status = ifelse(all.truth < 1 & Q50 < 1, "correct",
+                         ifelse(all.truth < 1 & Q50 > 1, "incorrect",
+                                ifelse(all.truth > 1 & Q50 > 1, "correct", 
+                                       ifelse(all.truth > 1 & Q50 < 1, "incorrect",
+                                              ifelse(all.truth == 1, "whatevs", NA)))))) %>% 
+  dplyr::filter(status != "whatevs", estimation.sim %in% c("T0", "present")) %>% 
+  group_by(population.growth, estimation.sim, sampling.scheme) %>% dplyr::summarize(percent.correct = round(sum(status == "correct")/n(), 1)) %>% 
+  mutate(percent.wrong = 1 - percent.correct)
   
+lambda.df4plot <- lambda.df %>% dplyr::rename(correct = percent.correct, wrong = percent.wrong) %>% 
+  pivot_longer(cols = c(correct, wrong), names_to = "status", values_to = "percent_summ") %>% 
+  mutate(percent.label = paste0(percent_summ*100), "%")
 ```
 
 ```{r Obj2 plots, echo=FALSE, out.width = "120%"}
@@ -364,13 +518,17 @@ brewer.pal.info #See different palette options from Rcolorbrewer
 cp2 <- brewer.pal(3, "RdYlBu") #Choose palette + number of colors
 scales::show_col(cp2)
 
+obj2_results %>% dplyr::count(model)
 
 
 #-------------------Figure 3-------------------------#
-(fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>%
+#DID NOT SAVE 09/12/2023
+(fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf"),
+                                          population.growth != "stable",
+                                          scenario %in% c(no_lambda_scenarios, "scenario_2.2.1", "scenario_2.2.2", "scenario_2.3.3")) %>% #Added scenario filter so we don't have one density plot per lambda prior
   ggplot(aes(x = relative_bias,
              y = estimation.sim.label, 
-             fill = model.label)) + 
+             fill = model)) + #Changed TO model from model.label
   geom_density_ridges(alpha = 0.6) + 
   labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
@@ -379,7 +537,7 @@ scales::show_col(cp2)
   #theme(strip.text.y = element_blank()) + 
   xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
-  scale_fill_manual(values = cp2, 
+  scale_fill_manual(values = cp2[c(1,3)], #Changed to subset for red and blue 
                     name = "Model") +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
     theme_bw()) +
@@ -390,7 +548,7 @@ scales::show_col(cp2)
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20))
 
-      ggsave("Figure_3.1_2023.08.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_3.1_2023.09.12.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 #Histogram of ages
@@ -402,7 +560,7 @@ samples.df_all %>% gghistogram(x = "birth.year", bins = num.bins, facet.by = "sa
   geom_vline(xintercept = c(85, 90), color = "coral2", linetype = "dashed", size = 1.1, alpha = 0.6) +
   scale_y_continuous(labels = label_comma(), expand = expansion(mult = c(0.01, .05)))
 
-ggsave("Figure_3.2_2023.08.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 6, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_3.2_2023.08.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 6, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
       
       #---------Figure S1----------------------------
@@ -412,32 +570,84 @@ ggsave("Figure_3.2_2023.08.16.tiff", plot = last_plot(), device = "tiff", dpi = 
 # cps1 <- brewer.pal(2, "PuOr") #Choose palette + number of colors
 # scales::show_col(cps1)
 
-plot.colors.figS1 <- c("lightblue1", "indianred3")
-scales::show_col(plot.colors.figS1)
-
-(figS1a <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
-                                         lambda.prior == "diffuse (0.80 - 1.20)") %>% 
+#LAMBDA AND SURVIVAL PLOT
+obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
+                                          !scenario %in% c(no_lambda_scenarios, "scenario_2.2.3", "scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.4")) %>% #Added scenario filter so we don't have one density plot per lambda prior
   ggplot(aes(x = relative_bias,
-             y = est.yr.lab, 
-             fill = sampling.scheme)) + 
+             y = estimation.sim.label, 
+             fill = parameter)) + #Changed TO model from model.label
   geom_density_ridges(alpha = 0.6, scale = 0.9) + 
   labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
-  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
-#  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
-  facet_wrap(~parameter) +
-   theme(strip.text = element_text(size = 15),
-         legend.position = "bottom",
-         legend.title = element_blank(),
-         legend.text = element_text(size = 15),
-         axis.text = element_text(size = 15),
-         axis.title = element_text(size = 20)) +
-  #       axis.title.y = element_blank(),
-  #       axis.text.y = element_blank(),
-  #       axis.ticks.y = element_blank()) + 
+  #facet_wrap(~sampling.scheme) + 
+  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme.label)) +
+  #theme(strip.text.y = element_blank()) + 
+  #xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = cp2[c(1,3)], #Changed to subset for red and blue 
+                    name = "Model") +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
-  #xlim(-100, 200) +
-  scale_fill_manual(values = cp))
+    theme_bw() +
+    theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20)) +
+  ggtitle(expression(paste("Estimates of ", lambda, " and ", phi)))
+
+plot.colors.figS1 <- c("lightblue1", "indianred3")
+scales::show_col(plot.colors.figS1)
+
+# (figS1a <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
+#                                          lambda.prior == "diffuse (0.80 - 1.20)") %>% 
+#   ggplot(aes(x = relative_bias,
+#              y = est.yr.lab, 
+#              fill = sampling.scheme)) + 
+#   geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#   labs(x="Relative bias", y="Estimation year") +
+# #  theme_ridges() + 
+#   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+# #  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
+#   facet_wrap(~parameter) +
+#    theme(strip.text = element_text(size = 15),
+#          legend.position = "bottom",
+#          legend.title = element_blank(),
+#          legend.text = element_text(size = 15),
+#          axis.text = element_text(size = 15),
+#          axis.title = element_text(size = 20)) +
+#   #       axis.title.y = element_blank(),
+#   #       axis.text.y = element_blank(),
+#   #       axis.ticks.y = element_blank()) + 
+#   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+#   #xlim(-100, 200) +
+#   scale_fill_manual(values = cp))
+
+
+#SURVIVAL PLOT
+# obj2_results %>% dplyr::filter(parameter %in% c("survival")) %>% #Added scenario filter so we don't have one density plot per lambda prior
+#   ggplot(aes(x = relative_bias,
+#              y = estimation.sim.label, 
+#              fill = model.label)) + #Changed TO model from model.label
+#   geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#   labs(x="Relative bias", y="Estimation year") +
+# #  theme_ridges() + 
+#   #facet_wrap(~sampling.scheme) + 
+#   facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme.label)) +
+#   #theme(strip.text.y = element_blank()) + 
+#   #xlim(-100, 100) +
+#   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+#   scale_fill_manual(values = cp2, #Changed to subset for red and blue 
+#                     name = "Model") +
+#   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+#     theme_bw() +
+#     theme(axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size=15),
+#         strip.text.y = element_text(size=15),
+#         legend.text = element_text(size = 15),
+#         legend.title = element_text(size = 20)) +
+#   ggtitle("Estimates of survival")
 
 #ggsave("Figure_S1_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
@@ -450,23 +660,20 @@ source(file = "~/R/working_directory/LemonSharkCKMR/03_DataViz/functions/Truth_c
 plot.colors.fig3.2 <- c("tomato3", "steelblue2")
 scales::show_col(plot.colors.fig3.2)
 
-(figS2 <- obj2_lam.results_4viz %>% 
-    mutate(est.yr = factor(est.yr),
-           degree.plot = ifelse(degree == "substantial decline", "severe decline", degree)) %>%
-    mutate(degree.plot = factor(degree.plot, levels = c("slight change", "severe decline"))) %>% 
-  mutate(perc.lab = paste0(percent.summ, "%")) %>% 
-  ggplot(aes(x = est.yr,
-             y = percent.summ, 
+(figS2 <- lambda.df4plot %>% 
+    dplyr::mutate(status = factor(status, levels = c("wrong", "correct"), labels = c("incorrect", "correct"))) %>% 
+  ggplot(aes(x = estimation.sim,
+             y = percent_summ, 
              fill = status,
-             pattern = est.yr)) + 
+             pattern = estimation.sim)) + 
   geom_bar(position = "stack", 
            stat = "identity", 
            color = "black") +
-    geom_text(aes(label = perc.lab),
+    geom_text(aes(label = percent.label),
                   size = 4, 
               fontface = "bold",
             position = position_stack(vjust = 0.5)) +
-  facet_grid(rows = vars(degree.plot), cols = vars(sampling.scheme)) +
+  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme)) +
     labs(x="\nEstimation year", y="Percent") +
     #This adjusts the x axis labels to stagger them. "points" is the unit by which to stagger, but could use others e.g. cm, in, etc.
     #theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
