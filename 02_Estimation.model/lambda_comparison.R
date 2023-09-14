@@ -1,3 +1,4 @@
+#Load packages
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
 library(MASS)
 library(popbio)
@@ -15,15 +16,17 @@ library(FSA)
 rm(list=ls())
 
 ######################### Specify common output prefixes #########################
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/"
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
 jags.model.prefix <- "CKMR.JAGS_"
-mom.comps.prefix <- "comparisons/mom.comps"
-dad.comps.prefix <- "comparisons/dad.comps"
+mom.comps.prefix <- "mom.comps"
+dad.comps.prefix <- "dad.comps"
 samples.prefix <- "samples/samples.missassigned"
 
 ######################### Specify other common settings #########################
-PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Nov2022/" #Location of population simulation output files
+PopSim.location <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Peer_review/" #Location of population simulation output files
 temp_location <- "~/R/working_directory/temp_results/" #Location to save temporary files in case run gets killed
 jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/JAGS_models/" #Location of JAGS models
 today <- format(Sys.Date(), "%d%b%Y") # Store date for use in file name
@@ -31,123 +34,63 @@ date.of.simulation <- today
 rseeds <- readRDS("rseeds_2022.04.15.rda")
 outSeeds <- "Seeds2022.04.15"
 
-
 adult.survival <- 0.825 # CHANGED FROM 0.825; Adult survival
 repro.age <- 12 # set age of reproductive maturity
 max.age <- 50 #set the maximum age allowed in the simulation
 n_yrs <- 90 #Number of years the simulation was run for
+
+############Specify common input prefixes####################
 inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
+date.of.PopSim <- "03Aug2023" #Most common date for population simulations: 03Aug2023
+date.of.PopSim <- "06Sep2023" #On 22Aug2023 I re-ran the stable population growth/annual breeding simulation, but identified aunt/niece and uncle/nephew pairs. Re-ran AGAIN on 06Sep2023 to iron out glitches with the code.
+
+###########Specify which simulations to focus on########################
+#s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
 sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
+objective <- 2 #Can be any number for the objectives (1-5)
+scenario <- "scenario_2.2.2" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
+#sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
+sample.scheme.vec <- c("sample.all.juvenile.ages") #If wanting to just run one
+est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
 
-#------------------------- Set input file locations -------------------------#
-PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
+#Assume we're not including aunt/niece pairs, but need to define the object. The specify.simulation code will adjust this setting if we are including aunt/niece pairs.
+test.decoys <- "no"
 
-#------------------------- Set output file locations -------------------------# 
- MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Nov2022/Model.output/"
- results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Nov2022/Model.results/"
- outSeeds <- "Seeds2022.04.15"
-
-#------------------------- Objective 2 common settings -------------------------#
- estimation.years <- c(n_yrs - 10, n_yrs - 5, n_yrs)
- fixed.parameters <- "none" #List the fixed parameters here; if none, then leave as "none".
- model <- "annual.model" #For naming output files
- source("./02_Estimation.model/functions/Obj2.functions.R") #Changed name of script that includes pairwise comparison and other functions
-
-
-#========================= Scenario 2.1 =========================
-#jags_file = paste0(jags.model_location, "HS.PO_noLambda_annual_model.txt") #Annual JAGS model w/o lambda
-
-#------------------------- Scenario 2.1.1: Small population decline; no lambda in model
-# PopSim.lambda <- "lambda.slight.decrease"
-# scenario<- "scenario_2.1.1" #For naming output files
-# jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-
-#------------------------- Scenario 2.1.2: Small population growth; no lambda in model
-# PopSim.lambda <- "lambda.slight.increase"
-# scenario<- "scenario_2.1.2" #For naming output files
-# jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-
-#------------------------- Scenario 2.1.3: Substantial population decline; no lambda in model
-# PopSim.lambda <- "lambda.extreme" 
-# scenario<- "scenario_2.1.3" #For naming output files
-# jags_params = c("Nf", "Nm", "survival") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-
-
-#========================= Scenario 2.2 =========================
-jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt")
-
-#------------------------- Scenario 2.2.1: Small population decline; lambda in model w/ tight prior
- PopSim.lambda <- "lambda.slight.decrease"
- scenario<- "scenario_2.2.1" #For naming output files
- jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
- estimated.parameters <- paste0(jags_params, collapse = ",")
-
-#------------------------- Scenario 2.2.2: Small population growth; lambda in model w/ tight prior
-# PopSim.lambda <- "lambda.slight.increase"
-# scenario<- "scenario_2.2.2" #For naming output files
-# jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-
-#------------------------- Scenario 2.2.3: Substantial population decline; lambda in model w/ tight prior
-# PopSim.lambda <- "lambda.extreme" 
-# scenario<- "scenario_2.2.3" #For naming output files
-# jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-
-
-#========================= Scenario 2.3 =========================
-#jags_file = paste0(jags.model_location, "HS.PO_wideLambda_annual_model.txt")
-
-#------------------------- Scenario 2.3.1: Small population decline; lambda in model w/ wide prior
-# PopSim.lambda <- "lambda.slight.decrease"
-# scenario<- "scenario_2.3.1" #For naming output files
-# jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-
-#------------------------- Scenario 2.3.2: Small population growth; lambda in model w/ wide prior
-# PopSim.lambda <- "lambda.slight.increase"
-# scenario<- "scenario_2.3.2" #For naming output files
-# jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-
-#------------------------- Scenario 2.3.3: Substantial population decline; lambda in model w/ wide prior
-# PopSim.lambda <- "lambda.extreme" 
-# scenario<- "scenario_2.3.3" #For naming output files
-# jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
-# estimated.parameters <- paste0(jags_params, collapse = ",")
-
-#========================== Sampling
-#------------------------- Target YOY -------------------------#
-# sampling.scheme <- "target.YOY" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-# date.of.PopSim <- "17Nov2022"
-# HS.only <- "yes" #Do we only want to filter HS relationships?
-# PO.only <- "no" #Do we only want to filter PO relationships?
-
-#------------------------- Sample all juveniles -------------------------#
- sampling.scheme <- "sample.all.juvenile.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
- date.of.PopSim <- "17Nov2022"
- HS.only <- "yes" #Do we only want to filter HS relationships?
- PO.only <- "no" #Do we only want to filter PO relationships?
-
-#------------------------- Sample all ages -------------------------#
-# sampling.scheme <- "sample.ALL.ages" # Can be sample.all.juvenile.ages, target.YOY, or sample.ALL.ages
-# date.of.PopSim <- "17Nov2022"
-# HS.only <- "no" #Do we only want to filter HS relationships?
-# PO.only <- "no" #Do we only want to filter PO relationships?
+#Specify simulation details based on inputs above
+source("./02_Estimation.model/functions/specify.simulation.R")
 
 ########################## Read in sampling and other dataframes #########################
-samples.df <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", sampling.scheme))
+#Read in sample dataframe and filter for the relevant sampling scheme
+samples.df_all <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
-samples.df %>% group_by(age.x) %>% summarize(n())
+#Check that the sample dataframe was appropriately filtered
+samples.df_all %>% group_by(sampling.scheme, age.x) %>% summarize(n())
 
-pop_size.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", sampling.scheme))
+#Read in dataframe with population size
+pop_size.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
-truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule, "_", sampling.scheme))
+pop_size.df %>% dplyr::filter(year == 85) %>% nrow() #Should be 500
+n_yrs <- max(pop_size.df$year) #Save number of simulation years
 
-n_yrs <- max(pop_size.df$year)
+pop_size.df %>% tail(15)
+pop_size.df %>% tail(15) %>% dplyr::select(adult.lambda)
+
+#Read in dataframe with true values (some of these will be recalculated later)
+truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
+
+#Double-check that things are cool - everything should be 500
+truth.df %>% group_by(sampling.scheme, sample.prop, parameter) %>% 
+  summarize(n())
+
+
+
+
+#######Compare this for increasing and declining populations###############
+truth.df %>% dplyr::filter(sampling.scheme == "sample.all.juvenile.ages", sample.prop == 1.5) %>% dplyr::group_by(parameter) %>% summarize(sd = sd(all.truth), mean = mean(all.truth), min = min(surv_min), max = max(surv_max))
+
+
+
+
 
 #Run the below twice: once after loading files from population increase, and once after loading files from population decrease
 
@@ -419,7 +362,7 @@ N85_estimates
 
 
 #Combine positive and negative lambda growth
-lambda.df.decrease <- bind_rows(N90_estimates, N50_estimates, N70_estimates, N80_estimates, N85_estimates)
+#lambda.df.decrease <- bind_rows(N90_estimates, N50_estimates, N70_estimates, N80_estimates, N85_estimates)
 lambda.df.increase <- bind_rows(N90_estimates, N50_estimates, N70_estimates, N80_estimates, N85_estimates)
 
 lambda.df.decrease <- lambda.df.decrease %>% mutate(pop.growth = "slight negative")
@@ -431,6 +374,8 @@ lambda.df <- lambda.df %>% mutate(relative_bias = ((avg.method.pop - true.adult.
 
 lambda.df %>% group_by(pop.growth, lambda.yrs) %>% 
   summarize(median(relative_bias))
+
+lambda.df %>% write_rds(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lambda.df")
 
 
 lambda.df %>% 
