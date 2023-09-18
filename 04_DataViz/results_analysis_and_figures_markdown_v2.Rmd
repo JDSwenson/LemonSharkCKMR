@@ -66,22 +66,26 @@ colnames(results.raw)
 results.raw %>% dplyr::count(sampling.scheme)
 results.raw %>% dplyr::count(estimation.year)
 results.raw %>% dplyr::count(sample.prop)
-results.raw %>% dplyr::count(sampling.scheme)
 results.raw %>% dplyr::count(estimation.sim)
+results.raw %>% dplyr::count(parameter)
 results.raw %>% dplyr::count(is.na(relative_bias))
 results.raw %>% dplyr::count(scenario) %>% View()
 results.raw %>% dplyr::filter(objective == "objective1") %>% 
   count(estimation.sim)
 results.raw %>% dplyr::count(scenario)
 results.raw %>% dplyr::count(objective)
-results.raw %>% dplyr::count(iteration) %>% View()
+results.raw %>% dplyr::count(iteration) %>% 
+  dplyr::filter(iteration == 1 | iteration == 500)
 #results.raw %>% dplyr::count(seed) %>% View()
+
+#Total number of individual simulations run
+results.raw %>% dplyr::filter(parameter == "Nf") %>% dplyr::count(sampling.scheme, estimation.sim, sample.prop, scenario) %>% 
+  summarize(sum(n))
 
 #Count number of times the model failed to converge
 results.raw %>% dplyr::filter(Rhat > 1.01) %>% 
   dplyr::count(scenario) %>% 
-  arrange(desc(n)) %>% 
-  View()
+  arrange(desc(n))
 
 results.raw %>% group_by(scenario) %>% 
   summarize(failed = sum(Rhat > 1.01), 
@@ -193,7 +197,6 @@ obj1_results %>% dplyr::filter(scenario == "scenario_1.2.1",
   theme_bw() +
   theme(legend.position = "bottom")
 ```
-
 
 ```{r Obj 1 viz}
 
@@ -374,8 +377,6 @@ obj1_results %>% dplyr::filter(aunt.label != "No aunt/niece",
 ```
 
 
-
-
 Format data for tests of population growth (Objective 2)
 ```{r Obj2 analysis and dataframe prep}
 #Need to recalculate truth for naive scenarios -- truth from simulation output was averaged, and we want year-specific truths.
@@ -474,21 +475,60 @@ samples.df_all <- samples.df_all %>%
 
 #Prep dataframe with percent of lambda estimates that were correct in each direction
 #UPDATE Sept 14, 2023: Don't think I'll include this figure
-lambda.df <- obj2_results %>% dplyr::filter(parameter == "lambda",
-                                            scenario %in% narrow_lambda_scenarios) %>% 
-  mutate(status = ifelse(all.truth < 1 & Q50 < 1, "correct",
-                         ifelse(all.truth < 1 & Q50 > 1, "incorrect",
-                                ifelse(all.truth > 1 & Q50 > 1, "correct", 
-                                       ifelse(all.truth > 1 & Q50 < 1, "incorrect",
-                                              ifelse(all.truth == 1, "whatevs", NA)))))) %>% #Some true values of lambda are 1 - don't want to use these
-  dplyr::filter(status != "whatevs", estimation.sim %in% c("T0", "present")) %>% 
-  group_by(population.growth, estimation.sim, sampling.scheme) %>% dplyr::summarize(percent.correct = round(sum(status == "correct")/n(), 1)) %>% 
-  mutate(percent.wrong = 1 - percent.correct)
+# lambda.df <- obj2_results %>% dplyr::filter(parameter == "lambda",
+#                                             scenario %in% narrow_lambda_scenarios) %>% 
+#   mutate(status = ifelse(all.truth < 1 & Q50 < 1, "correct",
+#                          ifelse(all.truth < 1 & Q50 > 1, "incorrect",
+#                                 ifelse(all.truth > 1 & Q50 > 1, "correct", 
+#                                        ifelse(all.truth > 1 & Q50 < 1, "incorrect",
+#                                               ifelse(all.truth == 1, "whatevs", NA)))))) %>% #Some true values of lambda are 1 - don't want to use these
+#   dplyr::filter(status != "whatevs", estimation.sim %in% c("T0", "present")) %>% 
+#   group_by(population.growth, estimation.sim, sampling.scheme) %>% dplyr::summarize(percent.correct = round(sum(status == "correct")/n(), 1)) %>% 
+#   mutate(percent.wrong = 1 - percent.correct)
+# 
+# #Prepare dataframe for plotting by pivoting
+# lambda.df4plot <- lambda.df %>% dplyr::rename(correct = percent.correct, wrong = percent.wrong) %>% 
+#   pivot_longer(cols = c(correct, wrong), names_to = "status", values_to = "percent_summ") %>% 
+#   mutate(percent.label = paste0(percent_summ*100), "%")
 
-#Prepare dataframe for plotting by pivoting
-lambda.df4plot <- lambda.df %>% dplyr::rename(correct = percent.correct, wrong = percent.wrong) %>% 
-  pivot_longer(cols = c(correct, wrong), names_to = "status", values_to = "percent_summ") %>% 
-  mutate(percent.label = paste0(percent_summ*100), "%")
+#Make sure we have the right number of all scenarios
+obj2_results %>% dplyr::count(scenario, sampling.scheme, model) %>% 
+  print(n = 36)
+
+#Results are more variable for the population decline scenario; it's bc there was more variation in the observed population growth. Check mean, sd, and range of lambda and survival truth
+obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival")) %>% 
+  group_by(population.growth, parameter) %>% 
+  summarize(mean.truth = mean(all.truth),
+            sd.truth = sd(all.truth),
+            min.truth = min(all.truth),
+            max.truth = max(all.truth)) %>% 
+  mutate(truth.range = max.truth - min.truth) %>% 
+  dplyr::select(population.growth,
+                parameter,
+                mean.truth, 
+                sd.truth,
+                truth.range) %>% 
+  arrange(parameter, population.growth)
+
+lambda.df <- readRDS(paste0(results_location, "lambda.df"))
+
+#Get more precise variation in lambda
+#Remove severe decline scenario bc survival was only changed for the last ten years of the simulation. So it gives mean values that are very similar to the slight decline scenario.
+pop.size_all <- readRDS(paste0(results_location, "pop.size_all")) %>% 
+  dplyr::filter(population.growth != "severe decline")
+
+#Summarize mean adult and mean total lambda across all years and iterations
+pop.size_all %>% group_by(population.growth, iteration) %>% 
+  summarize(mean.adult.lambda_iteration = mean(adult.lambda, na.rm = TRUE),
+            sd.adult.lambda_iteration = sd(adult.lambda, na.rm = TRUE),
+            mean.total.lambda_iteration = mean(total.lambda, na.rm = TRUE),
+            sd.total.lambda_iteration = sd(total.lambda, na.rm = TRUE)) %>% 
+  group_by(population.growth) %>% 
+  summarize(mean.adult.lambda = mean(mean.adult.lambda_iteration, na.rm = TRUE),
+            sd.adult.lambda = sd(sd.adult.lambda_iteration, na.rm = TRUE),
+            mean.total.lambda = mean(mean.total.lambda_iteration, na.rm = TRUE),
+            sd.total.lambda = sd(sd.total.lambda_iteration, na.rm = TRUE))
+
 ```
 
 ```{r Obj2 plots, echo=FALSE, out.width = "120%"}
@@ -499,8 +539,6 @@ options(scipen = 100000)
 brewer.pal.info #See different palette options from Rcolorbrewer
 cp2 <- brewer.pal(3, "RdYlBu") #Choose palette + number of colors
 scales::show_col(cp2)
-
-obj2_results %>% dplyr::count(model)
 
 ##################################################################################
 ####################### Objective 2 Main Figure ##################################
@@ -534,7 +572,7 @@ obj2_results %>% dplyr::count(model)
                                    face = "bold"))
 
 #Save each plot for Obj2 individually and combine in Affinity Designer
-ggsave("Figure_3.1_2023.09.14.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Figure_3.1_2023.09.14.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #-------------------Histogram of ages-----------------------#
 num.bins <- length(min(samples.df_all$birth.year):max(samples.df_all$birth.year))
@@ -556,7 +594,7 @@ age.dist_plot <- samples.df_all %>% gghistogram(x = "birth.year", bins = num.bin
 
   
 #Save each plot for Obj2 individually and combine in Affinity Designer
-ggsave("Fig2_age.dist_2023.09.14.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 6, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("Fig2_age.dist_2023.09.14.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 6, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
       
 ##################################################################################
@@ -584,7 +622,7 @@ obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
         legend.title = element_text(size = 20)) +
   ggtitle(expression(paste("Estimates of ", lambda)))
 
-ggsave("SuppFig_lambda_Obj2", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig_lambda_Obj2.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 # plot.colors.figS1 <- c("lightblue1", "indianred3")
 # scales::show_col(plot.colors.figS1)
@@ -642,7 +680,6 @@ ggsave("SuppFig_lambda_Obj2", plot = last_plot(), device = "tiff", dpi = 300, wi
 #ggsave("Figure_S1_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #-------------------Lambda comparison: avg vs indv-----------------------#
-lambda.df <- readRDS(paste0(results_location, "lambda.df"))
 lambda.df %>% 
   ggplot(aes(x = factor(lambda.yrs), y = relative_bias, fill = factor(pop.growth))) +
 # geom_violin(draw_quantiles = 0.5, position = position_dodge(0.75), width = 4) +
@@ -671,14 +708,23 @@ lambda.df %>%
 yr0 <- 1
 yrs <- 90
 
-pop_size.df <- pop_size.df %>% mutate(juv.pop.size = population_size - Total.adult.pop)
+pop.size_all <- pop.size_all %>% mutate(juv.pop.size = population_size - Total.adult.pop)
 
 #Initialize df for saving values
 adult.lam_90 = total.lam_90 = juv.lam_90 <- NULL
 
-for(i in 1:max(pop_size.df$iteration)){
+
+#NEED TO REFINE THIS 09/18/2023
+for(pg in 1:4){
+  pop.g.levels <- pop.size_all %>% distinct(population.growth) %>% pull(population.growth)
+  
+  pop.g <- pop.g.levels[pg]
+  
+  pop.g.df <- pop.size_all %>% dplyr::filter(population.growth == "pop.g")
+    
+for(i in 1:max(pop.size_all$iteration)){
   #Subset for iteration of interest
-  iter <- pop_size.df %>% dplyr::filter(iteration == i)
+  iter <- pop.g.df %>% dplyr::filter(iteration == i)
   
   #Change calculation of lambda
   mean.adult.lam_90 <- (iter$Total.adult.pop[yrs]/iter$Total.adult.pop[1])^(1/(yrs - yr0))
@@ -691,6 +737,11 @@ for(i in 1:max(pop_size.df$iteration)){
   juv.lam_90 <- c(juv.lam_90, mean.juv.lam_90)
   
 }
+
+  
+
+}
+
 
 #Compare lambda for difference age classes
 N90_lambda <- data.frame(total.lam_90, adult.lam_90, juv.lam_90) %>% 
@@ -710,41 +761,42 @@ N90_lambda %>% pivot_longer(cols = c(total_v_adult, total_v_juv, adult_v_juv),
 #-------------------Plot of Lambda direction-----------------------#
 #Sept 14, 2023: Think I'll leave this figure out ... 
 #How often did the model predict the direction of lambda correctly? 
-plot.colors.fig3.2 <- c("tomato3", "steelblue2")
-scales::show_col(plot.colors.fig3.2)
-
-(Supp_lambda.direction <- lambda.df4plot %>% 
-    dplyr::mutate(status = factor(status, levels = c("wrong", "correct"), labels = c("incorrect", "correct"))) %>% 
-  ggplot(aes(x = estimation.sim,
-             y = percent_summ, 
-             fill = status,
-             pattern = estimation.sim)) + 
-  geom_bar(position = "stack", 
-           stat = "identity", 
-           color = "black") +
-    geom_text(aes(label = percent.label),
-                  size = 4, 
-              fontface = "bold",
-            position = position_stack(vjust = 0.5)) +
-  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme)) +
-    labs(x="\nEstimation year", y="Percent") +
-    #This adjusts the x axis labels to stagger them. "points" is the unit by which to stagger, but could use others e.g. cm, in, etc.
-    #theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
-#  facet_wrap(~sampling.scheme) +
-  #xlim(-100, 200) +
-  scale_fill_manual(values = plot.colors.fig3.2)) +
-  theme_bw() +
-    theme(axis.text = element_text(size = 15),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size=15),
-        strip.text.y = element_text(size=15),
-        legend.text = element_text(size = 15),
-        legend.title = element_blank())
+# plot.colors.fig3.2 <- c("tomato3", "steelblue2")
+# scales::show_col(plot.colors.fig3.2)
+# 
+# (Supp_lambda.direction <- lambda.df4plot %>% 
+#     dplyr::mutate(status = factor(status, levels = c("wrong", "correct"), labels = c("incorrect", "correct"))) %>% 
+#   ggplot(aes(x = estimation.sim,
+#              y = percent_summ, 
+#              fill = status,
+#              pattern = estimation.sim)) + 
+#   geom_bar(position = "stack", 
+#            stat = "identity", 
+#            color = "black") +
+#     geom_text(aes(label = percent.label),
+#                   size = 4, 
+#               fontface = "bold",
+#             position = position_stack(vjust = 0.5)) +
+#   facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme)) +
+#     labs(x="\nEstimation year", y="Percent") +
+#     #This adjusts the x axis labels to stagger them. "points" is the unit by which to stagger, but could use others e.g. cm, in, etc.
+#     #theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
+# #  facet_wrap(~sampling.scheme) +
+#   #xlim(-100, 200) +
+#   scale_fill_manual(values = plot.colors.fig3.2)) +
+#   theme_bw() +
+#     theme(axis.text = element_text(size = 15),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size=15),
+#         strip.text.y = element_text(size=15),
+#         legend.text = element_text(size = 15),
+#         legend.title = element_blank())
 
 
 #ggsave("Figure_S2_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 9, units = "in")
 
 ```
+
 
 Format data for tests of multiennial breeding (Objective 3)
 ```{r Obj3 data prep}
@@ -760,7 +812,7 @@ annual_scenarios <- c("scenario_3.7.1", "scenario_3.7.2")
 biennial_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2", "scenario_3.6.1", "scenario_3.6.2")
 triennial_scenarios <- c("scenario_3.5.1", "scenario_3.5.2")
 
-#Create labels needed for plotting
+#Create labels for plotting
 obj3_results <- results %>% dplyr::filter(objective == "objective3") %>% 
   mutate(psi.label = ifelse(scenario %in% psi1_scenarios & !scenario %in% annual_scenarios, "1",
                             ifelse(scenario %in% psi1stoch_scenarios, "1*",
@@ -779,7 +831,7 @@ obj3_results <- results %>% dplyr::filter(objective == "objective3") %>%
                                              ifelse(sampling.scheme == "target.YOY", "target YOY", NA)))) %>% 
     mutate(estimation.sim.label = factor(estimation.sim, levels = c("T0-10", "T0", "present-5", "present")))
 
-
+#Check one scenario if desired
 obj3_results %>% dplyr::filter(scenario == "scenario_3.6.2") %>% 
   dplyr::filter(parameter == "psi" | parameter == "Nf" | parameter == "Nfb1")
 ```
@@ -791,8 +843,10 @@ cp3 <- brewer.pal(3, "RdBu") #Choose palette + number of colors
 cp3.sub <- cp3[c(1,3)]
 scales::show_col(cp3.sub)
 
-#---------Figure 4----------------------------
-#---------Objective 3-------------------------#
+##################################################################################
+####################### Objective 3 Main Figure ##################################
+##################################################################################
+#-------------------Objective 3 Density plots of relative bias-----------------------#
 (fig4a <- obj3_results %>% dplyr::filter(parameter == "Nf",
                                          breeding.schedule != "triennial",
                                          estimation.sim.label %in% c("T0", "present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
@@ -814,8 +868,6 @@ scales::show_col(cp3.sub)
   ggtitle("a) Intermittent breeding")
 
 #      ggsave("Figure_4a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
-
-      
 
 
   #------------------Figure S3--------------------------

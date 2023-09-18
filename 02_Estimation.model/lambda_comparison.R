@@ -42,38 +42,87 @@ n_yrs <- 90 #Number of years the simulation was run for
 ############Specify common input prefixes####################
 inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
 date.of.PopSim <- "03Aug2023" #Most common date for population simulations: 03Aug2023
-date.of.PopSim <- "06Sep2023" #On 22Aug2023 I re-ran the stable population growth/annual breeding simulation, but identified aunt/niece and uncle/nephew pairs. Re-ran AGAIN on 06Sep2023 to iron out glitches with the code.
+#date.of.PopSim <- "06Sep2023" #On 22Aug2023 I re-ran the stable population growth/annual breeding simulation, but identified aunt/niece and uncle/nephew pairs. Re-ran AGAIN on 06Sep2023 to iron out glitches with the code.
 
 ###########Specify which simulations to focus on########################
 #s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
 sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
 objective <- 2 #Can be any number for the objectives (1-5)
-scenario <- "scenario_2.2.2" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
-#sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
 sample.scheme.vec <- c("sample.all.juvenile.ages") #If wanting to just run one
 est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
 
 #Assume we're not including aunt/niece pairs, but need to define the object. The specify.simulation code will adjust this setting if we are including aunt/niece pairs.
 test.decoys <- "no"
 
-#Specify simulation details based on inputs above
-source("./02_Estimation.model/functions/specify.simulation.R")
 
 ########################## Read in sampling and other dataframes #########################
 #Read in sample dataframe and filter for the relevant sampling scheme
-samples.df_all <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
+#samples.df_all <- readRDS(file = paste0(PopSim.location, "sample.info_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
 #Check that the sample dataframe was appropriately filtered
-samples.df_all %>% group_by(sampling.scheme, age.x) %>% summarize(n())
+#samples.df_all %>% group_by(sampling.scheme, age.x) %>% summarize(n())
 
 #Read in dataframe with population size
-pop_size.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
+scenario <- "scenario_2.2.2"
 
-pop_size.df %>% dplyr::filter(year == 85) %>% nrow() #Should be 500
-n_yrs <- max(pop_size.df$year) #Save number of simulation years
+#Specify simulation details based on inputs above
+source("./02_Estimation.model/functions/specify.simulation.R")
 
-pop_size.df %>% tail(15)
-pop_size.df %>% tail(15) %>% dplyr::select(adult.lambda)
+pop_size_increase.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule)) %>% 
+  mutate(population.growth = "slightly increasing")
+
+pop_size_increase.df %>% dplyr::filter(year == 85) %>% nrow() #Should be 500
+n_yrs <- max(pop_size_increase.df$year) #Save number of simulation years
+
+pop_size_increase.df %>% tail(15)
+pop_size_increase.df %>% tail(15) %>% dplyr::select(adult.lambda)
+
+
+#Read in dataframe with population size
+scenario <- "scenario_2.2.1" 
+
+#Specify simulation details based on inputs above
+source("./02_Estimation.model/functions/specify.simulation.R")
+
+pop_size_decrease.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule)) %>% 
+  mutate(population.growth = "slightly decreasing")
+
+pop_size_decrease.df %>% dplyr::filter(year == 85) %>% nrow() #Should be 500
+n_yrs <- max(pop_size_decrease.df$year) #Save number of simulation years
+
+pop_size_decrease.df %>% tail(15)
+pop_size_decrease.df %>% tail(15) %>% dplyr::select(adult.lambda)
+
+#Read in dataframe with population size
+scenario <- "scenario_2.2.3" 
+
+#Specify simulation details based on inputs above
+source("./02_Estimation.model/functions/specify.simulation.R")
+
+pop_size_severe.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule)) %>% 
+  mutate(population.growth = "severe decline")
+
+pop_size_severe.df %>% dplyr::filter(year == 85) %>% nrow() #Should be 500
+n_yrs <- max(pop_size_severe.df$year) #Save number of simulation years
+
+
+#Read in dataframe with population size
+scenario <- "scenario_2.2.4"
+
+#Specify simulation details based on inputs above
+source("./02_Estimation.model/functions/specify.simulation.R")
+
+pop_size_stable.df <- readRDS(file = paste0(PopSim.location, "pop.size_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule)) %>% 
+  mutate(population.growth = "stable")
+
+pop_size_stable.df %>% dplyr::filter(year == 85) %>% nrow() #Should be 500
+n_yrs <- max(pop_size_stable.df$year) #Save number of simulation years
+
+
+
+pop.size_all <- bind_rows(pop_size_increase.df, pop_size_decrease.df, pop_size_severe.df, pop_size_stable.df)
+
+pop.size_all %>% write_rds(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/pop.size_all")
 
 #Read in dataframe with true values (some of these will be recalculated later)
 truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
