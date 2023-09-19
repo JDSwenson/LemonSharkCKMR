@@ -113,7 +113,7 @@ sample.years <- c(n_yrs - c(20:0)) #Twenty years of sampling
 
 ####-------------- Prep simulation ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 2  # 1 just to look at output     500 #Number of iterations to loop over
+iterations <- 2
 
 
 # Initialize arrays for saving results
@@ -227,9 +227,7 @@ for (iter in 1:iterations) {
 sampled.mothers <- unique(sample.info$mother.x)
 sampled.fathers <- unique(sample.info$father.x)
 
-
-#UPDATE 09/08/2023 Need to include a model fit to the full dataset either before or after the loop, then integrate the results.
-
+#First year of estimation will be four years after the first year of sampling
 first.est.year <- sample.years + 4
 
 #------------ Run loop of sampling over five year interval ------------------#
@@ -610,3 +608,17 @@ saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simu
 saveRDS(mom.comps.tibble, file = paste0(results_location, mom.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model))
 
 saveRDS(dad.comps.tibble, file = paste0(results_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model))
+
+#-------------Quick viz of results--------------#
+results2 %>% ggplot(aes(x = relative_bias,
+           y = parameter)) + 
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Relative bias", y="Parameter") +
+  #  theme_ridges() + 
+  facet_wrap(~time_window) + 
+  theme_bw() +
+  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+  theme_bw() +
+  theme(legend.title = element_blank(),
+        legend.position = "none")
