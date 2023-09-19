@@ -183,7 +183,7 @@ simulate.pop <- function(init.pop.size, init.prop.female, Nages, mating.periodic
       Adult.survival <- Sa
       juvenile.survival <- Sj
       
-      cat(paste0("Adult survival is ", round(Adult.survival, 3), ";\nJuvenile survival is ", round(juvenile.survival, 3), ";\nPopulation will now increase in size"))
+      cat(paste0("Adult survival is ", round(Adult.survival, 3), ";\nJuvenile survival is ", round(juvenile.survival, 3), ";\nPopulation will now decrease in size"))
       
     }
     

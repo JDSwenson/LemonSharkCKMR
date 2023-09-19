@@ -5,7 +5,7 @@
 #ref.vec <- ref.tibble %>% distinct(ref.yr) %>% pull(ref.yr)
 
 
-  (surv_mean <- exp(mean(log(sVec[ref.year:(n_yrs - 1)]))))
+  (surv_mean <- exp(mean(log(sVec[est.year.calibrate:estimation.year]))))
   
   #Arithemetic mean of survival
   (surv_mean_AM <- round(mean(sVec[ref.year:(n_yrs-1)]), 4))
@@ -26,8 +26,8 @@
 # surv_mean <- (prod(sVec2))^(1/delta)
 
 #surv_mean <- (sVec[n_yrs]/sVec[ref.value])^(1/(n_yrs - ref.value))
-surv_min <- min(sVec[ref.year:(n_yrs-1)]) #Minimum survival over sample period
-surv_max <- max(sVec[ref.year:(n_yrs-1)]) #Maximum survival over sample period
+surv_min <- min(sVec[est.year.calibrate:(n_yrs-1)]) #Minimum survival over sample period
+surv_max <- max(sVec[est.year.calibrate:(n_yrs-1)]) #Maximum survival over sample period
 
 
 #psi
@@ -56,4 +56,6 @@ ref.tibble2 <- tibble(survival = surv_mean,
 
 true.values <- ref.tibble2 %>% pivot_longer(cols = c(survival, psi), names_to = "parameter", values_to = "all.truth") %>% 
   mutate(iteration = iter,
-         seed = rseed)
+         seed = rseed,
+         estimation.year = estimation.year,
+         T0 = est.year.calibrate)

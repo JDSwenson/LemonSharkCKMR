@@ -9,159 +9,8 @@ rm(list=ls())
 #############################################################################
 ###############Load posterior samples - Objective 2##########################
 #############################################################################
-#Doesn't seem like DIC can tell the models apart, at least not when estimating for yr 90. Can't really tell for any of the sampling scenarios. 
-#If we want to try to do some model comparison, then I may need to re-run everything (bc I only saved the models for yr 90) and potentially try WAIC. Need to be more organized about this next time.
-#If wanting to reevaluate all of this to draw conclusions, skip ahead and focus on/start with the extreme scenario. That's the better example and the code is more streamlined.
 
-
-#Scenario slight population change
-(scenario_2.1_post.all <- list.files(path = objective_2_MCMC_location,
-                                       recursive = FALSE,
-                                       pattern = "*scenario_2.1_*",
-                                       full.names = TRUE))
-
-(scenario_2.2.1_post.all <- list.files(path = objective_2_MCMC_location,
-                                     recursive = FALSE,
-                                     pattern = "*scenario_2.2.1_*",
-                                     full.names = TRUE))
-
-(scenario_2.3.1_post.all <- list.files(path = objective_2_MCMC_location,
-                                       recursive = FALSE,
-                                       pattern = "*scenario_2.3.1_*",
-                                       full.names = TRUE))
-
-#Slight population change
-s2.1.1Y <- readRDS(scenario_2.1_post.all[5])
-s2.1.1J_1 <- readRDS(scenario_2.1_post.all[6])
-s2.1.1J_2 <- readRDS(scenario_2.1_post.all[7])
-s2.1.1J_2.subset <- s2.1.1J_2[501:1000] #First 500 list elements are blank
-s2.1.1J <- append(s2.1.1J_1, s2.1.1J_2.subset)
-s2.1.1A <- readRDS(scenario_2.1_post.all[4])
-
-s2.2.1Y <- readRDS(scenario_2.2.1_post.all[3])
-s2.2.1J_1 <- readRDS(scenario_2.2.1_post.all[5])
-s2.2.1J_2 <- readRDS(scenario_2.2.1_post.all[6])
-s2.2.1J_2.subset <- s2.2.1J_2[501:1000] #First 500 list elements are blank
-s2.2.1J <- append(s2.2.1J_1, s2.2.1J_2.subset)
-
-s2.3.1Y <- readRDS(scenario_2.3.1_post.all[1])
-s2.3.1J_1 <- readRDS(scenario_2.3.1_post.all[9])
-s2.3.1J_2 <- readRDS(scenario_2.3.1_post.all[10])
-s2.3.1J_2.subset <- s2.3.1J_2[501:1000] #First 500 list elements are blank
-s2.3.1J <- append(s2.3.1J_1, s2.3.1J_2.subset)
-s2.3.1A <- readRDS(scenario_2.3.1_post.all[4])
-
-#Specify file to extract DIC from
-file <- s2.3.1Y
-
-DIC.temp <- NULL
-DIC.df <- NULL
-
-for(i in 1:length(file)){
-  DIC.temp <- tibble(DIC_2.3.1 = file[[i]]$DIC, iteration = i, 
-                     sampling.scheme = "target YOY")
-  
-  DIC.df <- bind_rows(DIC.df, DIC.temp)
-}
-
-#DIC.YOY_2.1.1 <- DIC.df
-#DIC.YOY_2.2.1 <- DIC.df
-#DIC.YOY_2.3.1 <- DIC.df
-
-#DIC.juvs_2.1.1 <- DIC.df
-#DIC.juvs_2.2.1 <- DIC.df
-#DIC.juvs_2.3.1 <- DIC.df
-
-#DIC.adults_2.1.1 <- DIC.df
-#DIC.adults_2.3.1 <- DIC.df
-
-DIC.YOY_slight <- DIC.YOY_2.1.1 %>% left_join(DIC.YOY_2.2.1, by = c("iteration", "sampling.scheme")) %>% 
-  left_join(DIC.YOY_2.3.1, by = c("iteration", "sampling.scheme"))
-
-DIC.juvs_slight <- DIC.juvs_2.1.1 %>% left_join(DIC.juvs_2.2.1, by = c("iteration", "sampling.scheme")) %>% 
-  left_join(DIC.juvs_2.3.1, by = c("iteration", "sampling.scheme"))
-
-DIC.adults_slight <- DIC.adults_2.1.1 %>% 
-  left_join(DIC.adults_2.3.1, by = c("iteration", "sampling.scheme"))
-
-
-
-#Extreme population change
-(scenario_2.2.2_post.all <- list.files(path = objective_2_MCMC_location,
-                                       recursive = FALSE,
-                                       pattern = "*scenario_2.2.2_*",
-                                       full.names = TRUE))
-
-(scenario_2.3.2_post.all <- list.files(path = objective_2_MCMC_location,
-                                       recursive = FALSE,
-                                       pattern = "*scenario_2.3.2_*",
-                                       full.names = TRUE))
-
-#Extreme population change
-s2.1.2Y <- readRDS(scenario_2.1_post.all[3])
-s2.1.2J <- readRDS(scenario_2.1_post.all[2])
-s2.1.2A <- readRDS(scenario_2.1_post.all[1])
-
-s2.2.2Y <- readRDS(scenario_2.2.2_post.all[3])
-s2.2.2J <- readRDS(scenario_2.2.2_post.all[2])
-s2.2.2A <- readRDS(scenario_2.2.2_post.all[1])
-
-s2.3.2Y <- readRDS(scenario_2.3.2_post.all[3])
-s2.3.2J <- readRDS(scenario_2.3.2_post.all[2])
-s2.3.2A <- readRDS(scenario_2.3.2_post.all[1])
-
-DIC.df.temp = DIC.temp.1 = DIC.temp.2 = DIC.temp.3 <- NULL
-DIC.YOY_extreme = DIC.juvs_extreme = DIC.adults_extreme <- NULL
-
-for(i in 1:500){
-  #YOY
-  DIC.temp.1 <- tibble(DIC_2.1.2 = s2.1.2Y[[i]]$DIC, iteration = i, 
-                     sampling.scheme = "target YOY")
-
-  DIC.temp.2 <- tibble(DIC_2.2.2 = s2.2.2Y[[i]]$DIC, iteration = i, 
-                       sampling.scheme = "target YOY")
-
-  DIC.temp.3 <- tibble(DIC_2.3.2 = s2.3.2Y[[i]]$DIC, iteration = i, 
-                       sampling.scheme = "target YOY")
-
-  DIC.df.temp <- DIC.temp.1 %>% left_join(DIC.temp.2, by = c("iteration", "sampling.scheme")) %>% 
-    left_join(DIC.temp.3, by = c("iteration", "sampling.scheme"))
-  
-  DIC.YOY_extreme <- bind_rows(DIC.YOY_extreme, DIC.df.temp)
-  
-  #juvs
-  DIC.temp.1 <- tibble(DIC_2.1.2 = s2.1.2J[[i]]$DIC, iteration = i, 
-                       sampling.scheme = "sample all juvenile ages")
-  
-  DIC.temp.2 <- tibble(DIC_2.2.2 = s2.2.2J[[i]]$DIC, iteration = i, 
-                       sampling.scheme = "sample all juvenile ages")
-  
-  DIC.temp.3 <- tibble(DIC_2.3.2 = s2.3.2J[[i]]$DIC, iteration = i, 
-                       sampling.scheme = "sample all juvenile ages")
-  
-  DIC.df.temp <- DIC.temp.1 %>% left_join(DIC.temp.2, by = c("iteration", "sampling.scheme")) %>% 
-    left_join(DIC.temp.3, by = c("iteration", "sampling.scheme"))
-
-  DIC.juvs_extreme <- bind_rows(DIC.juvs_extreme, DIC.df.temp)
-  
-  
-  #adults
-  #juvs
-  DIC.temp.1 <- tibble(DIC_2.1.2 = s2.1.2A[[i]]$DIC, iteration = i, 
-                       sampling.scheme = "sample all juvenile ages")
-  
-  DIC.temp.2 <- tibble(DIC_2.2.2 = s2.2.2A[[i]]$DIC, iteration = i, 
-                       sampling.scheme = "sample all juvenile ages")
-  
-  DIC.temp.3 <- tibble(DIC_2.3.2 = s2.3.2A[[i]]$DIC, iteration = i, 
-                       sampling.scheme = "sample all juvenile ages")
-  
-  DIC.df.temp <- DIC.temp.1 %>% left_join(DIC.temp.2, by = c("iteration", "sampling.scheme")) %>% 
-    left_join(DIC.temp.3, by = c("iteration", "sampling.scheme"))
-  
-  DIC.adults_extreme <- bind_rows(DIC.adults_extreme, DIC.df.temp)
-  
-}
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.output/"
 
 
 
@@ -169,97 +18,216 @@ for(i in 1:500){
 
 
 
+################################################################################
+############################## Read in files ###################################
+################################################################################
+
+#------------------------Population growth----------------------
+#Slight population decline, narrow lambda prior: scenario_2.2.1
+#All juvs
+slight.pop.decline_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.1_annual.model_sample.all.juvenile.ages"))
+
+#Just YOY
+slight.pop.decline_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.1_annual.model_target.YOY"))
+
+#all ages
+slight.pop.decline_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.1_annual.model_sample.ALL.ages"))
 
 
+#Slight population increase, narrow lambda prior: scenario_2.2.2
+#All juvs
+slight.pop.increase_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.2_annual.model_sample.all.juvenile.ages"))
+
+#Just YOY
+slight.pop.increase_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.2_annual.model_target.YOY"))
+
+#All ages
+slight.pop.increase_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.2_annual.model_sample.ALL.ages"))
 
 
+#Severe population decrease - wide lambda prior: scenario_2.3.3
+#All juvs
+severe.pop.decrease_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.3.3_annual.model_sample.all.juvenile.ages"))
+
+#Just YOY
+severe.pop.decrease_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.3.3_annual.model_target.YOY"))
+
+#All ages
+severe.pop.decrease_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.3.3_annual.model_sample.ALL.ages"))
 
 
+#Stable population
+#All juvs
+stable.pop_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_08Sep2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.4_annual.model_sample.all.juvenile.ages"))
+
+#Just YOY
+stable.pop_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_08Sep2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.4_annual.model_target.YOY"))
+
+#All ages
+stable.pop_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_08Sep2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_2.2.4_annual.model_sample.ALL.ages"))
 
 
-#-----------------Cross correlation among parameters-------------------#
+#------------------------Multiennial breeding----------------------
+### 100% biennial breeders: scenario_3.1.2
+#All juvs
+biennial_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_3.1.2_multiennial.model_sample.all.juvenile.ages"))
+
+#Just YOY
+biennial_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_3.1.2_multiennial.model_target.YOY"))
+
+#All ages
+biennial_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_06Aug2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_3.1.2_multiennial.model_sample.ALL.ages"))
+
+### 100% annual breeders: scenario_3.7.2
+#All juvs
+annual_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_08Sep2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_3.7.2_multiennial.model_sample.all.juvenile.ages"))
+
+#Just YOY
+annual_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_08Sep2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_3.7.2_multiennial.model_target.YOY"))
+
+#All ages
+annual_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_08Sep2023_Seeds2022.04.15_1.5_prop.sampled_thin20_draw40000_burn50000_scenario_3.7.2_multiennial.model_sample.ALL.ages"))
+
+
+################################################################################
+################## Cross correlation among parameters ##########################
+################################################################################
+
+#-----------------Population growth-------------------
 cross.temp <- NULL
-s3.1.1_cross.list.A = s3.1.1_cross.list.J = s3.1.1_cross.list.Y <- list()
+s2.2.1_cross.list.A = s2.2.1_cross.list.J = s2.2.1_cross.list.Y <- list()
+s2.2.2_cross.list.A = s2.2.2_cross.list.J = s2.2.2_cross.list.Y <- list()
+s2.3.3_cross.list.A = s2.3.3_cross.list.J = s2.3.3_cross.list.Y <- list()
+s2.2.4_cross.list.A = s2.2.4_cross.list.J = s2.2.4_cross.list.Y <- list()
 
-for(cr in 1:length(s3.1.1A)){
-  s3.1.1_cross.list.A[[cr]] <- crosscorr(s3.1.1A[[cr]])
+
+for(cr in 1:length(slight.pop.decline_all.juvs)){
+  s2.2.1_cross.list.A[[cr]] <- crosscorr(slight.pop.decline_all.ages[[cr]]$samples)
+  s2.2.1_cross.list.J[[cr]] <- crosscorr(slight.pop.decline_all.juvs[[cr]]$samples)
+  s2.2.1_cross.list.Y[[cr]] <- crosscorr(slight.pop.decline_target.YOY[[cr]]$samples)
   
-  s3.1.1_cross.list.J[[cr]] <- crosscorr(s3.1.1J[[cr]])
+  s2.2.2_cross.list.A[[cr]] <- crosscorr(slight.pop.increase_all.ages[[cr]]$samples)
+  s2.2.2_cross.list.J[[cr]] <- crosscorr(slight.pop.increase_all.juvs[[cr]]$samples)
+  s2.2.2_cross.list.Y[[cr]] <- crosscorr(slight.pop.increase_target.YOY[[cr]]$samples)
   
-  s3.1.1_cross.list.Y[[cr]] <- crosscorr(s3.1.1Y[[cr]])
+  s2.3.3_cross.list.A[[cr]] <- crosscorr(severe.pop.decrease_all.ages[[cr]]$samples)
+  s2.3.3_cross.list.J[[cr]] <- crosscorr(severe.pop.decrease_all.juvs[[cr]]$samples)
+  s2.3.3_cross.list.Y[[cr]] <- crosscorr(severe.pop.decrease_target.YOY[[cr]]$samples)
+  
+  s2.2.4_cross.list.A[[cr]] <- crosscorr(stable.pop_all.ages[[cr]]$samples)
+  s2.2.4_cross.list.J[[cr]] <- crosscorr(stable.pop_all.juvs[[cr]]$samples)
+  s2.2.4_cross.list.Y[[cr]] <- crosscorr(stable.pop_target.YOY[[cr]]$samples)
+  
+  
 }
 
 ##Mean cross-correlation values
-(s3.1.1_cross.mean.A <- Reduce("+", s3.1.1_cross.list.A) / length(s3.1.1_cross.list.A))
+(s2.2.1_cross.mean.A <- as.data.frame(Reduce("+", s2.2.1_cross.list.A) / length(s2.2.1_cross.list.A)) %>% 
+  mutate(sampling.scheme = "sample all ages", scenario = "scenario_2.2.1") %>% 
+  rownames_to_column(var = "parameter"))
 
-(s3.1.1_cross.mean.J <- Reduce("+", s3.1.1_cross.list.J) / length(s3.1.1_cross.list.J))
+(s2.2.1_cross.mean.J <- as.data.frame(Reduce("+", s2.2.1_cross.list.J) / length(s2.2.1_cross.list.J)) %>% 
+    mutate(sampling.scheme = "sample all juveniles", scenario = "scenario_2.2.1") %>% 
+  rownames_to_column(var = "parameter"))
 
-(s3.1.1_cross.mean.Y <- Reduce("+", s3.1.1_cross.list.Y) / length(s3.1.1_cross.list.Y))
+(s2.2.1_cross.mean.Y <- as.data.frame(Reduce("+", s2.2.1_cross.list.Y) / length(s2.2.1_cross.list.Y)) %>% 
+    mutate(sampling.scheme = "target YOY", scenario = "scenario_2.2.1") %>% 
+  rownames_to_column(var = "parameter"))
 
 
-#Mostly interested in comparing scenarios 3.2.2 and 3.3.2 (both have lambda; the first has 5% non-conformists and the second has 0 non-conformists)
-#----------------------------Objective 3.2.2------------------------------#
-(scenario_3.2.2_post.all <- list.files(path = objective_3_MCMC_location,
-                                       recursive = FALSE,
-                                       pattern = "*1.5prop.*scenario_3.2.2_*",
-                                       full.names = TRUE))
+(s2.2.2_cross.mean.A <- as.data.frame(Reduce("+", s2.2.2_cross.list.A) / length(s2.2.2_cross.list.A)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_2.2.2") %>% 
+  rownames_to_column(var = "parameter"))
 
-s3.2.2A <- readRDS(scenario_3.2.2_post.all[1])
-s3.2.2J <- readRDS(scenario_3.2.2_post.all[2])
-s3.2.2Y <- readRDS(scenario_3.2.2_post.all[3])
+(s2.2.2_cross.mean.J <- as.data.frame(Reduce("+", s2.2.2_cross.list.J) / length(s2.2.2_cross.list.J)) %>% 
+    mutate(sampling.scheme = "sample all juveniles", scenario = "scenario_2.2.2") %>% 
+    rownames_to_column(var = "parameter"))
 
-#-----------------Cross correlation among parameters-------------------#
+(s2.2.2_cross.mean.Y <- as.data.frame(Reduce("+", s2.2.2_cross.list.Y) / length(s2.2.2_cross.list.Y)) %>% 
+    mutate(sampling.scheme = "target YOY", scenario = "scenario_2.2.2") %>% 
+    rownames_to_column(var = "parameter"))
+
+
+(s2.3.3_cross.mean.A <- as.data.frame(Reduce("+", s2.3.3_cross.list.A) / length(s2.3.3_cross.list.A)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_2.3.3") %>% 
+    rownames_to_column(var = "parameter"))
+
+(s2.3.3_cross.mean.J <- as.data.frame(Reduce("+", s2.3.3_cross.list.J) / length(s2.3.3_cross.list.J)) %>% 
+    mutate(sampling.scheme = "sample all juveniles", scenario = "scenario_2.3.3") %>% 
+    rownames_to_column(var = "parameter"))
+
+(s2.3.3_cross.mean.Y <- as.data.frame(Reduce("+", s2.3.3_cross.list.Y) / length(s2.3.3_cross.list.Y)) %>% 
+    mutate(sampling.scheme = "target YOY", scenario = "scenario_2.3.3") %>% 
+    rownames_to_column(var = "parameter"))
+
+
+(s2.2.4_cross.mean.A <- as.data.frame(Reduce("+", s2.2.4_cross.list.A) / length(s2.2.4_cross.list.A)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_2.2.4") %>% 
+    rownames_to_column(var = "parameter"))
+
+(s2.2.4_cross.mean.J <- as.data.frame(Reduce("+", s2.2.4_cross.list.J) / length(s2.2.4_cross.list.J)) %>% 
+    mutate(sampling.scheme = "sample all juveniles", scenario = "scenario_2.2.4") %>% 
+    rownames_to_column(var = "parameter"))
+
+(s2.2.4_cross.mean.Y <- as.data.frame(Reduce("+", s2.2.4_cross.list.Y) / length(s2.2.4_cross.list.Y)) %>% 
+    mutate(sampling.scheme = "target YOY", scenario = "scenario_2.2.4") %>% 
+    rownames_to_column(var = "parameter"))
+
+pop.growth_all <- bind_rows(s2.2.1_cross.mean.A, s2.2.1_cross.mean.J, s2.2.1_cross.mean.Y, s2.2.2_cross.mean.A, s2.2.2_cross.mean.J, s2.2.2_cross.mean.Y, s2.3.3_cross.mean.A, s2.3.3_cross.mean.J, s2.3.3_cross.mean.Y, s2.2.4_cross.mean.A, s2.2.4_cross.mean.J, s2.2.4_cross.mean.Y)
+
+
+#saveRDS(pop.growth_all, file = paste0(MCMC_location, "cross.corr_pop.growth_all_20230919"))
+
+
+#-----------------Multiennial breeding-------------------
 cross.temp <- NULL
-s3.2.2_cross.list.A = s3.2.2_cross.list.J = s3.2.2_cross.list.Y <- list()
+s3.1.2_cross.list.A = s3.1.2_cross.list.J = s3.1.2_cross.list.Y <- list()
+s3.7.2_cross.list.A = s3.7.2_cross.list.J = s3.7.2_cross.list.Y <- list()
 
-for(cr in 1:length(s3.2.2A)){
-  s3.2.2_cross.list.A[[cr]] <- crosscorr(s3.2.2A[[cr]])
+
+for(cr in 1:length(biennial_all.juvs)){
+  s3.1.2_cross.list.A[[cr]] <- crosscorr(biennial_all.ages[[cr]]$samples)
+  s3.1.2_cross.list.J[[cr]] <- crosscorr(biennial_all.juvs[[cr]]$samples)
+  s3.1.2_cross.list.Y[[cr]] <- crosscorr(biennial_target.YOY[[cr]]$samples)
   
-  s3.2.2_cross.list.J[[cr]] <- crosscorr(s3.2.2J[[cr]])
+  s3.7.2_cross.list.A[[cr]] <- crosscorr(annual_all.ages[[cr]]$samples)
+  s3.7.2_cross.list.J[[cr]] <- crosscorr(annual_all.juvs[[cr]]$samples)
+  s3.7.2_cross.list.Y[[cr]] <- crosscorr(annual_target.YOY[[cr]]$samples)
   
-  s3.2.2_cross.list.Y[[cr]] <- crosscorr(s3.2.2Y[[cr]])
+  
 }
 
 ##Mean cross-correlation values
-(s3.2.2_cross.mean.A <- Reduce("+", s3.2.2_cross.list.A) / length(s3.2.2_cross.list.A))
+(s3.1.2_cross.mean.A <- as.data.frame(Reduce("+", s3.1.2_cross.list.A) / length(s3.1.2_cross.list.A)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_3.1.2") %>% 
+    rownames_to_column(var = "parameter"))
 
-(s3.2.2_cross.mean.J <- Reduce("+", s3.2.2_cross.list.J) / length(s3.2.2_cross.list.J))
+(s3.1.2_cross.mean.J <- as.data.frame(Reduce("+", s3.1.2_cross.list.J) / length(s3.1.2_cross.list.J)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_3.1.2") %>% 
+    rownames_to_column(var = "parameter"))
 
-(s3.2.2_cross.mean.Y <- Reduce("+", s3.2.2_cross.list.Y) / length(s3.2.2_cross.list.Y))
-
-
-
-
-#-----------------------Objective 3.3.2-----------------------------#
-(scenario_3.3.2_post.all <- list.files(path = objective_3_MCMC_location,
-                                       recursive = FALSE,
-                                       pattern = "*1.5prop.*scenario_3.3.2_*",
-                                       full.names = TRUE))
-
-s3.3.2A <- readRDS(scenario_3.3.2_post.all[1])
-s3.3.2J <- readRDS(scenario_3.3.2_post.all[2])
-s3.3.2Y <- readRDS(scenario_3.3.2_post.all[3])
+(s3.1.2_cross.mean.Y <- as.data.frame(Reduce("+", s3.1.2_cross.list.Y) / length(s3.1.2_cross.list.Y)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_3.1.2") %>% 
+    rownames_to_column(var = "parameter"))
 
 
-#-----------------Cross correlation among parameters-------------------#
-cross.temp <- NULL
-s3.3.2_cross.list.A = s3.3.2_cross.list.J = s3.3.2_cross.list.Y <- list()
+(s3.7.2_cross.mean.A <- as.data.frame(Reduce("+", s3.7.2_cross.list.A) / length(s3.7.2_cross.list.A)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_3.7.2") %>% 
+    rownames_to_column(var = "parameter"))
 
-for(cr in 1:length(s3.3.2A)){
-  s3.3.2_cross.list.A[[cr]] <- crosscorr(s3.3.2A[[cr]])
-  
-  s3.3.2_cross.list.J[[cr]] <- crosscorr(s3.3.2J[[cr]])
-  
-  s3.3.2_cross.list.Y[[cr]] <- crosscorr(s3.3.2Y[[cr]])
-}
+(s3.7.2_cross.mean.J <- as.data.frame(Reduce("+", s3.7.2_cross.list.J) / length(s3.7.2_cross.list.J)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_3.7.2") %>% 
+    rownames_to_column(var = "parameter"))
 
-##Mean cross-correlation values
-(s3.3.2_cross.mean.A <- Reduce("+", s3.3.2_cross.list.A) / length(s3.3.2_cross.list.A))
+(s3.7.2_cross.mean.Y <- as.data.frame(Reduce("+", s3.7.2_cross.list.Y) / length(s3.7.2_cross.list.Y)) %>% 
+    mutate(sampling.scheme = "sample all ages", scenario = "scenario_3.7.2") %>% 
+    rownames_to_column(var = "parameter"))
 
-(s3.3.2_cross.mean.J <- Reduce("+", s3.3.2_cross.list.J) / length(s3.3.2_cross.list.J))
 
-(s3.3.2_cross.mean.Y <- Reduce("+", s3.3.2_cross.list.Y) / length(s3.3.2_cross.list.Y))
+multiennial.model_all <- bind_rows(s3.1.2_cross.mean.A, s3.1.2_cross.mean.J, s3.1.2_cross.mean.Y, s3.7.2_cross.mean.A, s3.7.2_cross.mean.J, s3.7.2_cross.mean.Y)
 
+
+#saveRDS(multiennial.model_all, file = paste0(MCMC_location, "cross.corr_multiennial.model_all_20230919"))
 
 
 s3.3.2Y[[1]]
@@ -288,10 +256,6 @@ pl=1 #Just so I don't get knocked all the way down each time I run code above th
 
 
 #-----------------------------Other code that may be useful----------------------------#
-
-
-
-
 jags_params <- c("Nfb", "psi", "Nm", "survival", "lambda") #Specify parameters
 
 
@@ -470,6 +434,7 @@ raftery.diag(s3[[1]])
 superdiag(s3[[1]])
 ##===============================================================================
 
+
 #----------------Subsetting a long chain to dial in MCMC parameters--------------------
 head(s1)
 length(s1)
@@ -511,3 +476,161 @@ s1 <- s1.subset
 s2 <- s2.subset
 s3 <- s3.subset
 
+
+
+
+################################################################################
+#################################### DIC #######################################
+################################################################################
+#Doesn't seem like DIC can tell the models apart, at least not when estimating for yr 90. Can't really tell for any of the sampling scenarios. 
+#If we want to try to do some model comparison, then I may need to re-run everything (bc I only saved the models for yr 90) and potentially try WAIC. Need to be more organized about this next time.
+#If wanting to reevaluate all of this to draw conclusions, skip ahead and focus on/start with the extreme scenario. That's the better example and the code is more streamlined.
+
+#Scenario slight population change
+(scenario_2.1_post.all <- list.files(path = objective_2_MCMC_location,
+                                     recursive = FALSE,
+                                     pattern = "*scenario_2.1_*",
+                                     full.names = TRUE))
+
+(scenario_2.2.1_post.all <- list.files(path = objective_2_MCMC_location,
+                                       recursive = FALSE,
+                                       pattern = "*scenario_2.2.1_*",
+                                       full.names = TRUE))
+
+(scenario_2.3.1_post.all <- list.files(path = objective_2_MCMC_location,
+                                       recursive = FALSE,
+                                       pattern = "*scenario_2.3.1_*",
+                                       full.names = TRUE))
+
+#Slight population change
+s2.1.1Y <- readRDS(scenario_2.1_post.all[5])
+s2.1.1J_1 <- readRDS(scenario_2.1_post.all[6])
+s2.1.1J_2 <- readRDS(scenario_2.1_post.all[7])
+s2.1.1J_2.subset <- s2.1.1J_2[501:1000] #First 500 list elements are blank
+s2.1.1J <- append(s2.1.1J_1, s2.1.1J_2.subset)
+s2.1.1A <- readRDS(scenario_2.1_post.all[4])
+
+s2.2.1Y <- readRDS(scenario_2.2.1_post.all[3])
+s2.2.1J_1 <- readRDS(scenario_2.2.1_post.all[5])
+s2.2.1J_2 <- readRDS(scenario_2.2.1_post.all[6])
+s2.2.1J_2.subset <- s2.2.1J_2[501:1000] #First 500 list elements are blank
+s2.2.1J <- append(s2.2.1J_1, s2.2.1J_2.subset)
+
+s2.3.1Y <- readRDS(scenario_2.3.1_post.all[1])
+s2.3.1J_1 <- readRDS(scenario_2.3.1_post.all[9])
+s2.3.1J_2 <- readRDS(scenario_2.3.1_post.all[10])
+s2.3.1J_2.subset <- s2.3.1J_2[501:1000] #First 500 list elements are blank
+s2.3.1J <- append(s2.3.1J_1, s2.3.1J_2.subset)
+s2.3.1A <- readRDS(scenario_2.3.1_post.all[4])
+
+#Specify file to extract DIC from
+file <- s2.3.1Y
+
+DIC.temp <- NULL
+DIC.df <- NULL
+
+for(i in 1:length(file)){
+  DIC.temp <- tibble(DIC_2.3.1 = file[[i]]$DIC, iteration = i, 
+                     sampling.scheme = "target YOY")
+  
+  DIC.df <- bind_rows(DIC.df, DIC.temp)
+}
+
+#DIC.YOY_2.1.1 <- DIC.df
+#DIC.YOY_2.2.1 <- DIC.df
+#DIC.YOY_2.3.1 <- DIC.df
+
+#DIC.juvs_2.1.1 <- DIC.df
+#DIC.juvs_2.2.1 <- DIC.df
+#DIC.juvs_2.3.1 <- DIC.df
+
+#DIC.adults_2.1.1 <- DIC.df
+#DIC.adults_2.3.1 <- DIC.df
+
+DIC.YOY_slight <- DIC.YOY_2.1.1 %>% left_join(DIC.YOY_2.2.1, by = c("iteration", "sampling.scheme")) %>% 
+  left_join(DIC.YOY_2.3.1, by = c("iteration", "sampling.scheme"))
+
+DIC.juvs_slight <- DIC.juvs_2.1.1 %>% left_join(DIC.juvs_2.2.1, by = c("iteration", "sampling.scheme")) %>% 
+  left_join(DIC.juvs_2.3.1, by = c("iteration", "sampling.scheme"))
+
+DIC.adults_slight <- DIC.adults_2.1.1 %>% 
+  left_join(DIC.adults_2.3.1, by = c("iteration", "sampling.scheme"))
+
+
+
+#Extreme population change
+(scenario_2.2.2_post.all <- list.files(path = objective_2_MCMC_location,
+                                       recursive = FALSE,
+                                       pattern = "*scenario_2.2.2_*",
+                                       full.names = TRUE))
+
+(scenario_2.3.2_post.all <- list.files(path = objective_2_MCMC_location,
+                                       recursive = FALSE,
+                                       pattern = "*scenario_2.3.2_*",
+                                       full.names = TRUE))
+
+#Extreme population change
+s2.1.2Y <- readRDS(scenario_2.1_post.all[3])
+s2.1.2J <- readRDS(scenario_2.1_post.all[2])
+s2.1.2A <- readRDS(scenario_2.1_post.all[1])
+
+s2.2.2Y <- readRDS(scenario_2.2.2_post.all[3])
+s2.2.2J <- readRDS(scenario_2.2.2_post.all[2])
+s2.2.2A <- readRDS(scenario_2.2.2_post.all[1])
+
+s2.3.2Y <- readRDS(scenario_2.3.2_post.all[3])
+s2.3.2J <- readRDS(scenario_2.3.2_post.all[2])
+s2.3.2A <- readRDS(scenario_2.3.2_post.all[1])
+
+DIC.df.temp = DIC.temp.1 = DIC.temp.2 = DIC.temp.3 <- NULL
+DIC.YOY_extreme = DIC.juvs_extreme = DIC.adults_extreme <- NULL
+
+for(i in 1:500){
+  #YOY
+  DIC.temp.1 <- tibble(DIC_2.1.2 = s2.1.2Y[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "target YOY")
+  
+  DIC.temp.2 <- tibble(DIC_2.2.2 = s2.2.2Y[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "target YOY")
+  
+  DIC.temp.3 <- tibble(DIC_2.3.2 = s2.3.2Y[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "target YOY")
+  
+  DIC.df.temp <- DIC.temp.1 %>% left_join(DIC.temp.2, by = c("iteration", "sampling.scheme")) %>% 
+    left_join(DIC.temp.3, by = c("iteration", "sampling.scheme"))
+  
+  DIC.YOY_extreme <- bind_rows(DIC.YOY_extreme, DIC.df.temp)
+  
+  #juvs
+  DIC.temp.1 <- tibble(DIC_2.1.2 = s2.1.2J[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "sample all juvenile ages")
+  
+  DIC.temp.2 <- tibble(DIC_2.2.2 = s2.2.2J[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "sample all juvenile ages")
+  
+  DIC.temp.3 <- tibble(DIC_2.3.2 = s2.3.2J[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "sample all juvenile ages")
+  
+  DIC.df.temp <- DIC.temp.1 %>% left_join(DIC.temp.2, by = c("iteration", "sampling.scheme")) %>% 
+    left_join(DIC.temp.3, by = c("iteration", "sampling.scheme"))
+  
+  DIC.juvs_extreme <- bind_rows(DIC.juvs_extreme, DIC.df.temp)
+  
+  
+  #adults
+  #juvs
+  DIC.temp.1 <- tibble(DIC_2.1.2 = s2.1.2A[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "sample all juvenile ages")
+  
+  DIC.temp.2 <- tibble(DIC_2.2.2 = s2.2.2A[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "sample all juvenile ages")
+  
+  DIC.temp.3 <- tibble(DIC_2.3.2 = s2.3.2A[[i]]$DIC, iteration = i, 
+                       sampling.scheme = "sample all juvenile ages")
+  
+  DIC.df.temp <- DIC.temp.1 %>% left_join(DIC.temp.2, by = c("iteration", "sampling.scheme")) %>% 
+    left_join(DIC.temp.3, by = c("iteration", "sampling.scheme"))
+  
+  DIC.adults_extreme <- bind_rows(DIC.adults_extreme, DIC.df.temp)
+  
+}

@@ -1165,6 +1165,28 @@ write_csv(table4, file = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/tab
 
 
 
+```{r potential supplementary tables and graphs}
+#----------------------- Cross-correlation --------------------------
+pop.growth_all <- readRDS(file = paste0(MCMC_location, "cross.corr_pop.growth_all_20230919"))
+multiennial.model_all <- readRDS(file = paste0(MCMC_location, "cross.corr_multiennial.model_all_20230919"))
+
+cross.corr_all <- bind_rows(pop.growth_all, multiennial.model_all)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 ```{r calculate relative bias and % in HPDI}
 #To get this in the table, I ran the script and then manually translated over the to table in Word. Perhaps there's a way I can just export this to a CSV file and copy and paste ... 
 #Check percent in interval; can change proportion sampled
