@@ -113,7 +113,7 @@ sample.years <- c(n_yrs - c(20:0)) #Twenty years of sampling
 
 ####-------------- Prep simulation ----------------------
 # Moved sampling below so extract different sample sizes from same population
-iterations <- 2
+iterations <- 50
 
 
 # Initialize arrays for saving results
@@ -135,7 +135,7 @@ sim.samples.1 <- "NinetyPercent_sampled"
 
 
 ####-------------- Start simulation loop ----------------------
-for (iter in 1:iterations) {
+for (iter in 20:iterations) { #Restart morning of 09/20/2023 - made it through iteration 19
   sim.start <- Sys.time()
   rseed <- rseeds[iter]
   set.seed(rseed)
@@ -335,7 +335,7 @@ for(block in first.est.year:n_yrs){
   cat("Running model using blocked samples\n")
   
   set.seed(rseed)
-  cat(paste0("Using samples from year ", block - 4, "to ", block, "\n"))
+  cat(paste0("Using samples from year ", block - 4, " to ", block, "\n"))
   
   source("./03_Lemon_shark_data/functions/Obj5_run.JAGS_HS.only.R")
 
@@ -586,20 +586,19 @@ results2 <- results %>%
   as_tibble()
 
 #Within HPD interval?
-results2 %>% group_by(sample.prop, parameter, estimation.year, sampling.scheme) %>% 
+results2 %>% group_by(parameter, estimation.year, time_window) %>% 
   dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100)
 
 #Median relative bias by sample size
-results2 %>% group_by(sampling.scheme, sample.prop, parameter, estimation.year) %>% 
+results2 %>% group_by(parameter, estimation.year, time_window) %>% 
   dplyr::summarize(median.bias = median(relative_bias), n = n()) %>% 
   dplyr::arrange(desc(median.bias))
 
 
 #-----------------------------Save major output files---------------------------------------------
 #Home computer: Dell Precision
-
 #Save model estimates
-write.table(results2, file = paste0(results_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #Save draws from posterior for model diagnostics 
 saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 1
