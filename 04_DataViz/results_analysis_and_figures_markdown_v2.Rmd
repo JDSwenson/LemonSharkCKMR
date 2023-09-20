@@ -24,6 +24,7 @@ library(viridis)
 library(scales)
 library(ggridges)
 library(ggpattern)
+library(ggalt)
 
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
@@ -1042,13 +1043,16 @@ ggsave("Figure_4b_aging.error_2023.09.18.tiff", plot = last_plot(), device = "ti
 
 PICK UP HERE AFTER 09/18/2023
 ```{r objective 5 viz}
-#Full dataset
-ls_dataFull <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FullDataset_wLambda.csv") %>% 
+#Load lemon shark simulation results
+ls_dataSim <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_time_series_sims.csv")
+
+#Load lemon shark data estimates
+ls_dataFull <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/z_old_files/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FullDataset_wLambda.csv") %>% 
   mutate(num.samps = num.samps_all) %>% 
   dplyr::select(-c(num.samps_all)) %>% 
   dplyr::filter(estimation_year >= 1997)
 
-ls_data.Fulldown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_DownsampledDataset_wLambda.csv") %>% 
+ls_data.Fulldown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/z_old_files/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_DownsampledDataset_wLambda.csv") %>% 
   mutate(mom_HSPs = mom_HSPs.down,
          num.samps = num.samps_down) %>% 
   dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all)) %>%
@@ -1061,7 +1065,7 @@ ls_data.Fulldown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objectiv
  #   dplyr::select(-c(num.samps_all))
 
 #Five year intervals
-ls_dataFive <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FiveYearIntervals_wLambda.csv") %>% 
+ls_dataFive <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/z_old_files/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FiveYearIntervals_wLambda.csv") %>% 
   mutate(num.samps = num.samps_all) %>% 
   dplyr::select(-c(num.samps_all)) %>% 
   dplyr::filter(estimation_year >= 1997)
@@ -1091,8 +1095,65 @@ ls_data4viz <- bind_rows(ls_data.full4viz,
 #------------------------------Fig 5a: Nf-----------------------------------------#
 brewer.pal.info #See different palette options from Rcolorbrewer
 cp5 <- brewer.pal(3, "Dark2") #Choose palette + number of colors
+cp5[3] <- "black"
 scales::show_col(cp5)
 
+
+######PICK UP HERE AND FINISH AFTER 09/20/2023
+#Reformat sim data for viz
+iter <- 12
+
+ls_estimatesSim <- ls_dataSim %>% pivot_longer(cols = c(Q50, all.truth), names_to = "type", values_to = "estimate") %>% 
+  dplyr::filter(type == "Q50",
+                iteration == iter)
+
+ls_truthSim <- ls_dataSim %>% pivot_longer(cols = c(Q50, all.truth), names_to = "type", values_to = "estimate") %>% 
+  dplyr::filter(type == "all.truth",
+                iteration == iter) %>%
+  dplyr::select(parameter, truth = estimate, estimation.year, type, time_window) %>% 
+  mutate(type = ifelse(parameter %in% c("Nf", "Nm", "Nfb1", "Nfb2", "psi"), "truth",
+                       ifelse(time_window == "all samples", "truth: all samples",
+                       ifelse(time_window == "five year block", "truth: five year block", NA))))
+
+ls_truthSim.abund <- ls_truthSim %>% dplyr::filter(parameter %in% c("Nf", "Nm", "Nfb2"))
+
+
+#Show abundance estimates first
+fig5sim <- ls_estimatesSim %>% dplyr::filter(iteration == iter,
+                                             parameter %in% c("Nf", "Nm", "Nfb2")) %>% 
+  ggplot(aes(x = estimation.year, 
+             y = estimate,
+             color = time_window)) +
+  geom_pointrange(aes(ymin = HPD2.5, 
+                      ymax = HPD97.5),
+                  position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "gam", 
+              se = FALSE, 
+              aes(linetype = time_window)) +
+  geom_line(data = ls_truthSim.abund,
+            aes(y = truth, 
+                color = type),
+            size = 1) +
+  facet_wrap(~parameter, 
+             scales = "free") +
+  theme_bw() +
+#  labs(x = "Estimation year", y = "Female abundance") +
+  scale_color_manual(name = "Time window", values = cp5) +
+#  ggtitle("a)") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25)) +
+  guides(linetype = "none") #Can decide what to keep or remove from legend with this
+
+fig5sim
+
+ggsave("LemonSharkSimFig.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+#LEMON SHARK DATA
 fig5a <- ls_data4viz %>% 
   dplyr::filter(parameter == "Nfb2") %>%
   ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
@@ -1166,11 +1227,17 @@ write_csv(table4, file = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/tab
 
 
 ```{r potential supplementary tables and graphs}
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/"
+
 #----------------------- Cross-correlation --------------------------
 pop.growth_all <- readRDS(file = paste0(MCMC_location, "cross.corr_pop.growth_all_20230919"))
 multiennial.model_all <- readRDS(file = paste0(MCMC_location, "cross.corr_multiennial.model_all_20230919"))
 
-cross.corr_all <- bind_rows(pop.growth_all, multiennial.model_all)
+cross.corr_all <- bind_rows(pop.growth_all, multiennial.model_all) %>% 
+  as_tibble()
+
+cross.corr_all %>% dplyr::filter(scenario == "scenario_3.1.2", parameter == "survival")
 
 
 ```
