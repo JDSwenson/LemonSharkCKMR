@@ -93,6 +93,37 @@ annual_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_08Sep2023_Seeds2
 ################## Cross correlation among parameters ##########################
 ################################################################################
 
+#If running a single iteration stored in sims.list
+crosscorr(sims.list.1[[1]]$samples) #T0
+crosscorr(sims.list.1[[2]]$samples) #T0-10
+crosscorr(sims.list.1[[3]]$samples) #present-5
+crosscorr(sims.list.1[[4]]$samples) #present
+
+#If running just a few iterations
+for(cr in 1:length(slight.pop.decline_t0)){
+  s2.2.1_cross.list.J[[cr]] <- crosscorr(slight.pop.decline_t0[[cr]]$samples)
+  
+  s2.2.2_cross.list.J[[cr]] <- crosscorr(slight.pop.decline_t0_10[[cr]]$samples)
+  
+  s2.3.3_cross.list.J[[cr]] <- crosscorr(slight.pop.decline_present_5[[cr]]$samples)
+  
+    s2.2.4_cross.list.J[[cr]] <- crosscorr(slight.pop.decline_present[[cr]]$samples)
+
+}
+
+(t0_cross.mean.J <- as.data.frame(Reduce("+", s2.2.1_cross.list.J) / length(s2.2.1_cross.list.J)))
+  
+(t0_10_cross.mean.J <- as.data.frame(Reduce("+", s2.2.2_cross.list.J) / length(s2.2.2_cross.list.J)))
+
+(present_5_cross.mean.J <- as.data.frame(Reduce("+", s2.3.3_cross.list.J) / length(s2.3.3_cross.list.J)))
+
+(present_cross.mean.J <- as.data.frame(Reduce("+", s2.2.4_cross.list.J) / length(s2.2.4_cross.list.J)))
+
+t0_cross.mean.J #T0
+t0_10_cross.mean.J #T0-10
+present_5_cross.mean.J #present-5
+present_cross.mean.J #present
+
 #-----------------Population growth-------------------
 cross.temp <- NULL
 s2.2.1_cross.list.A = s2.2.1_cross.list.J = s2.2.1_cross.list.Y <- list()
