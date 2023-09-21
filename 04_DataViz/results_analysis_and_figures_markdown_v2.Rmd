@@ -1117,6 +1117,7 @@ ls_truthSim <- ls_dataSim %>% pivot_longer(cols = c(Q50, all.truth), names_to = 
 
 ls_truthSim.abund <- ls_truthSim %>% dplyr::filter(parameter %in% c("Nf", "Nm", "Nfb2"))
 
+ls_truthSim.otherParams <- ls_truthSim %>% dplyr::filter(parameter %in% c("survival", "lambda"))
 
 #Show abundance estimates first
 fig5sim <- ls_estimatesSim %>% dplyr::filter(iteration == iter,
@@ -1153,7 +1154,53 @@ fig5sim
 
 ggsave("LemonSharkSimFig.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
-#LEMON SHARK DATA
+
+#Now show estimates of other parameters
+cp5.2 <- c("firebrick1", "dodgerblue", "firebrick4", "dodgerblue4") #Choose palette + number of colors
+
+suppfig_LSsim_otherParams <- ls_estimatesSim %>% dplyr::filter(iteration == iter,
+                                             parameter %in% c("survival", "lambda")) %>% 
+  ggplot(aes(x = estimation.year, 
+             y = estimate,
+             color = time_window)) +
+  geom_pointrange(aes(ymin = HPD2.5, 
+                      ymax = HPD97.5),
+                  position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "gam", 
+              se = FALSE, 
+              linetype = "dashed") +
+  geom_line(data = ls_truthSim.otherParams,
+            aes(y = truth, 
+                color = type),
+            size = 1) +
+  facet_wrap(~parameter, 
+             scales = "free") +
+  theme_bw() +
+#  labs(x = "Estimation year", y = "Female abundance") +
+  scale_color_manual(name = "Time window", values = cp5.2) +
+#  ggtitle("a)") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25)) +
+  guides(linetype = "none") #Can decide what to keep or remove from legend with this
+
+suppfig_LSsim_otherParams
+
+ggsave("LemonSharkSim_SuppFig.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+
+
+
+
+
+
+
+
+#---------------------LEMON SHARK DATA-----------------
 fig5a <- ls_data4viz %>% 
   dplyr::filter(parameter == "Nfb2") %>%
   ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 

@@ -76,17 +76,8 @@ post = jagsUI::jags(data = jags_data, #If using postpack from AFS workshop
                     parallel = T
 )
 
-if(exists("s") == TRUE){
-  if(s == 1){
     sims.list.1[[iter]] <- post
-  } else if(s == 2){
-    sims.list.2[[iter]] <- post
-  } else if(s == 3){
-    sims.list.3[[iter]] <- post
-  } else if(s == 4){
-    sims.list.4[[iter]] <- post
-  }
-}
+    
 
 #---------------- STEP 5: CONVERGENCE DIAGNOSTICS -----------------#
 # view convergence diagnostic summaries for all monitored nodes

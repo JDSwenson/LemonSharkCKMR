@@ -135,7 +135,7 @@ sim.samples.1 <- "NinetyPercent_sampled"
 
 
 ####-------------- Start simulation loop ----------------------
-for (iter in 20:iterations) { #Restart morning of 09/20/2023 - made it through iteration 19
+for (iter in 39:iterations) { #Restart morning of 09/20/2023 - made it through iteration 19
   sim.start <- Sys.time()
   rseed <- rseeds[iter]
   set.seed(rseed)
