@@ -76,7 +76,7 @@ post = jagsUI::jags(data = jags_data, #If using postpack from AFS workshop
                     parallel = T
 )
 
-    sims.list.1[[iter]] <- post
+#    sims.list.1[[iter]] <- post
     
 
 #---------------- STEP 5: CONVERGENCE DIAGNOSTICS -----------------#
