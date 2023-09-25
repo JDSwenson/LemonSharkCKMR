@@ -329,6 +329,8 @@ for(block in first.est.year:n_yrs){
   
   source("./03_Lemon_shark_data/functions/Obj5_run.JAGS_HS.only.R")
   
+  
+  
   ########### Calculate truth ###################
   #Calculate truth for survival and psi
   #results in a file called "true.values" that contains the truth for survival and psi
@@ -336,9 +338,8 @@ for(block in first.est.year:n_yrs){
   ref.year <- ref.year.block3
   source("./03_Lemon_shark_data/functions/PopSim_truth.R")
   
-  #Calculate truth for lambda
-  lambda.truth <- (pop.size.tibble$Total.adult.pop[block]/pop.size.tibble$Total.adult.pop[est.year.calibrate])^(1/(block - est.year.calibrate))
-  
+  #Pull lambda truth
+  lambda.truth <- (pop.size.tibble$adult.lambda[block])
   lambda.truth.df <- tibble(estimation.year = estimation.year,
                             iteration = iter,
                             seed = rseed,
@@ -401,7 +402,7 @@ for(block in first.est.year:n_yrs){
                                   ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.HSPs.block3, mom.HSPs.block3 + dad.HSPs.block3)),
            HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.HS.block3, 
                                   ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS.block3, mom.Exp.HS.block3 + dad.Exp.HS.block3))) %>% 
-    mutate(time_window = "five year block")
+    mutate(time_window = "three year block")
   
   gc()
   #---------------Five year block------------------------
@@ -464,7 +465,7 @@ for(block in first.est.year:n_yrs){
   source("./03_Lemon_shark_data/functions/PopSim_truth.R")
   
   #Calculate truth for lambda
-  lambda.truth <- (pop.size.tibble$Total.adult.pop[block]/pop.size.tibble$Total.adult.pop[est.year.calibrate])^(1/(block - est.year.calibrate))
+  lambda.truth <- (pop.size.tibble$adult.lambda[block])
   
   lambda.truth.df <- tibble(estimation.year = estimation.year,
                             iteration = iter,
@@ -591,7 +592,7 @@ for(block in first.est.year:n_yrs){
   source("./03_Lemon_shark_data/functions/PopSim_truth.R")
   
   #Calculate truth for lambda
-  lambda.truth <- (pop.size.tibble$Total.adult.pop[block]/pop.size.tibble$Total.adult.pop[est.year.calibrate])^(1/(block - est.year.calibrate))
+  lambda.truth <- (pop.size.tibble$adult.lambda[block])
   
   lambda.truth.df <- tibble(estimation.year = estimation.year,
                             iteration = iter,
@@ -740,8 +741,11 @@ results2 %>% group_by(parameter, estimation.year, time_window) %>%
 #Save model estimates
 write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims_results.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
+#Save pop size estimates
+saveRDS(pop.size.tibble_all, file = paste0(results_location, "lemon_shark_time_series_sims_popSize"))
+
 #Save draws from posterior for model diagnostics 
-saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 1
+#saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 1
 
 #Save final pairwise comparison matrices
 saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_mom.comps"))

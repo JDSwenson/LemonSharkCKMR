@@ -4,6 +4,8 @@
 #See: https://www.r-bloggers.com/2021/08/calculate-geometric-mean-in-r/
 #ref.vec <- ref.tibble %>% distinct(ref.yr) %>% pull(ref.yr)
 
+#The proportion of indvs that survive from one year to the next is saved as the first year i.e. the year we want the survival estimate for - 1
+surv_point <- sVec[block-1]
 
   (surv_mean <- exp(mean(log(sVec[est.year.calibrate:estimation.year]))))
   
@@ -48,7 +50,7 @@ for(i in ref.year:n_yrs){
 psi_truth <- round(mean(psi_truth.vec[ref.year:n_yrs]), 2)
 
 #Add the calculated values to ref.tibble2
-ref.tibble2 <- tibble(survival = surv_mean,
+ref.tibble2 <- tibble(survival = surv_point,
                       surv_AM = surv_mean_AM,
                       surv_min = surv_min,
                       surv_max = surv_max,

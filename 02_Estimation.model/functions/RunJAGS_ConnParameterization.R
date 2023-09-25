@@ -21,12 +21,6 @@ dad.n.comps <- dad_comps.all$all
 dad.positives <- dad_comps.all$yes
 dad.yrs <- nrow(dad_comps.all)
 
-if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt")){
-#Calculate parameters for beta distribution from mean and variance for survival
- surv.betaParams <- estBetaParams(survival.prior.mean, survival.prior.sd^2)
- surv.alpha <- surv.betaParams[[1]]
- surv.beta <- surv.betaParams[[2]]
- }
 }
 
 
@@ -80,37 +74,7 @@ if(model == "multiennial.model"){
 ######################### STEP 2: DEFINE DATA FOR JAGS ########################
 #------------------------- Annual model; no lambda -------------------------
  #========================= Model validation =========================#
-#Informed prior on survival#
 if(model == "annual.model"){
-  if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt")){
-    #Define data
-    jags_data = list(
-      #Mom
-      mom.mort.yrs = mom.mort.yrs,
-      mom.popGrowth.yrs = mom.popGrowth.yrs,
-      mom.n.comps = mom.n.comps,
-      mom.positives = mom.positives,
-      mom.yrs = mom.yrs,
-      
-      #Dad
-      dad.mort.yrs = dad.mort.yrs,
-      dad.popGrowth.yrs = dad.popGrowth.yrs,
-      dad.n.comps = dad.n.comps,
-      dad.positives = dad.positives,
-      dad.yrs = dad.yrs,
-      
-      #survival
-      surv.alpha = surv.alpha,
-      surv.beta = surv.beta
-    
-  )
-}
-
- #------------------------- Annual model; Diffuse prior on survival -------------------------
-   if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model.txt") |
-      jags_file == paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt") |
-      jags_file == paste0(jags.model_location, "HS.PO_wideLambda_annual_model.txt")){
-     
      #Define data
      jags_data = list(
        #Mom
@@ -125,10 +89,13 @@ if(model == "annual.model"){
        dad.popGrowth.yrs = dad.popGrowth.yrs,
        dad.n.comps = dad.n.comps,
        dad.positives = dad.positives,
-       dad.yrs = dad.yrs
+       dad.yrs = dad.yrs,
+       
+       #general
+       estimation.year = estimation.year,
+       est.year.calibrate = est.year.calibrate
    )
  }
-}
 
 #------------------------- Multiennial model -------------------------
 
@@ -212,37 +179,20 @@ if(model == "multiennial.model" & HS.only != "yes"){
 ######################### STEP 3: SPECIFY INITIAL VALUES #########################
 #------------------------- Annual model -------------------------
 if(model == "annual.model"){
-  #If no lambda, then do not specify a starting value for this parameter (which isn't in the model)
-  if(jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt") | jags_file == paste0(jags.model_location, "HS.PO_noLambda_annual_model.txt")){
-    jags_inits = function(nc) {
-      inits = list()
-      for(c in 1:nc){
-       inits[[c]] = list(
-         survival = runif(1, min=0.5, max=0.95),
-         Nf = rnorm(1, mean = 500, sd = 100),
-         Nm = rnorm(1, mean = 500, sd = 100)
-     )
-   }
-   return(inits)
-   }
-  }
   #If lambda is in the model, then specify a starting value for this parameter
-  if(jags_file == paste0(jags.model_location, "HS.PO_narrowLambda_annual_model.txt") | jags_file == paste0(jags.model_location, "HS.PO_wideLambda_annual_model.txt")){
     jags_inits = function(nc) {
       inits = list()
       for(c in 1:nc){
         inits[[c]] = list(
           survival = runif(1, min=0.5, max=0.95),
-          Nf = rnorm(1, mean = 500, sd = 100),
-          Nm = rnorm(1, mean = 500, sd = 100),
+          Nf0 = rnorm(1, mean = 500, sd = 100),
+          Nm0 = rnorm(1, mean = 500, sd = 100),
           lambda = 1
         )
       }
       return(inits)
     }
   }
-}
- 
  
 #------------------------- Multiennial model -------------------------
 if(model == "multiennial.model"){
@@ -289,18 +239,29 @@ post = jagsUI::jags(data = jags_data, #If using postpack from AFS workshop
                           parallel = T
 )
 
-if(exists("s") == TRUE){
-if(s == 1){
+# if(exists("s") == TRUE){
+# if(s == 1){
+#   sims.list.1[[iter]] <- post
+#  } else if(s == 2){
+#   sims.list.2[[iter]] <- post
+# } else if(s == 3){
+#   sims.list.3[[iter]] <- post
+# } else if(s == 4){
+#   sims.list.4[[iter]] <- post
+# }
+# }
+
+#Save results from different estimation years.
+if(est == 1){
   sims.list.1[[iter]] <- post
- } else if(s == 2){
+} else if(est == 2){
   sims.list.2[[iter]] <- post
-} else if(s == 3){
+} else if(est == 3){
   sims.list.3[[iter]] <- post
-} else if(s == 4){
+} else if(est == 4){
   sims.list.4[[iter]] <- post
-}
-}
-  
+}  
+
 #---------------- STEP 5: CONVERGENCE DIAGNOSTICS -----------------#
 # view convergence diagnostic summaries for all monitored nodes
 # 2.5, 50, and 97.5 are quantiles in model.summary

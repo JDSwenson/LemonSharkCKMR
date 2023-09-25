@@ -7,6 +7,8 @@ narrowLambda_annual.model.scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "sc
 wideLambda_annual.model.scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")
 narrowLambda_skip.model.scenarios <- c("scenario_3.1.2", "scenario_3.2.2", "scenario_3.3.2", "scenario_3.4.2", "scenario_3.5.2", "scenario_3.6.2", "scenario_3.7.2", "scenario_4.1", "scenario_4.2", "scenario_4.3")
 
+Conn_annual.scenarios <- c("scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scenario_2.4.4")
+
 if(scenario %in% noLambda_model.validation.scenarios){
   jags_file = paste0(jags.model_location, "HS.PO_noLambda_annual_model_validation.txt") #Annual model w/o lambda but with informed prior on survival
 } else if(scenario %in% noLambda_annual.model.scenarios){
@@ -17,7 +19,9 @@ if(scenario %in% noLambda_model.validation.scenarios){
   jags_file = paste0(jags.model_location, "HS.PO_wideLambda_annual_model.txt")
 } else if(scenario %in% narrowLambda_skip.model.scenarios){
   jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model.txt") 
-}
+}  else if(scenario %in% Conn_annual.scenarios){
+    jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_annual_model_Conn.txt")
+  }
 
 return(jags_file)
 }
@@ -196,6 +200,88 @@ if(objective == 1){
       
       
     }
+  } else if(scenario %in% c( "scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scenario_2.4.4")){
+    
+    #========================= Scenario 2.4 =========================
+    cat(paste0(" with Paul Conn's model and narrow prior"))
+    jags_params = c("Nft", "Nmt", "Nf0", "Nm0", "survival", "lambda") #List the parameters to be estimated
+    
+    
+    if(scenario == "scenario_2.4.1"){
+      #------------------------- Scenario 2.4.1: Small population decline; lambda in model w/ tight prior
+      cat(paste0(" and a slightly decreasing population."))
+      
+      PopSim.lambda <- "lambda.slight.decrease"
+      
+      
+    } else if(scenario == "scenario_2.4.2"){
+      #------------------------- Scenario 2.4.2: Small population growth; lambda in model w/ tight prior
+      cat(paste0(" and a slightly increasing population."))
+      
+      PopSim.lambda <- "lambda.slight.increase"
+      
+      
+    } else if(scenario == "scenario_2.4.3"){
+      
+      #------------------------- Scenario 2.4.3: Substantial population decline; lambda in model w/ tight prior
+      cat(paste0(" and a severely decreasing population."))
+      
+      PopSim.lambda <- "lambda.extreme" 
+      
+      
+    } else if(scenario == "scenario_2.4.4"){
+      
+      #------------------------- Scenario 2.4.4: Stable population
+      cat(paste0(" and a stable population."))
+      
+      PopSim.lambda <- "lambda.1" 
+      
+      
+    }
+  } else if(scenario %in% c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")){
+    
+    
+    #========================= Scenario 2.3 =========================
+    cat(paste0(" with an adapted model and diffuse prior"))
+    jags_params = c("Nf", "Nm", "survival", "lambda") #List the parameters to be estimated
+    
+    
+    if(scenario == "scenario_2.3.1"){
+      #------------------------- Scenario 2.3.1: Small population decline; lambda in model w/ wide prior
+      cat(paste0(" and a slightly decreasing population."))
+      
+      PopSim.lambda <- "lambda.slight.decrease"
+      
+      
+      
+    } else if(scenario == "scenario_2.3.2"){
+      
+      #------------------------- Scenario 2.3.2: Small population growth; lambda in model w/ wide prior
+      cat(paste0(" and a slightly increasing population."))
+      
+      PopSim.lambda <- "lambda.slight.increase"
+      
+      
+      
+      
+    } else if(scenario == "scenario_2.3.3"){
+      
+      #------------------------- Scenario 2.3.3: Substantial population decline; lambda in model w/ wide prior
+      cat(paste0(" and a severely decreasing population."))
+      
+      PopSim.lambda <- "lambda.extreme" 
+      
+      
+    } else if(scenario == "scenario_2.3.4"){
+      
+      #------------------------- Scenario 2.3.3: Substantial population decline; lambda in model w/ wide prior
+      cat(paste0(" and a stable population."))
+      
+      PopSim.lambda <- "lambda.1" 
+      
+      
+    }
+    
   }
   
 } else if(objective == 3){

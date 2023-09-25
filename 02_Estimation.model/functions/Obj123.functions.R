@@ -803,7 +803,19 @@ calc.truth <- function(truth.df = truth.df){
     cat("\nUsing average abundance for truth\n")
   } else cat("\nUsing year-specific truth, rather than average.\n")
   
-  
+  N0.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
+                                            year == est.year.calibrate) %>% 
+    dplyr::select(Nm0 = Male.adult.pop, 
+                  Nf0 = Female.adult.pop) %>% 
+    pivot_longer(cols = starts_with("N"),
+                 names_to = "parameter",
+                 values_to = "all.truth") %>% 
+    mutate(estimation.year = estimation.year,
+           sampling.scheme = s.scheme,
+           sample.prop = sample.proportion,
+           T0 = est.year.calibrate,
+           iteration = iter,
+           seed = rseed)
   
   (truth.iter_all.params <- truth.df %>% dplyr::filter(sampling.scheme == s.scheme,
                                                        iteration == iter,
@@ -811,7 +823,7 @@ calc.truth <- function(truth.df = truth.df){
       mutate(estimation.year = estimation.year) %>% 
       dplyr::mutate(T0 = ref.yr + 1) %>% 
       dplyr::select(-c(surv_min, surv_max, population.growth)) %>% 
-      bind_rows(truth.iter) %>% 
+      bind_rows(truth.iter, N0.truth) %>% 
       dplyr::select(parameter, all.truth, estimation.year, T0, iteration, sampling.scheme, sample.prop, seed) %>% #Change order of columns
       dplyr::arrange(parameter))
   
@@ -865,10 +877,10 @@ calc.truth <- function(truth.df = truth.df){
   if(HS.only == "yes"){
     
     results.temp <- results.temp %>% 
-      mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.HSPs, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.HSPs, mom.HSPs + dad.HSPs)),
-             HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.HS, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
+      mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.HSPs, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.HSPs, mom.HSPs + dad.HSPs)),
+             HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.Exp.HS, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
              POPs_detected = NA,
              POPs_expected = NA,
              scenario = scenario)
@@ -876,14 +888,14 @@ calc.truth <- function(truth.df = truth.df){
   } else if(HS.only != "yes"){
     
     results.temp <- results.temp %>% 
-      mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.HSPs, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.HSPs, mom.HSPs + dad.HSPs)),
-             HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.HS, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
-             POPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.POPs, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.POPs, mom.POPs + dad.POPs)),
-             POPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.PO, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.PO, mom.Exp.PO + dad.Exp.PO)),
+      mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.HSPs, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.HSPs, mom.HSPs + dad.HSPs)),
+             HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.Exp.HS, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
+             POPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.POPs, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.POPs, mom.POPs + dad.POPs)),
+             POPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.Exp.PO, 
+                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.Exp.PO, mom.Exp.PO + dad.Exp.PO)),
              scenario = scenario)
     
   }
