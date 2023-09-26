@@ -8,8 +8,36 @@ HS.PO_narrowLambda_annual_model_Conn = function(){
   sd ~ dunif(1, 10000)
   Nf0 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
   Nm0 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
-  survival ~ dunif(0.5, 0.99) # Uninformative prior for adult survival
+  survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
   lambda ~ dunif(0.95, 1.05) #Narrow prior for lambda
+  
+  #Likelihood
+  #Moms
+  #HS + PO
+  for(i in 1:mom.yrs){ # Loop over maternal cohort comparisons
+    mom.positives[i] ~ dbin((survival^mom.mort.yrs[i])/(Nf0*(lambda^mom.popGrowth.yrs[i])), mom.n.comps[i]) # Sex-specific CKMR model equation
+  }
+  
+  #Dads
+  #HS + PO
+  for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
+    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm0*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
+  }
+  
+  #derived quantities
+  Nft = Nf0 * lambda^(estimation.year - est.year.calibrate)
+  Nmt = Nm0 * lambda^(estimation.year - est.year.calibrate)
+}
+
+####
+HS.PO_wideLambda_annual_model_Conn = function(){
+  #PRIORS - uninformative
+  mu ~ dunif(1, 10000)
+  sd ~ dunif(1, 10000)
+  Nf0 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
+  Nm0 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
+  survival ~ dunif(0.5, 0.95) # Uninformative prior for adult survival
+  lambda ~ dunif(0.8, 1.2) #Narrow prior for lambda
   
   #Likelihood
   #Moms
@@ -114,6 +142,9 @@ HS.PO_narrowLambda_Skip_model_Conn = function(){
 
 jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model_Conn.txt")
 write_model(HS.PO_narrowLambda_annual_model_Conn, jags_file)
+
+jags_file = paste0(jags.model_location, "HS.PO_wideLambda_annual_model_Conn.txt")
+write_model(HS.PO_wideLambda_annual_model_Conn, jags_file)
 
 jags_file = paste0(jags.model_location, "HS.only_narrowLambda_Skip_model_Conn.txt")
 write_model(HS.only_narrowLambda_Skip_model_Conn, jags_file)

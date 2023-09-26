@@ -33,7 +33,7 @@ rm.arb <- TRUE #Do we want to remove juvniles with arbitrary birth years (there 
 estimation.year <- 2000 #Will only be used if using the model with lambda, but the script will throw an error if this object isn't defined (could fix this with a conditional statement, but don't feel like it now :-p).
 
 #Set path to data file
-input.file <- "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/data/Main_lemon_shark.csv"
+input.file <- "G://My Drive/Personal_Drive/R/CKMR/z_old_files/Objective.5_lemon_shark_data/data/Main_lemon_shark.csv"
 
 #Save von bertalanffy growth function
 vonBert <- vbFuns(param = "Typical")
@@ -113,6 +113,48 @@ mother_ref <- juv_ref.North %>% dplyr::select(birth.year, mother.x) %>%
 
 #Look at breeding schedule of known mothers
 mother_ref %>% drop_na(mother.x) %>% pivot_wider(names_from = birth.year, values_from = freq)
+
+#Check out what percentage of females bred off-cycle
+even.temp <- NULL
+rogue.breeders <- NULL
+
+unique.moms <- mother_ref %>% drop_na(mother.x) %>% 
+  distinct(mother.x) %>% 
+  pull(mother.x)
+
+for(i in 1:length(unique.moms)){
+  
+  mom <- unique.moms[i]
+  
+  mother_ref2 <- mother_ref %>% drop_na(mother.x) %>% 
+    dplyr::filter(mother.x == mom)
+  
+  birth.vec <- mother_ref2 %>%
+    mutate(birth.year = as.numeric(birth.year)) %>% 
+    pull(birth.year)
+  
+  if(length(birth.vec) > 1){
+  
+    rogue.temp <- 0
+    
+  for(j in 2:length(birth.vec)){
+    if((birth.vec[j] - birth.vec[j-1]) %% 2 == 0){
+      even.temp[j-1] <- 1
+    } else if((birth.vec[j] - birth.vec[j-1]) %% 2 != 0){
+      rogue.temp <- 1
+  }
+} 
+  if(rogue.temp > 0){
+    
+  rogue.breeders[i] <- 1 
+} else rogue.breeders[i] <- 0
+} else next 
+}
+
+#I THINK this vector has a 1 for each mom that bred off-cycle at least once, and 0 for each mom that did not. NA if there was just one instance of offspring.
+rogue.breeders
+
+length(rogue.breeders[which(rogue.breeders == 1)])/length(rogue.breeders)
 
 #Look at breeding schedule of known (we think) fathers
 father_ref %>% drop_na(father.x) %>% pivot_wider(names_from = birth.year, values_from = freq)

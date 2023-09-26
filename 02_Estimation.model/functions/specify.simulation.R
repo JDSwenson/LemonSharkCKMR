@@ -205,6 +205,7 @@ if(objective == 1){
     #========================= Scenario 2.4 =========================
     cat(paste0(" with Paul Conn's model and narrow prior"))
     jags_params = c("Nft", "Nmt", "Nf0", "Nm0", "survival", "lambda") #List the parameters to be estimated
+    source("./02_Estimation.model/functions/Obj123.functions_Conn.R")
     
     
     if(scenario == "scenario_2.4.1"){
@@ -224,9 +225,11 @@ if(objective == 1){
     } else if(scenario == "scenario_2.4.3"){
       
       #------------------------- Scenario 2.4.3: Substantial population decline; lambda in model w/ tight prior
-      cat(paste0(" and a severely decreasing population."))
+      cat(paste0(" - scratch that, a diffuse prior on lambda - and a severely decreasing population."))
       
-      PopSim.lambda <- "lambda.extreme" 
+      PopSim.lambda <- "lambda.extreme"
+      
+      jags_file <- paste0(jags.model_location, "HS.PO_wideLambda_annual_model_Conn.txt")
       
       
     } else if(scenario == "scenario_2.4.4"){

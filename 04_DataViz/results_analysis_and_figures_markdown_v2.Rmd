@@ -410,7 +410,7 @@ narrow_lambda_scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3
 diffuse_lambda_scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")
 
 #Format data and give labels that are more amenable to plotting
-obj2_results <- results %>% dplyr::filter(objective == "objective2") %>% 
+obj2_results <- results.raw %>% dplyr::filter(objective == "objective2") %>% 
   mutate(population.growth = ifelse(scenario %in% stable_popgrowth_scenarios, "stable",
                                     ifelse(scenario %in% slight_decline_scenarios, "slight decline",
                                            ifelse(scenario %in% slight_increase_scenarios, "slight increase",
@@ -702,7 +702,7 @@ biennial_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.2.1", "s
 triennial_scenarios <- c("scenario_3.5.1", "scenario_3.5.2")
 
 #Create labels for plotting
-obj3_results <- results %>% dplyr::filter(objective == "objective3") %>% 
+obj3_results <- results.raw %>% dplyr::filter(objective == "objective3") %>% 
   mutate(psi.label = ifelse(scenario %in% psi1_scenarios & !scenario %in% annual_scenarios, "1",
                             ifelse(scenario %in% psi1stoch_scenarios, "1*",
                                    ifelse(scenario %in% psi0.9_scenarios, "0.90",
@@ -723,6 +723,12 @@ obj3_results <- results %>% dplyr::filter(objective == "objective3") %>%
 #Check one scenario if desired
 obj3_results %>% dplyr::filter(scenario == "scenario_3.6.2") %>% 
   dplyr::filter(parameter == "psi" | parameter == "Nf" | parameter == "Nfb1")
+
+obj3_results %>% dplyr::filter(scenario %in% c("scenario_3.7.1", "scenario_3.7.2"), sampling.scheme == "sample.all.juvenile.ages",
+                               iteration == 2,
+                               estimation.sim == "T0") %>% 
+  arrange(parameter) %>% 
+  View()
 ```
 
 
@@ -887,9 +893,9 @@ ggsave("SuppFig_Nfb_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, 
 ```{r Obj4 data prep}
 ##################### Objective 4 ############################
 #---------------------Prep results----------------------------
-accurate.annual.scenario <- results %>% dplyr::filter(scenario == "scenario_2.2.4") %>% #stable population growth with narrow prior
+accurate.annual.scenario <- results.raw %>% dplyr::filter(scenario == "scenario_2.2.4") %>% #stable population growth with narrow prior
   mutate(scenario = "accurate.annual")
-accurate.biennial.scenario <- results %>% dplyr::filter(scenario == "scenario_3.1.2") %>% #stable population growth and biennial breeding/model
+accurate.biennial.scenario <- results.raw %>% dplyr::filter(scenario == "scenario_3.1.2") %>% #stable population growth and biennial breeding/model
   mutate(scenario = "accurate.biennial")
 
 cv5_scenarios <- c("scenario_4.1", "scenario_4.4")
@@ -899,7 +905,7 @@ cv20_scenarios <- c("scenario_4.3", "scenario_4.6")
 annual_scenariosObj4 <- c("scenario_4.4", "scenario_4.5", "scenario_4.6", "accurate.annual")
 biennial_scenariosObj4 <- c("scenario_4.1", "scenario_4.2", "scenario_4.3", "accurate.biennial")
 
-obj4_results <- results %>% dplyr::filter(objective == "objective4") %>% 
+obj4_results <- results.raw %>% dplyr::filter(objective == "objective4") %>% 
   bind_rows(accurate.annual.scenario, accurate.biennial.scenario)
 
 obj4_results <- obj4_results %>% 
@@ -937,7 +943,7 @@ obj4_results <- obj4_results %>%
 ####################### Objective 4 Main Figure ##################################
 ##################################################################################
 #-------------------Objective 4 Density plots of relative bias-----------------------#
-      (fig4b <- obj4_results %>% dplyr::filter(parameter == "Nf" | parameter == "survival", estimation.sim.label == "present") %>% 
+      (fig4b <- obj4_results %>% dplyr::filter(parameter == "Nf" | parameter == "survival", estimation.sim.label == "T0") %>% 
   ggplot(aes(x=factor(cv.label), fill = model.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
