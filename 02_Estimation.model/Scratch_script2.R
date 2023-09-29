@@ -1,3 +1,14 @@
+rents.df <- readRDS(file = paste0(PopSim.location, "parents.breakdown_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
+
+rents.df %>% dplyr::filter(parent.sex == "father") %>% 
+  group_by(year) %>% 
+  summarize(mean.offspring = mean(num.off),
+            min.offspring = min(num.off),
+            max.offspring = max(num.off)) %>% 
+  summarize(min.off.overall = min(min.offspring),
+            max.off.overall = max(max.offspring))
+
+
 samps.test <- samples.df_all %>% dplyr::filter(iteration == 200, sampling.scheme == "sample.ALL.ages", sample.prop == 2)
 
 imposters.test <- imposters.df %>% dplyr::filter(iteration == 200, sampling.scheme == "sample.ALL.ages", sample.prop == 2) %>% 
