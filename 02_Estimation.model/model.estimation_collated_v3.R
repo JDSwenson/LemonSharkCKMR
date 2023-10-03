@@ -1,3 +1,9 @@
+###Update from Oct 3, 2023
+##Want to get Conn's model running with all Objective 3 and 4 simulations.
+#Edited specify_simulation script and made model scripts.
+#Primarily need to edit calculations of truth and output, then save the different files, test, and upload to cluster.
+#Look at Obj123functions_Conn.R, line 807 for where to pick up
+
 #Load packages
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
 library(MASS)
@@ -42,16 +48,16 @@ n_yrs <- 90 #Number of years the simulation was run for
 ############Specify common input prefixes####################
 inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
 date.of.PopSim <- "03Aug2023" #Most common date for population simulations: 03Aug2023
-#date.of.PopSim <- "06Sep2023" #On 22Aug2023 I re-ran the stable population growth/annual breeding simulation, but identified aunt/niece and uncle/nephew pairs. Re-ran AGAIN on 06Sep2023 to iron out glitches with the code.
+date.of.PopSim <- "06Sep2023" #On 22Aug2023 I re-ran the stable population growth/annual breeding simulation, but identified aunt/niece and uncle/nephew pairs. Re-ran AGAIN on 06Sep2023 to iron out glitches with the code.
 
 ###########Specify which simulations to focus on########################
 #s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
-sample.props <- 1.5 #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
-objective <- 2 #Can be any number for the objectives (1-5)
-scenario <- "scenario_2.4.3" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
+sample.props <- "all" #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
+objective <- 1 #Can be any number for the objectives (1-5)
+scenario <- "scenario_1.2.2" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
 sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
 #sample.scheme.vec <- c("sample.ALL.ages") #If wanting to just run one
-est.yr.tests <- 4 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
+est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
 
 #Assume we're not including aunt/niece pairs, but need to define the object. The specify.simulation code will adjust this setting if we are including aunt/niece pairs.
 test.decoys <- "no"
@@ -143,9 +149,6 @@ if(sample.props == "all"){
    
    #Specify the model we'll be using
    jags_file <- specify.model()
-   
-   #For some reason this isn't overwriting like it should in the function above so we'll just specify it here.
-   jags_file <- paste0(jags.model_location, "HS.PO_wideLambda_annual_model_Conn.txt")
    
    #Subset for samples from focal sampling scheme
    samples.df <- samples.df_all %>% dplyr::filter(sampling.scheme == s.scheme)
@@ -294,7 +297,7 @@ if(sample.props == "all"){
       
       #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-      source("./02_Estimation.model/functions/RunJAGS_ConnParameterization.R")
+      source("./02_Estimation.model/functions/RunJAGS_collated.R")
 
 ########### Calculate truth ###################
       #Calculate truth for lambda
@@ -313,17 +316,13 @@ if(sample.props == "all"){
       truth.iter <- pop_size.df %>% dplyr::filter(iteration == iter,
                                                 year == estimation.year) %>% 
         mutate(Nfb1 = Num.mothers,
-               Nmb1 = Num.fathers,
-               Nft = Female.adult.pop,
-               Nmt = Male.adult.pop) %>%
+               Nmb1 = Num.fathers) %>%
         dplyr::select(Nf = Female.adult.pop,
                       Nfb1,
                       Nfb2 = Num.mothers,
                       Nm = Male.adult.pop,
                       Nmb1,
                       Nmb2 = Num.fathers,
-                      Nft,
-                      Nmt,
                       estimation.year = year,
                       iteration = iteration,
                       seed = seed) %>% 
@@ -449,15 +448,14 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
 }
 #-------------Quick viz of results--------------#
 #Box plot of relative bias
-ggplot(data=results2, aes(x=factor(estimation.year))) +
-  geom_boxplot(aes(y=relative_bias, fill=parameter)) +
-  ylim(-100, 100) +
-  geom_hline(yintercept=0, col="black", size=1.25) +
-  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Estimation year", y="Relative bias", title="Relative Bias by sample size") +
-  scale_fill_brewer(palette="Set2") +
-  font("title", size = 10, face = "bold") +
-  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme))
+# ggplot(data=results2, aes(x=factor(sample.proportion))) +
+#   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
+#   ylim(-100, 100) +
+#   geom_hline(yintercept=0, col="black", size=1.25) +
+#   annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+#   labs(x="Sample size", y="Relative bias", title="Relative Bias by sample size") +
+#   scale_fill_brewer(palette="Set2") +
+#   font("title", size = 10, face = "bold")
 
 
 

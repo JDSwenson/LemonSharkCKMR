@@ -1,8 +1,6 @@
 ####--------------------Split individual recaptures into first and last occasion------------------####
 split.dups <- function(samples){
   
-  #Double-checked code on 08/06/2023
-  
   #Identify duplicates
   dups.first.capture <- samples %>% group_by(indv.name) %>% 
     filter(n() > 1) %>% 
@@ -31,16 +29,14 @@ split.dups <- function(samples){
 #Filters for full sibs, but also identifies appropriate sample sets for each offspring birth year (for PO) and each younger sib birth year (for half-sib)
 filter.samples <- function(samples){
 
-  #Double-checked code on 08/06/2023
-  
   #------------------Filter 1: full siblings----------------------
     NoFullSibs.df <- samples %>% distinct(mother.x, father.x, .keep_all = TRUE) %>%
     as_tibble() #If there is more than one individual with the same mother AND father, then only keep one.
-    total.sibs <- nrow(samples) - nrow(NoFullSibs.df) #Calculate number of full sibs
+    total.sibs <- nrow(samples) - nrow(NoFullSibs.df)
       
     dif.cohort.sibs <- samples %>% group_by(mother.x, father.x) %>%
       filter(n() > 1) %>% 
-      distinct(birth.year) %>%
+      distinct(birth.year.miss) %>%
       ungroup() %>% 
       group_by(mother.x, father.x) %>% 
       summarize(distinct.birth.years = n()) %>% 
@@ -49,9 +45,9 @@ filter.samples <- function(samples){
 
     #The vector of years for which we need to split samples into potential parents and offspring i.e. offspring birth years.
   OffBirth.years <- NoFullSibs.df %>% 
-    dplyr::filter(age.x <= repro.age) %>% #CHANGE FROM age.x == 0 (not sure why it was that?)
-    distinct(birth.year) %>% 
-    arrange(birth.year) %>%
+    dplyr::filter(age.miss == 0) %>% 
+    distinct(birth.year.miss) %>% 
+    arrange(birth.year.miss) %>%
     pull() 
   
   #Initialize lists to save output
@@ -68,20 +64,20 @@ filter.samples <- function(samples){
     
     #Dataframe of reproductively mature individuals during offspring birth year
     parents[[y]] <- NoFullSibs.df %>%
-      mutate(age.in.OffBirth.year = age.x + (OffBirth.year - capture.year)) %>% 
+      mutate(age.in.OffBirth.year = age.miss + (OffBirth.year - capture.year)) %>% 
       filter(age.in.OffBirth.year >= repro.age) %>% 
       mutate(relation = "parent")
     
     #Dataframe of offspring born in this year
     offspring[[y]] <- NoFullSibs.df %>% 
-      mutate(age.in.OffBirth.year = age.x + (OffBirth.year - capture.year)) %>% #unnecessary line, I think
-      filter(birth.year == OffBirth.year) %>%
+      mutate(age.in.OffBirth.year = age.miss + (OffBirth.year - capture.year)) %>% #unnecessary line, I think
+      filter(birth.year.miss == OffBirth.year) %>%
       mutate(relation = "offspring")
       
     #Add dataframe of all potential offspring and parents to a list where each dataframe corresponds to an offspring birth year
     PO.samps.list[[y]] <- rbind(parents[[y]], offspring[[y]]) %>% 
       dplyr::select(indv.name, 
-                    birth.year, 
+                    birth.year.miss, 
                     capture.year,
                     age.in.OffBirth.year,
                     mother.x, 
@@ -91,7 +87,7 @@ filter.samples <- function(samples){
     
     #Not sure if this is needed, but add dataframe of potential half-sib samples for the year to a list where each dataframe corresponds to a specific birth year
     # HS.samps.list[[y]] <- NoFullSibs.df %>%
-    #   filter(birth.year <= OffBirth.year) #Filters for offspring that were born before or in Offbirth.year
+    #   filter(birth.year.miss <= OffBirth.year) #Filters for offspring that were born before or in Offbirth.year.miss
   }
   
   #Name list elements to correspond to sample year
@@ -101,7 +97,7 @@ filter.samples <- function(samples){
   #Not sure if this is needed, but create dataframes of samples for PO and HS comparisons. Think only need this for half-sibs
 #  PO.samps.df <- bind_rows(PO.samps.list) #Confirmed that it's the correct number of rows
   HS.samps.df <- NoFullSibs.df %>% 
-    dplyr::filter(age.x < repro.age) #Only use juveniles for half-sib model
+    dplyr::filter(age.miss < repro.age) #Only use juveniles for half-sib model
     
   print(paste0("There are ", total.sibs, " pairs of full siblings in the dataset, ", dif.cohort.sibs, " of these pairs were born in different years."))
   return(list(PO.samps.list, HS.samps.df, NoFullSibs.df, total.sibs, dif.cohort.sibs)) #Return list of possible parents and offspring for each year, and dataframe of potential half-sibs
@@ -112,16 +108,13 @@ filter.samples <- function(samples){
 
 ####--------------Build pairwise comparison matrices------------####
 #Input is the filtered list from above for POs, and the filtered dataframe for HS
-
-#Double-checked code 08/06/2023
-
 build.pairwise <- function(filtered.samples.PO.list, filtered.samples.HS.df){
 
 #Different birth years for abundance estimate
   # OffBirth.years.PO.vec <- filtered.samples.PO.list %>% 
   #   bind_rows() %>%
-  #   distinct(birth.year) %>% 
-  #   pull(birth.year) 
+  #   distinct(birth.year.miss) %>% 
+  #   pull(birth.year.miss) 
 
   
   #initialize lists for output
@@ -130,7 +123,6 @@ build.pairwise <- function(filtered.samples.PO.list, filtered.samples.HS.df){
   PO.dad.pairwise.list <- list()
   HS.dad.pairwise.list <- list()
   
-  #Double-checked PO pairwise comparison code 08/06/2023
   
   #Loop over each dataframe corresponding to the offspring birth year
   for(y in 1:length(filtered.samples.PO.list)){
@@ -145,25 +137,15 @@ build.pairwise <- function(filtered.samples.PO.list, filtered.samples.HS.df){
       pull(indv.name)
     
     #generate pairwise comparison matrix for all potential parents and offspring for the year
-    pairwise.df.PO <- expand.grid(PO.parents, PO.offspring, stringsAsFactors = FALSE) %>% as_tibble()
+    pairwise.df.PO <- expand.grid(PO.parents, PO.offspring) 
     colnames(pairwise.df.PO) <- c("indv.name", "offspring.name") #Rename columns so they can easily be joined
   
 head(pairwise.df.PO)
 
-#Prep a second dataframe that reverses the comparison columns
-pwdf.check <- pairwise.df.PO %>% dplyr::rename(offspring.name = indv.name, indv.name = offspring.name) 
-pwdf.check2 <- pwdf.check %>% bind_rows(pairwise.df.PO)
-
-#Check that there are no duplicate comparisons - should be TRUE
-nrow(pairwise.df.PO) == pwdf.check2 %>% distinct(indv.name, offspring.name) %>% nrow()/2
-
-#Check that no individuals are being compared against themselves - should be TRUE
-nrow(pairwise.df.PO %>% dplyr::filter(indv.name == offspring.name)) == 0
-
 #Create dataframe that will be used to extract the birth years for the potential offspring from each comparison using joins.
 Offspring_birthyears.PO <- filtered.samples.PO.list[[y]] %>%
   dplyr::select(offspring.name = indv.name, 
-                offspring.birth = birth.year, 
+                offspring.birth = birth.year.miss, 
                 offspring.mom = mother.x, 
                 offspring.dad = father.x)
 
@@ -173,8 +155,8 @@ pairwise.df_all.info.PO <- pairwise.df.PO %>% left_join(Offspring_birthyears.PO,
   as_tibble() %>% 
   left_join(filtered.samples.PO.list[[y]], by = "indv.name") %>% 
   dplyr::rename("parent.name" = indv.name, 
-                "parent.birth" = birth.year, 
-                #"parent.age" = age.x, 
+                "parent.birth" = birth.year.miss, 
+                #"parent.age" = age.miss, 
                 "parent.sex"= sex, 
                 "parent.capture.year" = capture.year) %>%
   dplyr::select(parent.name, 
@@ -255,9 +237,8 @@ PO.dad.pairwise.list[[y]] <- dad_comps.PO
 
   
 #--------------Half sibling--------------------------
-filtered.samples.HS.df <- filtered.samples.HS.df %>% dplyr::arrange(birth.year) #Arrange so older sib always comes first in pairwise comparison matrix
-pairwise.df.HS <- data.frame(t(combn(filtered.samples.HS.df$indv.name, m=2))) %>% 
-  as_tibble() # generate all combinations of the elements of x, taken m at a time.
+filtered.samples.HS.df <- filtered.samples.HS.df %>% dplyr::arrange(birth.year.miss) #Arrange so older sib always comes first in pairwise comparison matrix
+pairwise.df.HS <- data.frame(t(combn(filtered.samples.HS.df$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
 colnames(pairwise.df.HS) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
 
 #Create dataframe of pairwise comparisons with just individual IDs
@@ -267,8 +248,8 @@ head(pairwise.df.HS)
 #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
 OlderSib_birthyears.HS <- filtered.samples.HS.df %>%
   dplyr::select(older.sib = indv.name, 
-         older.sib.birth = birth.year, 
-         older.sib.age = age.x, 
+         older.sib.birth = birth.year.miss, 
+         older.sib.age = age.miss, 
          older.sib.mom = mother.x,
          older.sib.dad = father.x)
 
@@ -278,8 +259,8 @@ pairwise.df_all.info.HS <- pairwise.df.HS %>% left_join(OlderSib_birthyears.HS, 
   as_tibble() %>%  
   left_join(filtered.samples.HS.df, by = "indv.name") %>% 
   dplyr::rename("younger.sib" = indv.name, 
-                "younger.sib.birth" = birth.year, 
-                "younger.sib.age" = age.x, 
+                "younger.sib.birth" = birth.year.miss, 
+                "younger.sib.age" = age.miss, 
                 "younger.sib.mom" = mother.x, 
                 "younger.sib.dad" = father.x) %>%
   dplyr::select(older.sib, 
@@ -303,17 +284,6 @@ positives.HS <- pairwise.df_HS.filt %>% filter(older.sib.mom == younger.sib.mom 
   mutate(shared.parent = ifelse(older.sib.mom == younger.sib.mom, "mother", "father"))
 #nrow(positives)
 
-
-if(test.decoys == "yes"){
-  
-  fake.HSPs <- identify_imposters(imposters.df)
-  positives.HS <- positives.HS %>% bind_rows(fake.HSPs)
-  
-}
-
-
-
-
 ####----------------Split dataframes into final form for model----------####
 #Sex-specific half-sib
 mom_positives.HS <- positives.HS %>% filter(shared.parent == "mother") %>% 
@@ -327,53 +297,26 @@ dad_positives.HS <- positives.HS %>% filter(shared.parent == "father")  %>%
   rename(yes = freq)
 
 
-#-------- Make dataframes for negative comparisons -- Discount possibility of finding half-sibs when there are full sibs ------
- hsp.negs <- pairwise.df_HS.filt %>%
-   dplyr::filter(younger.sib.mom != older.sib.mom & younger.sib.dad != older.sib.dad) %>%
-   dplyr::select(older.sib.birth, younger.sib.birth) %>%
-   plyr::count() %>%
-   as_tibble()
+#Make dataframes for negative comparisons
+hsp.negs <- pairwise.df_HS.filt %>%
+  dplyr::filter(younger.sib.mom != older.sib.mom & younger.sib.dad != older.sib.dad) %>% 
+  dplyr::select(older.sib.birth, younger.sib.birth) %>% 
+  plyr::count() %>% 
+  as_tibble()
 
- mom_comps.HS <- hsp.negs %>%
-   dplyr::rename(no = freq) %>%
-   left_join(mom_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>%
-   mutate(yes = replace_na(yes, 0)) %>%
-   mutate(year_gap = younger.sib.birth - older.sib.birth) %>%
-   mutate(all = yes + no)
+mom_comps.HS <- hsp.negs %>% 
+  dplyr::rename(no = freq) %>% 
+  left_join(mom_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+  mutate(yes = replace_na(yes, 0)) %>% 
+  mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
+  mutate(all = yes + no)
 
- dad_comps.HS <- hsp.negs %>%
-   dplyr::rename(no = freq) %>%
-   left_join(dad_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>%
-   mutate(yes = replace_na(yes, 0)) %>%
-   mutate(year_gap = younger.sib.birth - older.sib.birth) %>%
-   mutate(all = yes + no)
-
-#-------- Make dataframes for negative comparisons -- include possibility of finding half-sibs when there are full sibs ------
-# mom.hsp.negs <- pairwise.df_HS.filt %>%
-#   dplyr::filter(younger.sib.mom != older.sib.mom) %>% 
-#   dplyr::select(older.sib.birth, younger.sib.birth) %>% 
-#   plyr::count() %>% 
-#   as_tibble()
-# 
-# mom_comps.HS <- mom.hsp.negs %>% 
-#   dplyr::rename(no = freq) %>% 
-#   left_join(mom_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
-#   mutate(yes = replace_na(yes, 0)) %>% 
-#   mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
-#   mutate(all = yes + no)
-# 
-# dad.hsp.negs <- pairwise.df_HS.filt %>%
-#   dplyr::filter(younger.sib.dad != older.sib.dad) %>% 
-#   dplyr::select(older.sib.birth, younger.sib.birth) %>% 
-#   plyr::count() %>% 
-#   as_tibble()
-# 
-# dad_comps.HS <- dad.hsp.negs %>% 
-#   dplyr::rename(no = freq) %>% 
-#   left_join(dad_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
-#   mutate(yes = replace_na(yes, 0)) %>% 
-#   mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
-#   mutate(all = yes + no)
+dad_comps.HS <- hsp.negs %>% 
+  dplyr::rename(no = freq) %>% 
+  left_join(dad_positives.HS, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+  mutate(yes = replace_na(yes, 0)) %>% 
+  mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
+  mutate(all = yes + no)
 
 
 # HS.mom.pairwise.list[[y]] <- mom_comps.HS
@@ -414,7 +357,6 @@ HS.dad.pairwise.df <- dad_comps.HS %>%
   mutate(type = "HS",
          parent = "father")
 
-#SWITCHED ref.year and estimation.year in pop growth calculation
 #Combine PO and HS dataframes for each sex
 mom_comps.all <- bind_rows(HS.mom.pairwise.df, PO.mom.pairwise.df) %>% 
   mutate(pop.growth.yrs = ref.year - est.year.calibrate) %>% 
@@ -434,13 +376,13 @@ downsample <- function(mom_comps.all, dad_comps.all, HS.samps.df, PO.samps.list)
 
   #Downsample for HSPs
 #Calculate proportion of samples born in each birth year
-  HS.samps.props <- HS.samps.df %>% group_by(birth.year) %>%
+  HS.samps.props <- HS.samps.df %>% group_by(birth.year.miss) %>%
     summarize(num = n()) %>%
   ungroup() %>%
   mutate(prop = num/sum(num))
 
   #Save vector of proportions corresponding to the correct index in the HS sample dataframe
-HS.props.vec <- HS.samps.df %>% left_join(HS.samps.props, by = "birth.year") %>%
+HS.props.vec <- HS.samps.df %>% left_join(HS.samps.props, by = "birth.year.miss") %>%
   pull(prop)
 
   #Calculate proportion of positive HS comparisons for mom
@@ -548,7 +490,7 @@ calc.psi <- function(loopy.list){
   
   for(i in ref.years){ #Extract all YOY for each year sampled
     BI.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>% 
-      dplyr::filter(age.x == 0)
+      dplyr::filter(age.miss == 0)
     
     #Combine all
     BI.df <- bind_rows(BI.df, BI.df_temp)
@@ -556,8 +498,8 @@ calc.psi <- function(loopy.list){
   
   #Extract unique mothers for each birth year
   BI.df <- BI.df %>% as_tibble() %>% 
-    arrange(birth.year) %>% 
-    distinct(mother.x, birth.year, .keep_all = TRUE)
+    arrange(birth.year.miss) %>% 
+    distinct(mother.x, birth.year.miss, .keep_all = TRUE)
   
   #-----------------Identify all relatives in population since estimation year and find breeding interval--------------------#
   pairwise.BI.df <- data.frame(t(combn(BI.df$indv.name, m=2)))  # generate all combinations of the elements of x, taken m at a time.
@@ -570,8 +512,8 @@ calc.psi <- function(loopy.list){
   #Create dataframe that will be used to extract the birth years for the younger fish from each pairwise comparison using joins.
   OlderSib_birthyears.BI <- BI.df %>%
     dplyr::select(older.sib = indv.name, 
-           older.sib.birth = birth.year, 
-           older.sib.age = age.x, 
+           older.sib.birth = birth.year.miss, 
+           older.sib.age = age.miss, 
            older.sib.mom = mother.x,
            older.sib.dad = father.x)
   
@@ -581,8 +523,8 @@ calc.psi <- function(loopy.list){
     as_tibble() %>%  
     left_join(BI.df, by = "indv.name") %>% 
     dplyr::rename("younger.sib" = indv.name, 
-                  "younger.sib.birth" = birth.year, 
-                  "younger.sib.age" = age.x, 
+                  "younger.sib.birth" = birth.year.miss, 
+                  "younger.sib.age" = age.miss, 
                   "younger.sib.mom" = mother.x, 
                   "younger.sib.dad" = father.x) %>%
     dplyr::select(older.sib, 
@@ -611,7 +553,7 @@ calc.psi <- function(loopy.list){
     dplyr::distinct(younger.sib.mom) %>% 
     pull(younger.sib.mom) #Should be the same as the older sib mom
   
-  annual.moms <- positives.mom.BI %>% dplyr::filter(BI == "odd") %>% 
+  annual.moms <- positives.mom.BI %>% dplyr::filter(BI == "off") %>% 
     dplyr::distinct(younger.sib.mom) %>% 
     pull(younger.sib.mom) #Should be the same as the older sib mom
   
@@ -727,220 +669,45 @@ estBetaParams <- function(mu, var) {
 }
 
 
-#Need to save aunt.unc_niece.nephew_pw.comps.all as RDS object in Population simulation script.Then import into model estimation script, and use function below to reduce the dataframe to charlatan HSPs.
+misassign.ages <- function(samples){
 
-#GOT EM
-identify_imposters <- function(imposters.df = imposters.df){
+  #------------Use VonBertalanffy growth function to assign lengths to individuals from ages--------------
+  #Set up growth function
+  ages <- 0:max.age
+  vonBert <- vbFuns(param = "Typical")
+  tmp <- growthFunShow("vonBertalanffy","Typical")
+  
+  #Use parameters from Brown and Gruber 1988
+  mean_length.at.age <- vonBert(t = ages, Linf = 317.65, K = 0.057, t0 = -2.302)
+  mean_length.subset <- mean_length.at.age[4:length(mean_length.at.age)]
+  
+  sd.vec <- c(3, 10, 9, age.cv*mean_length.subset) #Try 10 so we don't misassign across too many ages
+  
+  length.at.age_df <- tibble(mean.length = mean_length.at.age,
+                             sd.length = sd.vec) %>% #Name as mean.1 and mean.2 to allow for join later
+    mutate(age.x = ages)
 
-   charlatan_HSPs <- imposters.df %>%
-     dplyr::filter(iteration == iter,
-                   sampling.scheme == s.scheme,
-                   sample.prop == sample.proportion) %>%
-     mutate(shared.parent = as.character(ifelse(lineage == "maternal", "mother", 
-                                   ifelse(lineage == "paternal", "father", NA))),
-            older.sib.age = as.numeric(NA), #Need this column for row bind, but it's not used for any calculation
-            younger.sib.age = as.numeric(NA) #Need this column for row bind, but it's not used for any calculation
-     ) %>% 
-     dplyr::select(older.sib = aunt.unc,
-                   older.sib.birth = aunt.unc_birth.year,
-                   older.sib.age,
-                   younger.sib = niece.nephew,
-                   younger.sib.birth.year = niece.nephew_birth.year,
-                   younger.sib.age,
-                   older.sib.mom = aunt.unc_mother,
-                   younger.sib.mom = aunt.unc_mother, #Not true, but need to make sure we get the right number of positives and negatives, so need this to be the same for the aunt|uncle and niece|nephew.
-                   older.sib.dad = aunt.unc_father,
-                   younger.sib.dad = aunt.unc_father, #Not true, but need to make sure we get the right number of positives and negatives, so need this to be the same for the aunt|uncle and niece|nephew.
-                   older.sib.birth = aunt.unc_birth.year,
-                   younger.sib.birth = niece.nephew_birth.year,
-                   shared.parent)
-   
-   if(filter.decoys == "yes"){
-     
-     #See what would happen if we filtered them by age difference
-     charlatan_HSPs <- charlatan_HSPs %>% dplyr::filter(younger.sib.birth - older.sib.birth < year.gap.threshold)
+  #Save vonBert parameters
+  Linf_val <- 317.65
+  t0_val <- -2.302
+  K_val <- 0.057
+  
+  #Assign lengths using VonBert function
+  samples.int <- samples %>% left_join(length.at.age_df, by = "age.x") %>% 
+    mutate(indv.length = rnorm(n = nrow(samples), mean = mean.length, sd = sd.length)) %>% 
+    mutate(indv.length = ifelse(indv.length >= Linf_val, Linf_val - 1, indv.length)) %>% 
+    dplyr::select(-c(mean.length, sd.length))
 
-   }
-   
-  return(charlatan_HSPs)
-
-}
-
-
-
-
-
-
-calc.truth <- function(truth.df = truth.df){
-  #If there's no lambda in the model, then the true value of abundance is the mean over the estimated years. Here, we make this correction for the scenarios that do not include lambda in the model; for those that do, the values in truth.df are correct.
-  if(scenario == "scenario_1_model.validation" | 
-     scenario == "scenario_1.2.1" | 
-     scenario == "scenario_1.2.2" | 
-     scenario == "scenario_1.2.3"){
-    
-    #Make truth equal to mean over years
-    #est.year.calibrate is the first year of data aka T0. This is different than the object estimation.year, which is what we loop over and change.
-    Nf.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
-      summarize(mean.female.pop = mean(Female.adult.pop)) %>% 
-      pull(mean.female.pop)
-    
-    Nfb.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
-      summarize(mean.mothers = mean(Num.mothers)) %>% 
-      pull(mean.mothers)
-    
-    Nm.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
-      summarize(mean.male.pop = mean(Male.adult.pop)) %>% 
-      pull(mean.male.pop)
-    
-    Nmb.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
-      summarize(mean.fathers = mean(Num.fathers)) %>% 
-      pull(mean.fathers)
-    
-    truth.iter <- truth.iter %>% mutate(all.truth = ifelse(parameter == "Nf", Nf.truth, 
-                                                           ifelse(parameter == "Nfb1" | parameter == "Nfb2", Nfb.truth, 
-                                                                  ifelse(parameter == "Nm", Nm.truth, 
-                                                                         ifelse(parameter == "Nmb1" | parameter == "Nmb2", Nmb.truth, all.truth)))))
-    cat("\nUsing average abundance for truth\n")
-  } else cat("\nUsing year-specific truth, rather than average.\n")
-  
-  
-  ###ADDED 10/03/2023
-  #Make dataframe of truth
-  truth.iter.temp <- pop.size.tibble %>% dplyr::filter(year == estimation.year) %>% 
-    mutate(Nfbt = Num.mothers,
-           Nft = Female.adult.pop,
-           Nmt = Male.adult.pop) %>%
-    dplyr::select(Nfbt,
-                  Nft,
-                  Nmt,
-                  estimation.year = year,
-                  iteration = iteration,
-                  seed = seed) %>% 
-    pivot_longer(cols = starts_with("N"),
-                 names_to = "parameter",
-                 values_to = "all.truth") 
-  
-  truth.iter <- pop.size.tibble %>% dplyr::filter(year == est.year.calibrate) %>% 
-    mutate(Nfb0 = Num.mothers,
-           Nf0 = Female.adult.pop,
-           Nm0 = Male.adult.pop) %>%
-    dplyr::select(Nfb0,
-                  Nf0,
-                  Nm0,
-                  estimation.year = year,
-                  iteration = iteration,
-                  seed = seed) %>%
-    pivot_longer(cols = starts_with("N"),
-                 names_to = "parameter",
-                 values_to = "all.truth") %>% 
-    bind_rows(truth.iter.temp, lambda.truth.df, true.values) %>% 
-    mutate(T0 = est.year.calibrate)
-  
-  #Define Nf and Nm as objects for calculations
-  Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf0") %>% pull(all.truth)
-  
-  Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm0") %>% pull(all.truth)
-  
-  #----------END ADDED 10/3/2023
-  
-  
-  
-  N0.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
-                                            year == est.year.calibrate) %>% 
-    dplyr::select(Nm0 = Male.adult.pop, 
-                  Nf0 = Female.adult.pop) %>% 
-    pivot_longer(cols = starts_with("N"),
-                 names_to = "parameter",
-                 values_to = "all.truth") %>% 
-    mutate(estimation.year = estimation.year,
-           sampling.scheme = s.scheme,
-           sample.prop = sample.proportion,
-           T0 = est.year.calibrate,
-           iteration = iter,
-           seed = rseed)
-  
-  (truth.iter_all.params <- truth.df %>% dplyr::filter(sampling.scheme == s.scheme,
-                                                       iteration == iter,
-                                                       sample.prop == sample.proportion) %>% 
-      mutate(estimation.year = estimation.year) %>% 
-      dplyr::mutate(T0 = ref.yr + 1) %>% 
-      dplyr::select(-c(surv_min, surv_max, population.growth)) %>% 
-      bind_rows(truth.iter, N0.truth) %>% 
-      dplyr::select(parameter, all.truth, estimation.year, T0, iteration, sampling.scheme, sample.prop, seed) %>% #Change order of columns
-      dplyr::arrange(parameter))
-  
-  
-  results.temp <- model.summary2 %>% left_join(truth.iter_all.params, by = c("parameter", "iteration", "seed")) %>% 
-    dplyr::select(parameter,
-                  Q50,
-                  all.truth,
-                  HPD2.5,
-                  HPD97.5,
-                  mean,
-                  sd,
-                  Q2.5,
-                  Q97.5,
-                  Rhat,
-                  estimation.year,
-                  T0,
-                  sampling.scheme,
-                  iteration,
-                  neff,
-                  sample.prop,
-                  seed) %>% 
-    mutate(estimation.sim = ifelse(est == 1, "T0", 
-                                   ifelse(est == 2, "T0-10",
-                                          ifelse(est == 3, "present-5",
-                                                 ifelse(est == 4, "present", NA))))) %>% 
-    mutate(full.siblings = full.sibs,
-           diff.cohort_full.siblings = diff.cohort.sibs,
-           imposters = as.numeric(NA))
-  
-  if(test.decoys == "yes"){
-    
-    charlatan_HSPs <- imposters.df %>%
-      dplyr::filter(iteration == iter,
-                    sampling.scheme == s.scheme,
-                    sample.prop == sample.proportion)
-    
-    if(filter.decoys == "yes"){
-      
-      #See what would happen if we filtered them by age difference
-      charlatan_HSPs <- charlatan_HSPs %>% dplyr::filter(niece.nephew_birth.year - aunt.unc_birth.year < year.gap.threshold)
-      
-    }
-    
-    results.temp <- results.temp %>% mutate(imposters = nrow(charlatan_HSPs))
-
+  #Specify reverse VonBert function that will assign ages based on length
+  rev.VonBert <- function(t0, Lt, Linf, K){
+    age <- round(t0 + (log(1 - Lt/Linf)/-K), 0)
+    return(age)
   }
-  
 
-  
-  if(HS.only == "yes"){
+  #Misassign ages from function specified above
+  samples.miss <- samples.int %>% mutate(age.miss = rev.VonBert(t0 = t0_val, Linf = Linf_val, K = K_val, Lt = indv.length)) %>% 
+    mutate(age.miss = ifelse(age.miss < 0, 0, age.miss)) %>% 
+    mutate(birth.year.miss = capture.year - age.miss)  
     
-    results.temp <- results.temp %>% 
-      mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.HSPs, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.HSPs, mom.HSPs + dad.HSPs)),
-             HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.Exp.HS, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
-             POPs_detected = NA,
-             POPs_expected = NA,
-             scenario = scenario)
-    
-  } else if(HS.only != "yes"){
-    
-    results.temp <- results.temp %>% 
-      mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.HSPs, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.HSPs, mom.HSPs + dad.HSPs)),
-             HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.Exp.HS, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
-             POPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.POPs, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.POPs, mom.POPs + dad.POPs)),
-             POPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi", "Nf0", "Nft"), mom.Exp.PO, 
-                                    ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2", "Nm0", "Nmt"), dad.Exp.PO, mom.Exp.PO + dad.Exp.PO)),
-             scenario = scenario)
-    
-  }
-  
-  return(results.temp)
+    return(samples.miss)
 }

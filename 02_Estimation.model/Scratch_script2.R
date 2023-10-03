@@ -1,3 +1,9 @@
+obj2_results %>% dplyr::filter(scenario %in% conn_scenarios, 
+                               iteration == 1,
+                               sampling.scheme == "sample.all.juvenile.ages") %>% 
+  arrange(scenario, parameter) %>% 
+  View()
+
 rents.df <- readRDS(file = paste0(PopSim.location, "parents.breakdown_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
 rents.df %>% dplyr::filter(parent.sex == "father") %>% 

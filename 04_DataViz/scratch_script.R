@@ -1,3 +1,13 @@
+obj2_results %>% dplyr::filter(scenario %in% c("scenario_2.3.3", "scenario_2.4.3")) %>% dplyr::filter(parameter == "lambda") %>% 
+  dplyr::select(parameter, Q50, all.truth, scenario, estimation.sim.label, model.label)
+
+obj2_results %>% dplyr::filter(scenario %in% c("scenario_2.3.3", "scenario_2.4.3"))%>% 
+  dplyr::filter(parameter == "lambda") %>% 
+  group_by(scenario) %>% 
+  summarize(min(Q50), max(Q50))
+
+
+
 ls_data %>% dplyr::filter(years_sampled == 3)
 
 obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),

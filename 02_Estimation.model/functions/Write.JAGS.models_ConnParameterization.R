@@ -104,8 +104,8 @@ HS.PO_narrowLambda_Skip_model_Conn = function(){
   #PRIORS - uninformative
   mu ~ dunif(1, 10000)
   sd ~ dunif(1, 10000)
-  Nf ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
-  Nm ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
+  Nf0 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
+  Nm0 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for male abundance
   survival ~ dunif(0.5,0.95) # Uninformative prior for adult survival
   psi ~ dunif(0, 1) #Percent of animals breeding non-annually #Turn off if fixing psi
   lambda ~ dunif(0.95, 1.05)
@@ -114,30 +114,31 @@ HS.PO_narrowLambda_Skip_model_Conn = function(){
   #Moms
   #HS - even years
   for(i in 1:mom.yrs_HS.on){ # Loop over maternal cohort comparisons
-    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.on[i]))), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
+    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf0*(lambda^mom.popGrowth.yrs_HS.on[i]))), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #HS - odd years
   for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
-    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf*(lambda^mom.popGrowth.yrs_HS.off[j]))), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
+    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf0*(lambda^mom.popGrowth.yrs_HS.off[j]))), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
   }
   
   #Moms
   #PO
   for(k in 1:mom.yrs_PO){
-    mom.positives_PO[k] ~ dbin((survival^mom.mort.yrs_PO[k])/(Nf*(lambda^mom.popGrowth.yrs_PO[k])), mom.n.comps_PO[k]) # Sex-specific CKMR model equation
+    mom.positives_PO[k] ~ dbin((survival^mom.mort.yrs_PO[k])/(Nf0*(lambda^mom.popGrowth.yrs_PO[k])), mom.n.comps_PO[k]) # Sex-specific CKMR model equation
   }
   
   #Dads
   #HS + PO
   for(f in 1:dad.yrs){ # Loop over paternal cohort comparisons
-    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
+    dad.positives[f] ~ dbin((survival^dad.mort.yrs[f])/(Nm0*(lambda^dad.popGrowth.yrs[f])), dad.n.comps[f]) # Sex-specific CKMR model equation
   }
   
-  #Derived quantities
-  Nfb1 <- ((a + psi - a*psi)/a)*Nf
-  Nfb2 <- Nf/a
+  Nft = Nf0 * lambda^(estimation.year - est.year.calibrate)
+  Nmt = Nm0 * lambda^(estimation.year - est.year.calibrate)
+  Nfb0 = Nf0/a
+  Nfbt = Nft/a
   
 }
 

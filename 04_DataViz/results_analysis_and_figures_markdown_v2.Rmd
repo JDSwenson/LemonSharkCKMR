@@ -80,7 +80,7 @@ results.raw %>% dplyr::count(iteration) %>%
 #results.raw %>% dplyr::count(seed) %>% View()
 
 #Total number of individual simulations run
-results.raw %>% dplyr::filter(parameter == "Nf") %>% dplyr::count(sampling.scheme, estimation.sim, sample.prop, scenario) %>% 
+results.raw %>% dplyr::filter(parameter == "Nf" | parameter == "Nf0") %>% dplyr::count(sampling.scheme, estimation.sim, sample.prop, scenario) %>% 
   summarize(sum(n))
 
 #Count number of times the model failed to converge
@@ -444,8 +444,8 @@ conn_scenarios <- c("scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scena
 
 #Set up vectors of lambda prior scenarios
 no_lambda_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4")
-narrow_lambda_scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4", "scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scenario_2.4.4")
-diffuse_lambda_scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")
+narrow_lambda_scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4", "scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.4")
+diffuse_lambda_scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4", "scenario_2.4.3")
 
 #Format data and give labels that are more amenable to plotting
 obj2_results <- results.raw %>% dplyr::filter(objective == "objective2") %>% 
@@ -453,19 +453,22 @@ obj2_results <- results.raw %>% dplyr::filter(objective == "objective2") %>%
                                     ifelse(scenario %in% slight_decline_scenarios, "slight decline",
                                            ifelse(scenario %in% slight_increase_scenarios, "slight increase",
                                                   ifelse(scenario %in% severe_decline_scenarios, "severe decline", NA))))) %>% 
-  mutate(model.label = ifelse(scenario %in% no_lambda_scenarios, "naive",
-                              ifelse(scenario %in% narrow_lambda_scenarios, "adapted (narrow lambda prior)", 
-                                     ifelse(scenario %in% diffuse_lambda_scenarios, "adapted (diffuse lambda prior)", NA)))) %>% 
   mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>%
-    mutate(model.label = factor(model.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
   mutate(estimation.sim.label = factor(estimation.sim, levels = c("T0-10", "T0", "present-5", "present"))) %>% 
   mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
                                       ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample juveniles", 
                                              ifelse(sampling.scheme == "target.YOY", "target YOY", NA))))
 
+  # mutate(model.label = ifelse(scenario %in% no_lambda_scenarios, "naive",
+  #                             ifelse(scenario %in% narrow_lambda_scenarios, "adapted (narrow lambda prior)", 
+  #                                    ifelse(scenario %in% diffuse_lambda_scenarios, "adapted (diffuse lambda prior)", NA)))) %>% 
+    # mutate(model.label = factor(model.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
+
+
+
 #Update truth values for naive scenarios to be year-specific rather than averages
 obj2.naive.results.wrong.truth <- obj2_results %>% 
-  dplyr::filter(model.label == "naive", 
+  dplyr::filter(model == "naive", 
                 population.growth != "stable") %>% 
   mutate(surv.truth = all.truth) %>% 
   dplyr::select(-all.truth)
@@ -487,8 +490,16 @@ obj2_results2 <- obj2.naive.results.wrong.truth %>%
 obj2_results <- obj2_results %>% dplyr::filter(!scenario %in% c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3")) %>% 
   bind_rows(obj2_results2) %>% 
   mutate(model = ifelse(scenario %in% naive_scenarios, "naive", 
-                        ifelse(scenario %in% conn_scenarios, "Conn", "adapted"))) %>% 
-  mutate(model = factor(model, levels = c("naive", "adapted", "Conn"), labels = c("naive", "adapted", "Conn")))
+                        ifelse(scenario %in% conn_scenarios, "adapted", NA))) %>% 
+  mutate(model = factor(model, levels = c("naive", "adapted"), labels = c("naive", "adapted")))
+
+####This code is an alternative to the above code for creating variables for a figure that compares our adapted model to Paul's
+# obj2_results <- obj2_results %>% dplyr::filter(!scenario %in% c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3")) %>% 
+#   bind_rows(obj2_results2) %>% 
+#   mutate(model = ifelse(scenario %in% naive_scenarios, "naive", 
+#                         ifelse(scenario %in% conn_scenarios, "Conn", "adapted"))) %>% 
+#   mutate(model = factor(model, levels = c("naive", "adapted", "Conn"), labels = c("naive", "adapted", "Conn")))
+
 
 
 #-----------Prep sample file for analysis of age distribution---------------------
@@ -558,7 +569,7 @@ obj2_results <- obj2_results %>% mutate(parameter = ifelse(parameter == "Nft", "
                                                   parameter)))
 
 #Check that Paul Conn's model registered appropriately
-obj2_results %>% dplyr::count(scenario, model)
+obj2_results %>% dplyr::filter(parameter == "survival", population.growth != "stable") %>% dplyr::count(model)
 ```
 
 ```{r Obj2 plots, echo=FALSE, out.width = "120%"}
@@ -574,7 +585,7 @@ scales::show_col(cp2)
 #-------------------Objective 2 Density plots of relative bias-----------------------#
 (fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf"),
                                           population.growth != "stable",
-                                          scenario %in% c(no_lambda_scenarios, conn_scenarios, "scenario_2.2.1", "scenario_2.2.2", "scenario_2.3.3")) %>% #Added scenario filter so we only have one density plot per situation -- narrow prior for slight growth/decline and diffuse prior for severe decline.
+                                          scenario %in% c(no_lambda_scenarios, conn_scenarios)) %>% #Added scenario filter so we only have one density plot per situation -- narrow prior for slight growth/decline and diffuse prior for severe decline.
   ggplot(aes(x = relative_bias,
              y = estimation.sim.label, 
              fill = model)) + #Changed TO model from model.label
@@ -586,57 +597,64 @@ scales::show_col(cp2)
   #theme(strip.text.y = element_blank()) + 
   xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
-  scale_fill_manual(values = cp2, #Change to subset for red and blue if just doing two: [c(1,3)]
+  scale_fill_manual(values = cp2[c(1, 3)], #Change to subset for red and blue if just doing two: [c(1,3)]
                     name = "Model") +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
     theme_bw()) +
-    theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size=15),
-        strip.text.y = element_text(size=15),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20),
-        axis.text.y = element_text(colour = c("darkturquoise", "darkslategrey", "indianred4", "seagreen4"), 
-                                   face = "bold"))
+    theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 25),
+        strip.text.x = element_text(size=20),
+        strip.text.y = element_text(size=20),
+        legend.text = element_text(size = 20),
+        legend.title = element_text(size = 25),
+        axis.text.y = element_text(face = "bold"))
+
+
+#Save each plot for Obj2 individually and combine in Affinity Designer
+#ggsave("Figure_3.1_2023.10.03.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+##################################################################################
+####################### Objective 2 Supplementary Figure(s) ######################
+##################################################################################
 
 ##Look at stable population growth
 obj2_results %>% dplyr::filter(parameter %in% c("Nf"),
                                           population.growth == "stable") %>% #Added scenario filter so we only have one density plot per situation -- narrow prior for slight growth/decline and diffuse prior for severe decline.
   ggplot(aes(x = relative_bias,
              y = estimation.sim.label, 
-             fill = model)) + #Changed TO model from model.label
+             fill = sampling.scheme.label)) + #Changed TO model from model.label
   geom_density_ridges(alpha = 0.6) + 
   labs(x="Relative bias", y="Estimation year") +
 #  theme_ridges() + 
   #facet_wrap(~sampling.scheme) + 
-  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme.label)) +
+#  facet_grid(cols = vars(sampling.scheme.label)) +
   #theme(strip.text.y = element_blank()) + 
   xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
-  scale_fill_manual(values = cp2, #Change to subset for red and blue if just doing two: [c(1,3)]
+  scale_fill_manual(values = cp, #Change to subset for red and blue if just doing two: [c(1,3)]
                     name = "Model") +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
-    theme_bw()) +
-    theme(axis.text = element_text(size = 12),
+    theme_bw() +
+  ggtitle("Stable population growth") +
+    theme(plot.title = element_text(face = "bold", size = 25),
+      axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
-        strip.text.x = element_text(size=15),
-        strip.text.y = element_text(size=15),
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
         axis.text.y = element_text(colour = c("darkturquoise", "darkslategrey", "indianred4", "seagreen4"), 
                                    face = "bold"))
 
 #Save each plot for Obj2 individually and combine in Affinity Designer
-#ggsave("Figure_3.1_2023.09.14.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("SuppFig_StablePop_Nf_Obj2.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 12, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #-------------------Histogram of ages-----------------------#
 num.bins <- length(min(samples.df_all$birth.year):max(samples.df_all$birth.year))
 
-age.dist_plot <- samples.df_all %>% gghistogram(x = "birth.year", bins = num.bins, facet.by = "sampling.scheme.label", color = "darkslategray4", fill = "darkslategray4", ggtheme = theme_bw()) +
+age.dist_plot <- samples.df_all %>% gghistogram(x = "birth.year", y = "..density..", bins = num.bins, facet.by = "sampling.scheme.label", color = "darkslategray4", fill = "darkslategray4", ggtheme = theme_bw()) +
   geom_vline(aes(xintercept= ref.yr), color = "darkslategrey", linetype = "longdash", size = 1.1) +
-  geom_vline(aes(xintercept = ref.yr - 10), color = "darkturquoise", linetype = "longdash", size = 1.1, alpha = 0.6) +
-  geom_vline(xintercept = 85, color = "indianred4", linetype = "longdash", size = 1.1, alpha = 0.6) +
-  geom_vline(xintercept = 90, color = "seagreen4", linetype = "longdash", size = 1.1, alpha = 0.6) +
+#  geom_vline(aes(xintercept = ref.yr - 10), color = "darkturquoise", linetype = "longdash", size = 1.1, alpha = 0.6) +
+#  geom_vline(xintercept = 85, color = "indianred4", linetype = "longdash", size = 1.1, alpha = 0.6) +
+#  geom_vline(xintercept = 90, color = "seagreen4", linetype = "longdash", size = 1.1, alpha = 0.6) +
   scale_y_continuous(labels = label_comma(), expand = expansion(mult = c(0.01, .05))) +
   xlab("Birth year") +
   theme_bw() +
@@ -647,37 +665,91 @@ age.dist_plot <- samples.df_all %>% gghistogram(x = "birth.year", bins = num.bin
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20))
 
-  
-#Save each plot for Obj2 individually and combine in Affinity Designer
-#ggsave("Fig2_age.dist_2023.09.14.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 6, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+age.dist_plot
 
-      
-##################################################################################
-####################### Objective 2 Supplementary Figure(s) ######################
-##################################################################################
-#-------------------Plot of Lambda bias-----------------------#
-obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
-                                          !scenario %in% c(no_lambda_scenarios, "scenario_2.2.3", "scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.4")) %>% #Added scenario filter so we only have one density plot for each situation. Want the situations to match up with Figure 3.
+#Save each plot for Obj2 individually and combine in Affinity Designer
+#ggsave("SuppFig_age.dist_Obj2_2023.10.03.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 6, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+#-------------------Plots of survival and abundance-----------------------#
+p.obj2_Nm <- obj2_results %>% dplyr::filter(parameter %in% c("Nm"), population.growth != "stable") %>% #Added scenario filter so we only have one density plot for each situation. Want the situations to match up with Figure 3.
   ggplot(aes(x = relative_bias,
              y = estimation.sim.label, 
              fill = model)) + #Changed TO model from model.label
   geom_density_ridges(alpha = 0.6, scale = 0.9) + 
   labs(x="Relative bias", y="Estimation year") +
-  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme.label)) +
+  facet_grid(rows = vars(population.growth), 
+             cols = vars(sampling.scheme.label)) +
+  xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
   scale_fill_manual(values = cp2[c(1,3)], #Changed to subset for red and blue 
                     name = "Model") +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
     theme_bw() +
-    theme(axis.text = element_text(size = 12),
+    theme(plot.title = element_text(face = "bold", 
+                                    size = 25),
+          axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_blank(),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20, face = "bold")) +
+  ggtitle(expression(paste("Estimates of Nm")))
+
+p.obj2_surv <- obj2_results %>% dplyr::filter(parameter %in% c("survival"), population.growth != "stable") %>% #Added scenario filter so we only have one density plot for each situation. Want the situations to match up with Figure 3.
+  ggplot(aes(x = relative_bias,
+             y = estimation.sim.label, 
+             fill = model)) + #Changed TO model from model.label
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+  labs(x="Relative bias", y="Estimation year") +
+  facet_grid(rows = vars(population.growth), 
+             cols = vars(sampling.scheme.label)) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = cp2[c(1,3)], #Changed to subset for red and blue 
+                    name = "Model") +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+    theme_bw() +
+    theme(plot.title = element_text(face = "bold", 
+                                    size = 25),
+          axis.text.x = element_text(size = 12),
+        axis.title.x = element_text(size = 20),
+        axis.text.y = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20, face = "bold")) +
+  ggtitle(expression(paste("Estimates of survival")))
+
+ggarrange(p.obj2_Nm, p.obj2_surv, common.legend = TRUE, legend = "bottom")
+
+ggsave("SuppFig_NmSurv_Obj2_2023.10.03.tiff", plot = last_plot(), device = "tiff", dpi = 500, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 8)
+
+#-------------------Plot of Lambda bias-----------------------#
+obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
+                                          scenario %in% conn_scenarios) %>% #Added scenario filter so we only have one density plot for each situation. Want the situations to match up with Figure 3.
+  ggplot(aes(x = relative_bias, 
+             fill = sampling.scheme.label)) + #Changed TO model from model.label
+  geom_density(alpha = 0.6) + 
+  labs(x="Relative bias", y="Estimation year") +
+  facet_grid(rows = vars(population.growth)) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = cp, #Changed to subset for red and blue 
+                    name = "Sampling scheme") +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+    theme_bw() +
+    theme(plot.title = element_text(face = "bold", 
+                                    size = 25),
+          axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size=15),
         strip.text.y = element_text(size=15),
         legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20)) +
+        legend.title = element_text(size = 20),
+        legend.position = "bottom") +
   ggtitle(expression(paste("Estimates of ", lambda)))
 
-#ggsave("SuppFig_lambda_Obj2.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig_lambda_Obj2.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 12, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 #-------------------Lambda comparison: avg vs indv-----------------------#
@@ -772,7 +844,8 @@ psi0.75_scenarios <- c("scenario_3.3.1", "scenario_3.3.2")
 psi0.50_scenarios <- c("scenario_3.4.1", "scenario_3.4.2")
 
 annual_scenarios <- c("scenario_3.7.1", "scenario_3.7.2")
-biennial_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2", "scenario_3.6.1", "scenario_3.6.2")
+biennial_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2")
+biennial_stoch_scenarios <- c("scenario_3.6.1", "scenario_3.6.2")
 triennial_scenarios <- c("scenario_3.5.1", "scenario_3.5.2")
 
 #Create labels for plotting
@@ -786,7 +859,8 @@ obj3_results <- results.raw %>% dplyr::filter(objective == "objective3") %>%
   mutate(psi.label = factor(psi.label, levels = c("1", "1*", "0.90", "0.75", "0.50", "0"))) %>% 
   mutate(breeding.schedule = ifelse(scenario %in% annual_scenarios, "annual",
                                     ifelse(scenario %in% biennial_scenarios, "biennial", 
-                                           ifelse(scenario %in% triennial_scenarios, "triennial", NA)))) %>% 
+                                           ifelse(scenario %in% triennial_scenarios, "triennial", 
+                                                  ifelse(scenario %in% biennial_stoch_scenarios, "biennial*", NA))))) %>% 
   mutate(model.label = ifelse(scenario %in% naive_scenarios, "annual", "multiennial")) %>% 
   #mutate(model.label = factor(model.label, levels = c("annual", "multiennial"))) %>% #Don't think we need this for plotting, but will leave commented just in case.
   mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
@@ -814,15 +888,15 @@ scales::show_col(cp3.sub)
 
 ######################################################################################################### Objective 3 Main Figure ####################################################################################################################
 #-------------------Objective 3 Density plots of relative bias-----------------------#
-(fig4a <- obj3_results %>% dplyr::filter(parameter == "Nf",
-                                         breeding.schedule != "triennial",
-                                         estimation.sim.label %in% c("T0", "present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
-  ggplot(aes(x=factor(psi.label), fill = model.label)) +
+(fig4a <- obj3_results %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival"),
+                                         breeding.schedule %in% c("annual", "biennial", "biennial*", "triennial"),
+                                         estimation.sim.label %in% c("present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
+  ggplot(aes(x=factor(breeding.schedule, levels = c("triennial", "biennial", "biennial*", "annual")), fill = model.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(x="Proportion biennial breeders", y="Relative bias") +
   scale_fill_manual(values = cp3.sub) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(estimation.sim.label), scales = "fixed") +
+  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival", "lambda"))), scales = "free") +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
@@ -831,29 +905,25 @@ scales::show_col(cp3.sub)
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
         plot.title = element_text(size=25))) +
-  guides(fill=guide_legend(title="Model")) +
-  ggtitle("a) Intermittent breeding")
+  guides(fill=guide_legend(title="Model"))
 
-ggsave("Figure_4a_2023.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
-
-#      ggsave("Figure_4a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
+#ggsave("Figure_4_Obj3_2023.10.03.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 ##################################################################################
 ####################### Objective 3 Supplementary Figure(s) ######################
 ##################################################################################
 
-#-------------------Plot of triennial breeding --------------------#  
-(tri.fig <- obj3_results %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival", "lambda"),
-                                         breeding.schedule == "triennial",
-                                         estimation.sim.label %in% c("present")) %>%
-   mutate(parameter = factor(parameter, levels = c("Nf", "Nm", "survival", "lambda"), labels = c("Nf", "Nm", "survival", "lambda"))) %>% 
-  ggplot(aes(x=factor(model.label), fill = model.label)) +
+#-------------------Other parameters --------------------#  
+(fig4_others <- obj3_results %>% dplyr::filter(!breeding.schedule %in% c("triennial"),
+                                         estimation.sim.label %in% c("present"),
+                                         !parameter %in% c("psi", "Nfb1", "Nfb2")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
+  ggplot(aes(x=factor(psi.label), fill = model.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  labs(x="Model", y="Relative bias") +
+  labs(x="Proportion biennial breeders", y="Relative bias") +
   scale_fill_manual(values = cp3.sub) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(parameter), scales = "free") +
+  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival", "lambda"))), scales = "free") +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
@@ -861,114 +931,142 @@ ggsave("Figure_4a_2023.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 3
         strip.text.y = element_text(size=15),
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))) +
-  guides(fill=guide_legend(title="Model")) +
-  ggtitle("Triennial breeding")
+        plot.title = element_text(size=25)) +
+  guides(fill=guide_legend(title="Model")))
 
-ggsave("SuppFig_triennial.breeding_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig_variablepsi_Obj3_2023.10.03.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
-
-
-#-------------------Plot of Lambda bias-----------------------#
-(figS3.lambda <- obj3_results %>% dplyr::filter(parameter %in% c("lambda"),
-                                         breeding.schedule != "triennial",
-                                         estimation.sim.label %in% c("T0", "present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
-  ggplot(aes(x=factor(psi.label), fill = model.label)) +
-  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  labs(x="Proportion biennial breeders", y="Relative bias") +
-  scale_fill_manual(values = cp3.sub) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(estimation.sim.label), scales = "fixed") +
-  theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size=15),
-        strip.text.y = element_text(size=15),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))) +
-  guides(fill=guide_legend(title="Model")) +
-  ggtitle("Lambda")
+#      ggsave("Figure_4a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
 
 
-ggsave("SuppFig_Lambda_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
-
-
-
-#-------------------Plot of survival bias-----------------------#
-(figS3.survival <- obj3_results %>% dplyr::filter(parameter %in% c("survival"),
-                                         breeding.schedule != "triennial",
-                                         estimation.sim.label %in% c("T0", "present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
-  ggplot(aes(x=factor(psi.label), fill = model.label)) +
-  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  labs(x="Proportion biennial breeders", y="Relative bias") +
-  scale_fill_manual(values = cp3.sub) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(estimation.sim.label), scales = "fixed") +
-  theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size=15),
-        strip.text.y = element_text(size=15),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))) +
-  guides(fill=guide_legend(title="Model")) +
-  ggtitle("Survival")
-
-
-ggsave("SuppFig_survival_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
-
-
-#-------------------Plot of psi bias-----------------------#
-      (figS3_psi <- obj3_results %>% dplyr::filter(parameter %in% c("psi"),
-                                         breeding.schedule != "triennial",
-                                         estimation.sim.label %in% c("T0", "present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
-  ggplot(aes(x=factor(psi.label), fill = model.label)) +
-  geom_boxplot(aes(y=relative_bias), draw_quantiles = 0.5) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  labs(x="Proportion biennial breeders", y="Relative bias") +
-  scale_fill_manual(values = cp3.sub[2]) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(estimation.sim.label), scales = "fixed") +
-  theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size=15),
-        strip.text.y = element_text(size=15),
-        legend.position = "none",
-        plot.title = element_text(size=25)))
-
-
-
-#-----------Plot of bias in Nfb, calculated in two ways -----------#
-(figS3.Nfb <- obj3_results %>% dplyr::filter(parameter %in% c("Nfb1", "Nfb2"),
-                                         breeding.schedule != "triennial",
-                                         estimation.sim.label %in% c("present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
-  ggplot(aes(x=factor(psi.label), fill = model.label)) +
-  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  labs(x="Proportion biennial breeders", y="Relative bias") +
-  scale_fill_manual(values = cp3.sub) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(parameter), scales = "fixed") +
-  theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size=15),
-        strip.text.y = element_text(size=15),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))) +
-  guides(fill=guide_legend(title="Model")) +
-  ggtitle("Survival")
-
-ggsave("SuppFig_Nfb_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+# #-------------------Plot of triennial breeding --------------------#  
+# (tri.fig <- obj3_results %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival", "lambda"),
+#                                          breeding.schedule == "triennial",
+#                                          estimation.sim.label %in% c("present")) %>%
+#    mutate(parameter = factor(parameter, levels = c("Nf", "Nm", "survival", "lambda"), labels = c("Nf", "Nm", "survival", "lambda"))) %>% 
+#   ggplot(aes(x=factor(model.label), fill = model.label)) +
+#   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+#   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+#   labs(x="Model", y="Relative bias") +
+#   scale_fill_manual(values = cp3.sub) +
+#   facet_grid(cols = vars(sampling.scheme.label), rows = vars(parameter), scales = "free") +
+#   theme_bw() +
+#   theme(axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size=15),
+#         strip.text.y = element_text(size=15),
+#         legend.text = element_text(size = 15),
+#         legend.title = element_text(size = 20),
+#         plot.title = element_text(size=25))) +
+#   guides(fill=guide_legend(title="Model")) +
+#   ggtitle("Triennial breeding")
+# 
+# ggsave("SuppFig_triennial.breeding_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+# 
+# 
+# 
+# #-------------------Plot of Lambda bias-----------------------#
+# (figS3.lambda <- obj3_results %>% dplyr::filter(parameter %in% c("lambda"),
+#                                          breeding.schedule != "triennial",
+#                                          estimation.sim.label %in% c("T0", "present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
+#   ggplot(aes(x=factor(psi.label), fill = model.label)) +
+#   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+#   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+#   labs(x="Proportion biennial breeders", y="Relative bias") +
+#   scale_fill_manual(values = cp3.sub) +
+#   facet_grid(cols = vars(sampling.scheme.label), rows = vars(estimation.sim.label), scales = "fixed") +
+#   theme_bw() +
+#   theme(axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size=15),
+#         strip.text.y = element_text(size=15),
+#         legend.text = element_text(size = 15),
+#         legend.title = element_text(size = 20),
+#         plot.title = element_text(size=25))) +
+#   guides(fill=guide_legend(title="Model")) +
+#   ggtitle("Lambda")
+# 
+# 
+# ggsave("SuppFig_Lambda_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+# 
+# 
+# 
+# #-------------------Plot of survival bias-----------------------#
+# (figS3.survival <- obj3_results %>% dplyr::filter(parameter %in% c("survival"),
+#                                          breeding.schedule != "triennial",
+#                                          estimation.sim.label %in% c("T0", "present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
+#   ggplot(aes(x=factor(psi.label), fill = model.label)) +
+#   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+#   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+#   labs(x="Proportion biennial breeders", y="Relative bias") +
+#   scale_fill_manual(values = cp3.sub) +
+#   facet_grid(cols = vars(sampling.scheme.label), rows = vars(estimation.sim.label), scales = "fixed") +
+#   theme_bw() +
+#   theme(axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size=15),
+#         strip.text.y = element_text(size=15),
+#         legend.text = element_text(size = 15),
+#         legend.title = element_text(size = 20),
+#         plot.title = element_text(size=25))) +
+#   guides(fill=guide_legend(title="Model")) +
+#   ggtitle("Survival")
+# 
+# 
+# ggsave("SuppFig_survival_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+# 
+# 
+# #-------------------Plot of psi bias-----------------------#
+#       (figS3_psi <- obj3_results %>% dplyr::filter(parameter %in% c("psi"),
+#                                          breeding.schedule != "triennial",
+#                                          estimation.sim.label %in% c("T0", "present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
+#   ggplot(aes(x=factor(psi.label), fill = model.label)) +
+#   geom_boxplot(aes(y=relative_bias), draw_quantiles = 0.5) +
+#   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+#   labs(x="Proportion biennial breeders", y="Relative bias") +
+#   scale_fill_manual(values = cp3.sub[2]) +
+#   facet_grid(cols = vars(sampling.scheme.label), rows = vars(estimation.sim.label), scales = "fixed") +
+#   theme_bw() +
+#   theme(axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size=15),
+#         strip.text.y = element_text(size=15),
+#         legend.position = "none",
+#         plot.title = element_text(size=25)))
+# 
+# 
+# 
+# #-----------Plot of bias in Nfb, calculated in two ways -----------#
+# (figS3.Nfb <- obj3_results %>% dplyr::filter(parameter %in% c("Nfb1", "Nfb2"),
+#                                          breeding.schedule != "triennial",
+#                                          estimation.sim.label %in% c("present")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
+#   ggplot(aes(x=factor(psi.label), fill = model.label)) +
+#   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+#   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+#   labs(x="Proportion biennial breeders", y="Relative bias") +
+#   scale_fill_manual(values = cp3.sub) +
+#   facet_grid(cols = vars(sampling.scheme.label), rows = vars(parameter), scales = "fixed") +
+#   theme_bw() +
+#   theme(axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size=15),
+#         strip.text.y = element_text(size=15),
+#         legend.text = element_text(size = 15),
+#         legend.title = element_text(size = 20),
+#         plot.title = element_text(size=25))) +
+#   guides(fill=guide_legend(title="Model")) +
+#   ggtitle("Survival")
+# 
+# ggsave("SuppFig_Nfb_Obj3.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 ```
 
 ```{r Obj4 data prep}
 ##################### Objective 4 ############################
 #---------------------Prep results----------------------------
-accurate.annual.scenario <- results.raw %>% dplyr::filter(scenario == "scenario_2.2.4") %>% #stable population growth with narrow prior
-  mutate(scenario = "accurate.annual")
+accurate.annual.scenario <- results.raw %>% dplyr::filter(scenario == "scenario_2.4.4") %>% #stable population growth with narrow prior
+  mutate(scenario = "accurate.annual",
+         parameter = ifelse(parameter == "Nft", "Nf", 
+                            ifelse(parameter == "Nmt", "Nm", parameter)))
 accurate.biennial.scenario <- results.raw %>% dplyr::filter(scenario == "scenario_3.1.2") %>% #stable population growth and biennial breeding/model
   mutate(scenario = "accurate.biennial")
 
@@ -1017,7 +1115,7 @@ obj4_results <- obj4_results %>%
 ####################### Objective 4 Main Figure ##################################
 ##################################################################################
 #-------------------Objective 4 Density plots of relative bias-----------------------#
-      (fig4b <- obj4_results %>% dplyr::filter(parameter == "Nf" | parameter == "survival", estimation.sim.label == "T0") %>% 
+      (fig4b <- obj4_results %>% dplyr::filter(parameter == "Nf" | parameter == "survival", estimation.sim.label == "present") %>% 
   ggplot(aes(x=factor(cv.label), fill = model.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
@@ -1031,11 +1129,11 @@ obj4_results <- obj4_results %>%
         strip.text.y = element_text(size = 15),
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))) +
-  guides(fill=guide_legend(title="Population + model")) +
-  ggtitle("b) Aging error")
+        plot.title = element_text(size=25),
+  legend.position = "top")) +
+  guides(fill=guide_legend(title="Population + model"))
 
-ggsave("Figure_4b_aging.error_2023.09.18.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Figure_5_aging.error_2023.10.03.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 12, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 ##################################################################################
 ####################### Objective 4 Supplementary Figure(s) ##################################
@@ -1101,7 +1199,8 @@ ggsave("Figure_4b_aging.error_2023.09.18.tiff", plot = last_plot(), device = "ti
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(y="Relative bias", x = "Age-length uncertainty") +
   scale_fill_manual(values = cp4) +
-  facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "free") +
+  facet_grid(cols = vars(sampling.scheme), 
+             rows = vars(factor(parameter, levels = c("Nm", "survival", "lambda"))), scales = "free") +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
@@ -1109,14 +1208,12 @@ ggsave("Figure_4b_aging.error_2023.09.18.tiff", plot = last_plot(), device = "ti
         strip.text.y = element_text(size = 15),
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))) +
-  guides(fill=guide_legend(title="Population + model")) +
-  ggtitle("Aging error")
+        plot.title = element_text(size=25),
+        legend.position = "top")) +
+  guides(fill=guide_legend(title="Population + model"))
             
 
-  ggsave("SuppFig_other.parameters_Obj4.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
-  
-
+  ggsave("SuppFig_other.parameters_Obj4.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 12, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 ```
 
 

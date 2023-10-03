@@ -72,7 +72,6 @@ if(model == "multiennial.model"){
 
 
 ######################### STEP 2: DEFINE DATA FOR JAGS ########################
-#------------------------- Annual model; no lambda -------------------------
  #========================= Model validation =========================#
 if(model == "annual.model"){
      #Define data
@@ -98,7 +97,6 @@ if(model == "annual.model"){
  }
 
 #------------------------- Multiennial model -------------------------
-
 if(model == "multiennial.model" & HS.only == "yes"){
   #Define data
   jags_data = list(
@@ -127,7 +125,9 @@ if(model == "multiennial.model" & HS.only == "yes"){
     dad.yrs = dad.yrs,
     
     
-    # #Breeding interval
+    #general
+    estimation.year = estimation.year,
+    est.year.calibrate = est.year.calibrate,
     a = mating.periodicity
   )
   
@@ -170,7 +170,9 @@ if(model == "multiennial.model" & HS.only != "yes"){
     dad.positives = dad.positives,
     dad.yrs = dad.yrs,
     
-    # #Breeding interval
+    #general
+    estimation.year = estimation.year,
+    est.year.calibrate = est.year.calibrate,
     a = mating.periodicity
   )   
 }
@@ -201,8 +203,8 @@ if(model == "multiennial.model"){
     for(c in 1:nc){
       inits[[c]] = list(
         survival = runif(1, min=0.5, max=0.95),
-        Nf = rnorm(1, mean = 500, sd = 100),
-        Nm = rnorm(1, mean = 500, sd = 100),
+        Nf0 = rnorm(1, mean = 500, sd = 100),
+        Nm0 = rnorm(1, mean = 500, sd = 100),
         psi = runif(1, min=0, max=1),
         lambda = 1
       )
