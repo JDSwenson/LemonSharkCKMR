@@ -505,7 +505,7 @@ draw.samples <- function(target.samples = target.samples){
       dplyr::filter(age.x == 0) %>% 
       nrow()
     
-    sample.size <- num.YOY * (sample.prop/100)
+    sample.size <- round(num.YOY * (sample.prop/100),0)
     
     #Sample YOY only for half-sib analysis
     sample.df_temp <- loopy.list[[i]] %>% mutate(capture.year = i) %>%
@@ -778,7 +778,6 @@ mom_comps.all <- HS.mom.pairwise.df %>%
 dad_comps.all <- HS.dad.pairwise.df %>% 
   mutate(pop.growth.yrs = ref.year - estimation.year) %>% 
   arrange(desc(ref.year), mort.yrs)
-
 
 return(list(mom_comps.all, dad_comps.all, positives.HS))
 }

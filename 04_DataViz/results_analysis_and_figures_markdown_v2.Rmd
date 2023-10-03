@@ -92,7 +92,7 @@ results.raw %>% dplyr::filter(Rhat > 1.01) %>%
 results.raw %>% group_by(scenario) %>% 
   summarize(failed = sum(Rhat > 1.01), 
             passed = sum(Rhat <= 1.01)) %>% 
-  summarize(percent.failed = sum(failed)/((sum(failed) + sum(passed))))
+  summarize(percent.failed = sum(failed)/((sum(failed) + sum(passed)))*100)
   
 
 #Scenario-specific failure rates
@@ -122,7 +122,8 @@ results %>% dplyr::count(parameter)
 
 results %>% group_by(parameter, scenario, sampling.scheme, estimation.sim) %>% 
   summarize(median.relative.bias = median(relative_bias)) %>% 
-  dplyr::filter(parameter %in% c("Nf", "Nm", "survival"))
+  dplyr::filter(parameter %in% c("Nf", "Nm", "survival")) %>% 
+  print(n = 50)
 
 #check out median relative bias by parameter, model, and estimation.sim for Nm and Nf
 results %>% dplyr::filter(parameter %in% c("Nf", "Nm")) %>%
@@ -384,6 +385,8 @@ obj1_results %>% dplyr::filter(aunt.label != "No aunt/niece",
   writexl::write_xlsx(path = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/aunt.niece_table.xlsx")
 
 #-------------------Plot of numbers of full sibs in dataset
+cp.sibs <- brewer.pal(3, "Spectral") #Choose palette + number of colors
+
 p.full.sibs <- obj1_results %>% dplyr::filter(scenario == "scenario_1.2.1", parameter == "Nf") %>% 
   pivot_longer(cols = c(full.siblings, diff.cohort_full.siblings), names_to = "sib.years", values_to = "num.full.sibs") %>%
   ggplot(aes(fill = sib.years)) + 
@@ -392,7 +395,7 @@ p.full.sibs <- obj1_results %>% dplyr::filter(scenario == "scenario_1.2.1", para
   facet_grid(rows = vars(sample.prop.lab), cols = vars(sampling.scheme.label)) + 
   theme_bw() +
 #  xlim(-100, 100) +
-  scale_fill_manual(values = cp, labels = c("different cohort", "all")) +
+  scale_fill_manual(values = cp.sibs[c(1, 3)], labels = c("different cohort", "all")) +
   theme_bw() +
   theme(legend.title = element_blank(),
         legend.position = "bottom")
@@ -406,7 +409,7 @@ p.full.sibs
   #            fill = sampling.scheme.label)) + 
   # geom_density_ridges(alpha = 0.6) +
 
-ggsave("SuppFig_FullSibs_2023.10.02.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://MyDrive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 2200, units = "px")
+ggsave("SuppFig_FullSibs_2023.10.02.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw", width = 3694, height = 2200, units = "px")
 ```
 
 
@@ -431,14 +434,17 @@ truth.obj2 <- bind_rows(obj2truth.slight.decline, obj2truth.slight.increase, obj
   mutate(estimation.year = year)
 
 #Set up vectors of population growth scenarios
-slight_decline_scenarios <- c("scenario_2.1.1", "scenario_2.2.1", "scenario_2.3.1")
-slight_increase_scenarios <- c("scenario_2.1.2", "scenario_2.2.2", "scenario_2.3.2")
-severe_decline_scenarios <- c("scenario_2.1.3", "scenario_2.2.3", "scenario_2.3.3")
-stable_popgrowth_scenarios <- c("scenario_2.1.4", "scenario_2.2.4", "scenario_2.3.4")
+slight_decline_scenarios <- c("scenario_2.1.1", "scenario_2.2.1", "scenario_2.3.1", "scenario_2.4.1")
+slight_increase_scenarios <- c("scenario_2.1.2", "scenario_2.2.2", "scenario_2.3.2", "scenario_2.4.2")
+severe_decline_scenarios <- c("scenario_2.1.3", "scenario_2.2.3", "scenario_2.3.3", "scenario_2.4.3")
+stable_popgrowth_scenarios <- c("scenario_2.1.4", "scenario_2.2.4", "scenario_2.3.4", "scenario_2.4.4")
+
+#Specify Conn scenarios
+conn_scenarios <- c("scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scenario_2.4.4")
 
 #Set up vectors of lambda prior scenarios
 no_lambda_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4")
-narrow_lambda_scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4")
+narrow_lambda_scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4", "scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scenario_2.4.4")
 diffuse_lambda_scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")
 
 #Format data and give labels that are more amenable to plotting
@@ -480,8 +486,9 @@ obj2_results2 <- obj2.naive.results.wrong.truth %>%
 #Remove from obj2_results the results from scenarios with average truth values so they can be replaced with year-specific truths. All columns except for truth are the same.
 obj2_results <- obj2_results %>% dplyr::filter(!scenario %in% c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3")) %>% 
   bind_rows(obj2_results2) %>% 
-  mutate(model = ifelse(scenario %in% naive_scenarios, "naive", "adapted")) %>% 
-  mutate(model = factor(model, levels = c("naive", "adapted"), labels = c("naive", "adapted")))
+  mutate(model = ifelse(scenario %in% naive_scenarios, "naive", 
+                        ifelse(scenario %in% conn_scenarios, "Conn", "adapted"))) %>% 
+  mutate(model = factor(model, levels = c("naive", "adapted", "Conn"), labels = c("naive", "adapted", "Conn")))
 
 
 #-----------Prep sample file for analysis of age distribution---------------------
@@ -491,6 +498,7 @@ sampFile.stable <- "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Pe
 samples.df_all <- readRDS(file = sampFile.stable)
 
 #Occasionally there is a different ref.yr for sample.ALL.ages (77), but it's one year away from the dominant ref.yr (76) and there are only a few instances. It helps for visualization to make the same so there aren't two vertical lines in an upcoming plot.
+#Also, apparently only saved ref.yr for the last iteration. It's fine for viz purposes, but that's why there are so many NAs.
 samples.df_all %>% dplyr::count(ref.yr)
 
 samples.df_all <- samples.df_all %>% 
@@ -542,6 +550,15 @@ pop.size_all %>% group_by(population.growth, iteration) %>%
             mean.total.lambda = mean(mean.total.lambda_iteration, na.rm = TRUE),
             sd.total.lambda = sd(sd.total.lambda_iteration, na.rm = TRUE))
 
+#Add/edit Paul Conn simulations
+#obj2_results <- obj2_results %>% mutate(model = ifelse(scenario %in% conn_scenarios, "Conn", model))
+
+obj2_results <- obj2_results %>% mutate(parameter = ifelse(parameter == "Nft", "Nf",
+                                           ifelse(parameter == "Nmt", "Nm",
+                                                  parameter)))
+
+#Check that Paul Conn's model registered appropriately
+obj2_results %>% dplyr::count(scenario, model)
 ```
 
 ```{r Obj2 plots, echo=FALSE, out.width = "120%"}
@@ -553,13 +570,11 @@ brewer.pal.info #See different palette options from Rcolorbrewer
 cp2 <- brewer.pal(3, "RdYlBu") #Choose palette + number of colors
 scales::show_col(cp2)
 
-##################################################################################
-####################### Objective 2 Main Figure ##################################
-##################################################################################
+######################################################################################################### Objective 2 Main Figure ####################################################################################################################
 #-------------------Objective 2 Density plots of relative bias-----------------------#
 (fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf"),
                                           population.growth != "stable",
-                                          scenario %in% c(no_lambda_scenarios, "scenario_2.2.1", "scenario_2.2.2", "scenario_2.3.3")) %>% #Added scenario filter so we only have one density plot per situation -- narrow prior for slight growth/decline and diffuse prior for severe decline.
+                                          scenario %in% c(no_lambda_scenarios, conn_scenarios, "scenario_2.2.1", "scenario_2.2.2", "scenario_2.3.3")) %>% #Added scenario filter so we only have one density plot per situation -- narrow prior for slight growth/decline and diffuse prior for severe decline.
   ggplot(aes(x = relative_bias,
              y = estimation.sim.label, 
              fill = model)) + #Changed TO model from model.label
@@ -571,7 +586,34 @@ scales::show_col(cp2)
   #theme(strip.text.y = element_blank()) + 
   xlim(-100, 100) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
-  scale_fill_manual(values = cp2[c(1,3)], #Changed to subset for red and blue 
+  scale_fill_manual(values = cp2, #Change to subset for red and blue if just doing two: [c(1,3)]
+                    name = "Model") +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+    theme_bw()) +
+    theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        axis.text.y = element_text(colour = c("darkturquoise", "darkslategrey", "indianred4", "seagreen4"), 
+                                   face = "bold"))
+
+##Look at stable population growth
+obj2_results %>% dplyr::filter(parameter %in% c("Nf"),
+                                          population.growth == "stable") %>% #Added scenario filter so we only have one density plot per situation -- narrow prior for slight growth/decline and diffuse prior for severe decline.
+  ggplot(aes(x = relative_bias,
+             y = estimation.sim.label, 
+             fill = model)) + #Changed TO model from model.label
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Relative bias", y="Estimation year") +
+#  theme_ridges() + 
+  #facet_wrap(~sampling.scheme) + 
+  facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme.label)) +
+  #theme(strip.text.y = element_blank()) + 
+  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = cp2, #Change to subset for red and blue if just doing two: [c(1,3)]
                     name = "Model") +
   scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
     theme_bw()) +
@@ -618,7 +660,7 @@ obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
                                           !scenario %in% c(no_lambda_scenarios, "scenario_2.2.3", "scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.4")) %>% #Added scenario filter so we only have one density plot for each situation. Want the situations to match up with Figure 3.
   ggplot(aes(x = relative_bias,
              y = estimation.sim.label, 
-             fill = parameter)) + #Changed TO model from model.label
+             fill = model)) + #Changed TO model from model.label
   geom_density_ridges(alpha = 0.6, scale = 0.9) + 
   labs(x="Relative bias", y="Estimation year") +
   facet_grid(rows = vars(population.growth), cols = vars(sampling.scheme.label)) +
@@ -635,7 +677,7 @@ obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
         legend.title = element_text(size = 20)) +
   ggtitle(expression(paste("Estimates of ", lambda)))
 
-ggsave("SuppFig_lambda_Obj2.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+#ggsave("SuppFig_lambda_Obj2.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 12, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 #-------------------Lambda comparison: avg vs indv-----------------------#

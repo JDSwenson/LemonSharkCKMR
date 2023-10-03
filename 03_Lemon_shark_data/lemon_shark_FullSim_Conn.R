@@ -233,14 +233,6 @@ sampled.fathers <- unique(sample.info$father.x)
 #First year of estimation will be four years after the first year of sampling
 first.est.year <- sample.years + 4
 
-#All samples - set up so we don't have to build the pairwise comparison matrix with every shift in estimation year
-estimation.year <- first.est.year
-samples.df.all <- sample.info
-
-cat(paste0("\nBuilding pairwise comparison matrix for all samples for iteration ", iter, "\n"))
-pairwise.out.all <- build.pairwise(filtered.samples.HS.df = samples.df.all)  
-
-
 #------------ Run loop of sampling over five year interval ------------------#
 for(block in first.est.year:n_yrs){
   
@@ -253,6 +245,9 @@ for(block in first.est.year:n_yrs){
   
   #Blocked  samples - three year
   samples.df.block3 <- sample.info %>% dplyr::filter(capture.year >= block - 2 & capture.year <= block)
+  
+  #all samples
+  samples.df.all <- sample.info %>% dplyr::filter(capture.year <= block)
   
 #--------------Calculate reference year--------------
   #Five year block
@@ -543,11 +538,16 @@ for(block in first.est.year:n_yrs){
   #----------------Use all data ---------------------
   #-------------Construct pairwise comparison matrix--------------
   sim <- "all"
-  
+  #All samples - set up so we don't have to build the pairwise comparison matrix with every shift in estimation year
+  cat(paste0("\nBuilding pairwise comparison matrix for all samples for iteration ", iter, "\n"))
+
   est.year.calibrate <- est.year.calibrate.all
   ref.year <- ref.year.all
   
-  pairwise.out <- pairwise.out.all
+  pairwise.out <- build.pairwise(filtered.samples.HS.df = samples.df.all)
+  mom_comps.all.all <- pairwise.out[[1]]  
+  dad_comps.all.all <- pairwise.out[[2]]
+  positives.HS.all <- pairwise.out[[3]]
   
   mom_comps.all.all <- pairwise.out[[1]] %>% 
     mutate(pop.growth.yrs = ref.year - est.year.calibrate)
@@ -765,18 +765,18 @@ results2 %>% group_by(parameter, estimation.year, time_window) %>%
 #-----------------------------Save major output files---------------------------------------------
 #Home computer: Dell Precision
 #Save model estimates
-write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims_results_Conn.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims_results_Conn2.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #Save pop size estimates
-saveRDS(pop.size.tibble_all, file = paste0(results_location, "lemon_shark_time_series_sims_popSize_Conn"))
+saveRDS(pop.size.tibble_all, file = paste0(results_location, "lemon_shark_time_series_sims_popSize_Conn2"))
 
 #Save draws from posterior for model diagnostics 
 #saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 1
 
 #Save final pairwise comparison matrices
-saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_mom.comps_Conn"))
+saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_mom.comps_Conn2"))
 
-saveRDS(dad.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_dad.comps_Conn"))
+saveRDS(dad.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_dad.comps_Conn2"))
 
 #-------------Quick viz of results--------------#
 results2 %>% ggplot(aes(x = relative_bias,
