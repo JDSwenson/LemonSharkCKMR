@@ -29,14 +29,13 @@ library(ggalt)
 rm(list=ls())
 today <- format(Sys.Date(), "%d%b%Y")
 
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/"
 ```
 
 
 ```{r set-file-locations and read in files, include = FALSE}
 #------------- Simulation parameters and labels  ----------------#
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.output/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/"
-
 results.files <- list.files(path = paste0(results_location),
                             recursive = FALSE,
                             pattern = "*.csv",
@@ -1219,30 +1218,72 @@ ggsave("Figure_5_aging.error_2023.10.03.tiff", plot = last_plot(), device = "tif
 
 
 PICK UP HERE AFTER 09/18/2023
-```{r objective 5 viz}
+```{r objective 5 data read and format}
 ###############################################################
 ############# Load lemon shark sim results and data ###########
 ###############################################################
 
 #--------------Load lemon shark simulation results-----------#
-lemonSim.files <- list.files(path = paste0(results_location),
+(lemonSim.files <- list.files(path = paste0(results_location, "/lemon_shark_sims/"),
                             recursive = FALSE,
                             pattern = "lemon_shark.*\\.csv$",
-                            full.names = TRUE)
+                            full.names = TRUE))
 
-ls_dataSim <- map_dfr(lemonSim.files, read_csv) %>% 
-  mutate(time_window = ifelse(time_window == "all samples", "all available", 
-                              ifelse(estimation.yr - T0 == 1, "three year block",
-                                      time_window))) %>%  #Had the wrong label for the three year block
-  mutate(parameter = ifelse(parameter == "Nfb2", "Nfb", parameter))
+ls_dataSim <- map_dfr(lemonSim.files, read_csv) 
+#Don't need the below anymore -- that was for the first run of this
+# %>% 
+#   mutate(time_window = ifelse(time_window == "all samples", "all available", 
+#                               ifelse(estimation.yr - T0 == 1, "three year block",
+#                                       time_window))) %>%  #Had the wrong label for the three year block
+#   mutate(parameter = ifelse(parameter == "Nfb2", "Nfb", parameter))
 
 ls_dataSim %>% dplyr::count(time_window)
 ls_dataSim %>% dplyr::count(parameter)
 
 #ls_dataSim <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_time_series_sims.csv")
 
+#----------------------Load population size for trajectory
+ls_dataTrend_raw <- readRDS(file = paste0(results_location, "/lemon_shark_sims/lemon_shark_time_series_sims_popSize_Conn3_temp"))
 
-#--------------------Load lemon shark data estimates---------#
+min.yr <- ls_dataSim %>% dplyr::filter(parameter == "Nfbt") %>% summarize(min.yr = min(estimation.year)) %>% 
+  pull(min.yr)
+
+ls_dataTrend.df <- ls_dataTrend_raw %>% dplyr::group_by(year) %>% 
+  dplyr::summarize(Nf.trend = round(mean(Female.adult.pop), 0),
+                   Nm.trend = round(mean(Male.adult.pop), 0),
+                   Nfb.trend = round(mean(Num.mothers), 0)
+                   ) %>% 
+  mutate(Nf.trend.trans = Nf.trend * 4,
+         Nm.trend.trans = Nm.trend * 4,
+         Nfb.trend.trans = Nfb.trend * 4) %>% 
+  dplyr::filter(year >= min.yr) %>% 
+  mutate(type = "trend")
+
+#--------------------Single interation abundance trend
+#-------Single iteration abundance trend----------------#
+(iter <- sample(c(1:100), size = 1)) #Iteration 16 is a good one for visualization
+iter <- 16
+
+ls_estimatesSim <- ls_dataSim %>% pivot_longer(cols = c(Q50, all.truth), names_to = "type", values_to = "estimate") %>% 
+  dplyr::filter(type == "Q50",
+                iteration == iter) %>% 
+  mutate(time_window = ifelse(time_window == "all samples" ,"all available samples", time_window))
+
+ls_truthSim <- ls_dataSim %>% pivot_longer(cols = c(Q50, all.truth), names_to = "type", values_to = "estimate") %>% 
+  dplyr::filter(type == "all.truth",
+                iteration == iter) %>%
+  dplyr::select(parameter, truth = estimate, estimation.year, type, time_window) %>% 
+  mutate(type = ifelse(parameter %in% c("Nft", "Nf0", "Nmt", "Nm0", "Nfbt", "Nfb0", "psi"), "truth",
+                       ifelse(time_window == "all samples", "truth: all samples",
+                       ifelse(time_window == "five year block", "truth: five year block",
+                              ifelse(time_window == "three year block", "truth: three year block", NA)))))
+
+ls_truthSim.abund <- ls_truthSim %>% dplyr::filter(parameter %in% c("Nft", "Nf0", "Nmt", "Nm0", "Nfbt"))
+
+ls_truthSim.otherParams <- ls_truthSim %>% dplyr::filter(parameter %in% c("survival", "lambda"))
+
+#
+#--------------------Load lemon shark data estimates---------
 ls_dataFull <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/z_old_files/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FullDataset_wLambda.csv") %>% 
   mutate(num.samps = num.samps_all) %>% 
   dplyr::select(-c(num.samps_all)) %>% 
@@ -1287,7 +1328,10 @@ ls_data4viz <- bind_rows(ls_data.full4viz,
                          ls_data.Fulldown4viz,
                          ls_data.five4viz) %>% 
   mutate(Dataset = factor(Dataset, levels = c("Full", "Full | downsampled", "Five year intervals")))
+```
 
+
+```{r objective 5 viz}
 #------------------- Simulation figs --------------------------
 brewer.pal.info #See different palette options from Rcolorbrewer
 cp5 <- brewer.pal(3, "Dark2") #Choose palette + number of colors
@@ -1295,14 +1339,18 @@ cp5[4] <- "black"
 scales::show_col(cp5)
 
 #------- Box plot of relative bias for Nfb----------------#
-ls_Nfb_boxplot <- ls_dataSim %>% dplyr::filter(parameter == "Nfb") %>% 
-  ggplot(aes(x=factor(estimation.yr), fill = time_window)) +
-  geom_boxplot(aes(y=relative_bias)) +
+ls_Nfb_boxplot <- ls_dataSim %>% dplyr::filter(parameter %in% c("Nfbt")) %>% 
+  ggplot() +
+  geom_boxplot(aes(x=factor(estimation.year), fill = time_window, y=relative_bias), notch = TRUE, outlier.alpha = 0.1) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(y="Relative bias", x = "Year") +
-  scale_y_continuous(limits = c(-50, 200), breaks = c(-50, -25, 0, 25, 50, 75, 100, 125, 150, 175, 200)) +
+    geom_path(data = ls_dataTrend.df, aes(x = factor(year), y = Nfb.trend.trans, color = type, group = 1), linewidth = 1.25, linetype = "solid") +
+  scale_y_continuous(limits = c(-50, 200), breaks = c(-50, -25, 0, 25, 50, 75, 100, 125, 150, 175, 200),
+                         sec.axis = sec_axis(~. *1, name = "abundance")
+) +
   scale_fill_manual(values = cp5) +
-  facet_wrap(~parameter, scales = "fixed") +
+  scale_color_manual(values = "darkslateblue", name = element_blank()) +
+  #facet_wrap(~parameter, scales = "free", ncol = 2) +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
@@ -1310,14 +1358,84 @@ ls_Nfb_boxplot <- ls_dataSim %>% dplyr::filter(parameter == "Nfb") %>%
         strip.text.y = element_text(size = 15),
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
-        plot.title = element_text(size=25)) +
+        plot.title = element_text(size=25),
+        axis.title.y.right = element_blank(),
+        axis.text.y.right = element_blank(),
+        axis.ticks.y.right = element_blank()) +
   guides(fill=guide_legend(title="Sample window"))
 
 ls_Nfb_boxplot
 
-  ggsave("LS_sim_boxplot.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
-  
-#Can try bringing in pop_size_tibble and plotting mean pop_size for each plotted year to show how abundance rose and fell in the sims.
+ggsave("LS_sim_Nfb_boxplot_2023.10.04.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+#-----------------Single iteration abundance trend----------------
+params <- c("Nfbt")
+
+ls_truthSim.abund.Plot <- ls_truthSim.abund %>% dplyr::filter(parameter %in% params)
+
+fig5sim <- ls_estimatesSim %>% dplyr::filter(iteration == iter,
+                                             parameter %in% params) %>% 
+  ggplot(aes(x = estimation.year, 
+             y = estimate,
+             color = time_window)) +
+  geom_pointrange(aes(ymin = HPD2.5, 
+                      ymax = HPD97.5),
+                  position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "gam", 
+              se = FALSE, 
+              aes(linetype = time_window)) +
+  geom_line(data = ls_truthSim.abund.Plot,
+            aes(y = truth, 
+                color = type),
+            size = 1) +
+#  facet_wrap(~parameter, 
+#             scales = "free") +
+  theme_bw() +
+#  labs(x = "Estimation year", y = "Female abundance") +
+  scale_color_manual(name = "Sample window", values = cp5) +
+#  ggtitle("a)") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25)) +
+  guides(linetype = "none") #Can decide what to keep or remove from legend with this
+
+fig5sim
+
+ggsave("LS_sim_Nfb_singleTrend_2023.10.04.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+######################################################################################################### Objective 5 Supplementary Figure(s) ####################################################################################################################
+
+
+ls_survival_boxplot <- ls_dataSim %>% dplyr::filter(parameter %in% c("survival")) %>% 
+  ggplot() +
+  geom_boxplot(aes(x=factor(estimation.year), fill = time_window, y=relative_bias)) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(y="Relative bias", x = "Year") +
+    geom_path(data = ls_dataTrend.df, aes(x = factor(year), y = Nfb.trend, group = 1), linewidth = 1.25, linetype = "solid", colour = "darkslateblue") +
+  scale_y_continuous(limits = c(-50, 50), breaks = c(-50, -25, 0, 25, 50),
+                         sec.axis = sec_axis(~. *1, name = "abundance")
+) +
+  scale_fill_manual(values = cp5) +
+  #facet_wrap(~parameter, scales = "free", ncol = 2) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25),
+        axis.title.y.right = element_blank(),
+        axis.text.y.right = element_blank(),
+        axis.ticks.y.right = element_blank()) +
+  guides(fill=guide_legend(title="Sample window"))
+
+ls_survival_boxplot
+
+ggsave("SuppFig_survival_boxplot_2023.10.04.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #------- Box plot of relative bias for other parameters ----------------#
 ls_supp_boxplot <- ls_dataSim %>% dplyr::filter(parameter %in% c("Nfb", "Nm")) %>% 

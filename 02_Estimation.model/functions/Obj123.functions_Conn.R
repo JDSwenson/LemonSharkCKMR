@@ -632,6 +632,37 @@ calc.psi <- function(loopy.list){
 
 #----------------Calculate expected matches-------------------
 calc.Exp <- function(mom_comps.all, dad_comps.all){
+  #Make dataframe of truth, for calculations of expectations
+  #ADDED from main script on 10/04/2023
+  truth.iter <- pop_size.df %>% dplyr::filter(iteration == iter,
+                                              year == estimation.year) %>% 
+    mutate(Nfb1 = Num.mothers,
+           Nmb1 = Num.fathers) %>%
+    dplyr::select(Nf = Female.adult.pop,
+                  Nfb1,
+                  Nfb2 = Num.mothers,
+                  Nm = Male.adult.pop,
+                  Nmb1,
+                  Nmb2 = Num.fathers,
+                  estimation.year = year,
+                  iteration = iteration,
+                  seed = seed) %>% 
+    pivot_longer(cols = starts_with("N"),
+                 names_to = "parameter",
+                 values_to = "all.truth") %>% 
+    #bind_rows(lambda.truth.df) %>% 
+    mutate(sampling.scheme = s.scheme, 
+           sample.prop = sample.proportion,
+           T0 = est.year.calibrate)
+  
+  #Calculate expectations
+  #Define Nf and Nm as objects for calculations
+  Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf") %>% pull(all.truth)
+  
+  Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm") %>% pull(all.truth)
+  
+  #-----END ADDED
+  
 #-----------Calculate C and expected HSPs-------------------
 #Calculate Exp(R) for MHSPs
 mom_C.HS <- mom_comps.all %>% dplyr::filter(type == "HS") #Filter for HS relationships
@@ -805,6 +836,19 @@ calc.truth <- function(truth.df = truth.df){
   
   
   ###ADDED 10/03/2023
+  
+  #Calculate truth for lambda
+  lambda.pop.df <- pop_size.df %>% dplyr::filter(iteration == iter)
+  
+  lambda.truth <- (lambda.pop.df$Total.adult.pop[n_yrs]/lambda.pop.df$Total.adult.pop[est.year.calibrate])^(1/(n_yrs - est.year.calibrate))
+  
+  lambda.truth.df <- tibble(estimation.year = estimation.year,
+                            iteration = iter,
+                            seed = rseed,
+                            parameter = "lambda",
+                            all.truth = lambda.truth)
+  
+  
   #Make dataframe of truth
   truth.iter.temp <- pop.size.tibble %>% dplyr::filter(year == estimation.year) %>% 
     mutate(Nfbt = Num.mothers,
@@ -833,68 +877,66 @@ calc.truth <- function(truth.df = truth.df){
     pivot_longer(cols = starts_with("N"),
                  names_to = "parameter",
                  values_to = "all.truth") %>% 
-    bind_rows(truth.iter.temp, lambda.truth.df, true.values) %>% 
-    mutate(T0 = est.year.calibrate)
-  
-  #Define Nf and Nm as objects for calculations
-  Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf0") %>% pull(all.truth)
-  
-  Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm0") %>% pull(all.truth)
+    bind_rows(truth.iter.temp, lambda.truth.df) %>% 
+    mutate(T0 = est.year.calibrate,
+           sampling.scheme = s.scheme,
+           sample.prop = sample.proportion)
   
   #----------END ADDED 10/3/2023
-  
-  
-  
-  N0.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
-                                            year == est.year.calibrate) %>% 
-    dplyr::select(Nm0 = Male.adult.pop, 
-                  Nf0 = Female.adult.pop) %>% 
-    pivot_longer(cols = starts_with("N"),
-                 names_to = "parameter",
-                 values_to = "all.truth") %>% 
-    mutate(estimation.year = estimation.year,
-           sampling.scheme = s.scheme,
-           sample.prop = sample.proportion,
-           T0 = est.year.calibrate,
-           iteration = iter,
-           seed = rseed)
+  # N0.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
+  #                                           year == est.year.calibrate) %>% 
+  #   dplyr::select(Nm0 = Male.adult.pop, 
+  #                 Nf0 = Female.adult.pop) %>% 
+  #   pivot_longer(cols = starts_with("N"),
+  #                names_to = "parameter",
+  #                values_to = "all.truth") %>% 
+  #   mutate(estimation.year = estimation.year,
+  #          sampling.scheme = s.scheme,
+  #          sample.prop = sample.proportion,
+  #          T0 = est.year.calibrate,
+  #          iteration = iter,
+  #          seed = rseed)
   
   (truth.iter_all.params <- truth.df %>% dplyr::filter(sampling.scheme == s.scheme,
                                                        iteration == iter,
                                                        sample.prop == sample.proportion) %>% 
       mutate(estimation.year = estimation.year) %>% 
-      dplyr::mutate(T0 = ref.yr + 1) %>% 
+      dplyr::mutate(T0 = ref.yr + 1) %>% #Should be the same as est.year.calibrate
       dplyr::select(-c(surv_min, surv_max, population.growth)) %>% 
-      bind_rows(truth.iter, N0.truth) %>% 
+      bind_rows(truth.iter) %>% 
       dplyr::select(parameter, all.truth, estimation.year, T0, iteration, sampling.scheme, sample.prop, seed) %>% #Change order of columns
       dplyr::arrange(parameter))
   
   
   results.temp <- model.summary2 %>% left_join(truth.iter_all.params, by = c("parameter", "iteration", "seed")) %>% 
-    dplyr::select(parameter,
-                  Q50,
-                  all.truth,
-                  HPD2.5,
-                  HPD97.5,
-                  mean,
-                  sd,
-                  Q2.5,
-                  Q97.5,
-                  Rhat,
-                  estimation.year,
-                  T0,
-                  sampling.scheme,
-                  iteration,
-                  neff,
-                  sample.prop,
-                  seed) %>% 
     mutate(estimation.sim = ifelse(est == 1, "T0", 
                                    ifelse(est == 2, "T0-10",
                                           ifelse(est == 3, "present-5",
                                                  ifelse(est == 4, "present", NA))))) %>% 
     mutate(full.siblings = full.sibs,
            diff.cohort_full.siblings = diff.cohort.sibs,
-           imposters = as.numeric(NA))
+           imposters = as.numeric(NA)) %>% 
+    dplyr::select(parameter,
+                  estimation.sim, 
+                  Q50,
+                  all.truth,
+                  HPD2.5,
+                  HPD97.5,
+                  T0,
+                  estimation.year,
+                  sampling.scheme,
+                  iteration,
+                  full.siblings,
+                  diff.cohort_full.siblings,
+                  imposters,
+                  mean,
+                  sd,
+                  Q2.5,
+                  Q97.5,
+                  Rhat,
+                  neff,
+                  sample.prop,
+                  seed) 
   
   if(test.decoys == "yes"){
     

@@ -1,3 +1,9 @@
+###Update from Oct 3, 2023
+##Want to get Conn's model running with all Objective 3 and 4 simulations.
+#Edited specify_simulation script and made model scripts.
+#Primarily need to edit calculations of truth and output, then save the different files, test, and upload to cluster.
+#Look at Obj123functions_Conn.R, line 807 for where to pick up
+
 #Load packages
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
 library(MASS)
@@ -16,6 +22,8 @@ library(FSA)
 rm(list=ls())
 
 ######################### Specify common output prefixes #########################
+MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.output/"
+results_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/"
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
 jags.model.prefix <- "CKMR.JAGS_"
@@ -39,15 +47,20 @@ n_yrs <- 90 #Number of years the simulation was run for
 
 ############Specify common input prefixes####################
 inSeeds <- "Seeds2022.04.15" #Seeds used for population simulation
-date.of.PopSim <- "03Aug2023"
+date.of.PopSim <- "03Aug2023" #Most common date for population simulations: 03Aug2023
+#date.of.PopSim <- "06Sep2023" #On 22Aug2023 I re-ran the stable population growth/annual breeding simulation, but identified aunt/niece and uncle/nephew pairs. Re-ran AGAIN on 06Sep2023 to iron out glitches with the code.
 
 ###########Specify which simulations to focus on########################
 #s.scheme <- "target.YOY" #can be "target.YOY", "sample.all.juvenile.ages", or "sample.ALL.ages"
 sample.props <- 1.5 #Either label this with the percent we want to target if just one (e.g., 1.5)) or if wanting to run over all sample proportions, set as "all"
-objective <- 4 #Can be any number 1-5
+objective <- 4 #Can be any number for the objectives (1-5)
 scenario <- "scenario_4.4" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
 sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
-est.yr.tests <- 4 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present.
+#sample.scheme.vec <- c("sample.ALL.ages") #If wanting to just run one
+est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will estimate abundance in the present and at t0; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
+
+#Assume we're not including aunt/niece pairs, but need to define the object. The specify.simulation code will adjust this setting if we are including aunt/niece pairs.
+test.decoys <- "no"
 
 #Specify simulation details based on inputs above
 source("./02_Estimation.model/functions/specify.simulation.R")
@@ -66,14 +79,22 @@ pop_size.df %>% dplyr::filter(year == 85) %>% nrow() #Should be 500
 n_yrs <- max(pop_size.df$year) #Save number of simulation years
 
 pop_size.df %>% tail(15)
+pop_size.df %>% tail(15) %>% dplyr::select(adult.lambda)
 
-#Read in dataframe with true values (most of these will be recalculated later)
+#Read in dataframe with true values (some of these will be recalculated later)
 truth.df <- readRDS(file = paste0(PopSim.location, "truth_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule))
 
 #Double-check that things are cool - everything should be 500
 truth.df %>% group_by(sampling.scheme, sample.prop, parameter) %>% 
   summarize(n())
 
+if(test.decoys == "yes"){
+
+  #Read in dataframe with aunt|uncle/niece|nephew pairs masquerading as half-sibs
+  imposters.df <- readRDS(file = paste0(PopSim.location, "aunt.uncle_niece.nephews_", date.of.PopSim, "_", inSeeds, "_", PopSim.lambda, "_", PopSim.breeding.schedule)) %>% 
+    dplyr::distinct(.keep_all = TRUE)
+  
+}
 
 ########################## MCMC & model parameters #########################
 ni <- 40000 # number of post-burn-in samples per chain
@@ -123,8 +144,6 @@ if(sample.props == "all"){
  #   #Set estimation year to 10 years in the past, or 0
  #   estimation.year <- estimation.years[est]
  #   
- 
- iterations <- 500
    
  for(s.scheme in sample.scheme.vec){
    
@@ -134,7 +153,7 @@ if(sample.props == "all"){
    #Subset for samples from focal sampling scheme
    samples.df <- samples.df_all %>% dplyr::filter(sampling.scheme == s.scheme)
 
-   HS.only <- "yes" #Specify that we'll only use half-siblings. Will change if the sampling scheme includes adults.
+   HS.only <- "yes" #Specify that we'll only use half-siblings. Will change below if the sampling scheme includes adults.
    PO.only <- "no"
       
    #First iteration gives NA for reference year, but we can infer what it should be based on the sampling scheme
@@ -148,7 +167,7 @@ if(sample.props == "all"){
    if(s.scheme == "sample.ALL.ages"){
      HS.only <- "no"
      if(model == "multiennial.model"){
-       jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt")
+       jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model_Conn.txt") #We are not testing the multiennial model with a changing population so we do not need to have a scenario where we use a wide lambda prior.
      }
    }
    
@@ -172,8 +191,8 @@ if(sample.props == "all"){
        mutate(estimation.yr = ref.yr + 1) %>% 
        pull(estimation.yr)
      
-     #Make vector of estimation years
-     estimation.years <- c(est.year.calibrate, est.year.calibrate - 10, n_yrs - 5, n_yrs)
+     #Make vector of estimation years: t0, t0-10, five years into the past, present
+     estimation.years <- c(n_yrs, est.year.calibrate, est.year.calibrate - 10, n_yrs - 5)
      
      #Save total sample size
      sample.size.iter <- sample.df_all.info %>% 
@@ -195,8 +214,8 @@ if(sample.props == "all"){
         
  
     PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
-    HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings
-    NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample
+    HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings i.e. kept one of the two
+    NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample if desired
     full.sibs <- filter1.out[[4]] #Number of full siblings
     diff.cohort.sibs <- filter1.out[[5]] #Number of full siblings from different cohorts
     
@@ -217,6 +236,15 @@ if(sample.props == "all"){
     dad_comps.all <- pairwise.out[[2]]
     positives.HS <- pairwise.out[[3]]
 
+    
+    if(test.decoys == "yes"){
+      
+      fake.HSPs <- identify_imposters(imposters.df)
+      
+      positives.HS
+      
+      }
+    
     head(mom_comps.all)
     head(dad_comps.all)
     
@@ -265,48 +293,11 @@ if(sample.props == "all"){
       
       #Define JAGS data and model, and run the MCMC engine
       set.seed(rseed)
-      source("./02_Estimation.model/functions/RunJAGS_collated.R")
+      source("./02_Estimation.model/functions/RunJAGS_ConnParameterization.R")
 
 ########### Calculate truth ###################
-      #Calculate truth for lambda
-      lambda.pop.df <- pop_size.df %>% dplyr::filter(iteration == iter)
-      
-      lambda.truth <- (lambda.pop.df$Total.adult.pop[n_yrs]/lambda.pop.df$Total.adult.pop[est.year.calibrate])^(1/(n_yrs - est.year.calibrate))
-      
-      lambda.truth.df <- tibble(estimation.year = estimation.year,
-                                iteration = iter,
-                                seed = rseed,
-                                parameter = "lambda",
-                                all.truth = lambda.truth)
-      
-      
-      #Make dataframe of truth
-      truth.iter <- pop_size.df %>% dplyr::filter(iteration == iter,
-                                                year == estimation.year) %>% 
-        mutate(Nfb1 = Num.mothers,
-               Nmb1 = Num.fathers) %>%
-        dplyr::select(Nf = Female.adult.pop,
-                      Nfb1,
-                      Nfb2 = Num.mothers,
-                      Nm = Male.adult.pop,
-                      Nmb1,
-                      Nmb2 = Num.fathers,
-                      estimation.year = year,
-                      iteration = iteration,
-                      seed = seed) %>% 
-        pivot_longer(cols = starts_with("N"),
-                     names_to = "parameter",
-                     values_to = "all.truth") %>% 
-        bind_rows(lambda.truth.df) %>% 
-        mutate(sampling.scheme = s.scheme, 
-               sample.prop = sample.proportion,
-               T0 = est.year.calibrate)
-      
-    #Calculate expectations
-      #Define Nf and Nm as objects for calculations
-      Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf") %>% pull(all.truth)
-      
-      Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm") %>% pull(all.truth)
+      #REMOVED section for lambda truth to calc.truth function 10/04/2023
+      #REMOVED section for initial Nf/Nm truth calculation and moved to calc.Exp function 10/04/2023
       
       #Subset for just the present iteration
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
@@ -319,97 +310,9 @@ if(sample.props == "all"){
     sampled.mothers <- unique(sample.df_all.info$mother.x)
     sampled.fathers <- unique(sample.df_all.info$father.x)
     
-    #If there's no lambda in the model, then the true value of abundance is the mean over the estimated years. Here, we make this correction for the scenarios that do not include lambda in the model; for those that do, the values in truth.df are correct.
-    if(scenario == "scenario_1_model.validation" | 
-       scenario == "scenario_2.1.1" | 
-       scenario == "scenario_2.1.2" | 
-       scenario == "scenario_2.1.3"){
+    #Calculate truth
+    results.temp <- calc.truth(truth.df = truth.df)
     
-      #Make truth equal to mean over years
-      Nf.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
-        summarize(mean.female.pop = mean(Female.adult.pop)) %>% 
-        pull(mean.female.pop)
-      
-      Nfb.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
-        summarize(mean.mothers = mean(Num.mothers)) %>% 
-        pull(mean.mothers)
-      
-      Nm.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
-        summarize(mean.male.pop = mean(Male.adult.pop)) %>% 
-        pull(mean.male.pop)
-      
-      Nmb.truth <- pop.size.tibble %>% dplyr::filter(year >= est.year.calibrate) %>% 
-        summarize(mean.fathers = mean(Num.fathers)) %>% 
-        pull(mean.fathers)
-      
-      truth.iter <- truth.iter %>% mutate(all.truth = ifelse(parameter == "Nf", Nf.truth, 
-                                               ifelse(parameter == "Nfb1" | parameter == "Nfb2", Nfb.truth, 
-                                                      ifelse(parameter == "Nm", Nm.truth, 
-                                                             ifelse(parameter == "Nmb1" | parameter == "Nmb2", Nmb.truth, all.truth)))))
-      cat("\nUsing average abundance for truth\n")
-    } else cat("\nUsing year-specific truth, rather than average.\n")
-    
-    
-    
-    (truth.iter_all.params <- truth.df %>% dplyr::filter(sampling.scheme == s.scheme,
-                               iteration == iter,
-                               sample.prop == sample.proportion) %>% 
-      mutate(estimation.year = estimation.year) %>% 
-      dplyr::mutate(T0 = ref.yr + 1) %>% 
-      dplyr::select(-c(surv_min, surv_max, population.growth)) %>% 
-      bind_rows(truth.iter) %>% 
-      dplyr::select(parameter, all.truth, estimation.year, T0, iteration, sampling.scheme, sample.prop, seed) %>% #Change order of columns
-      dplyr::arrange(parameter))
-
-
-    results.temp <- model.summary2 %>% left_join(truth.iter_all.params, by = c("parameter", "iteration", "seed")) %>% 
-      dplyr::select(parameter,
-                    Q50,
-                    all.truth,
-                    HPD2.5,
-                    HPD97.5,
-                    mean,
-                    sd,
-                    Q2.5,
-                    Q97.5,
-                    Rhat,
-                    estimation.year,
-                    T0,
-                    sampling.scheme,
-                    iteration,
-                    neff,
-                    sample.prop,
-                    seed) %>% 
-      mutate(estimation.sim = ifelse(est == 1, "T0", 
-                                     ifelse(est == 2, "T0-10",
-                                            ifelse(est == 3, "present-5", "present"))))
-    
-    
-    if(HS.only == "yes"){
-      
-      results.temp <- results.temp %>% 
-        mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.HSPs, 
-                                      ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.HSPs, mom.HSPs + dad.HSPs)),
-               HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.HS, 
-                                      ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
-               POPs_detected = NA,
-               POPs_expected = NA,
-               scenario = scenario)
-      
-    } else if(HS.only != "yes"){
-      
-      results.temp <- results.temp %>% 
-        mutate(HSPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.HSPs, 
-                                      ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.HSPs, mom.HSPs + dad.HSPs)),
-               HSPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.HS, 
-                                      ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.HS, mom.Exp.HS + dad.Exp.HS)),
-               POPs_detected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.POPs, 
-                                      ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.POPs, mom.POPs + dad.POPs)),
-               POPs_expected = ifelse(parameter %in% c("Nf", "Nfb1", "Nfb2", "psi"), mom.Exp.PO, 
-                                      ifelse(parameter %in% c("Nm", "Nmb1", "Nmb2"), dad.Exp.PO, mom.Exp.PO + dad.Exp.PO)),
-               scenario = scenario)
-      
-    }
     
     results <- rbind(results, results.temp)
     
@@ -433,7 +336,7 @@ if(sample.props == "all"){
    } #end loop over sample sizes
     
   #-----------------Save output files iteratively--------------------
-   if(iter %% 100 == 0){
+   #if(iter %% 100 == 0){
      
 #Results
     write.table(results, file = paste0(temp_location, results_prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", s.scheme, ".csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
@@ -452,7 +355,7 @@ if(sample.props == "all"){
 #    
     saveRDS(dad.comps.tibble, file = paste0(temp_location, dad.comps.prefix, "_", date.of.simulation, "_", outSeeds, "_", scenario, "_", model, "_", s.scheme))
 
-   }
+#   }
     
       sim.end <- Sys.time()
    

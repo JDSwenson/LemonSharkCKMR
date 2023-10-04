@@ -1,3 +1,9 @@
+###Update from Oct 3, 2023
+##Want to get Conn's model running with all Objective 3 and 4 simulations.
+#Edited specify_simulation script and made model scripts.
+#Primarily need to edit calculations of truth and output, then save the different files, test, and upload to cluster.
+#Look at Obj123functions_Conn.R, line 807 for where to pick up
+
 #Load packages
 library(tidyverse) # safe to ignore conflicts with filter() and lag()
 library(MASS)
@@ -51,7 +57,7 @@ objective <- 2 #Can be any number for the objectives (1-5)
 scenario <- "scenario_2.4.3" #See Excel sheet with simulation scenarios: Simulation_log_key_UPDATED.xlsx on Google Drive
 sample.scheme.vec <- c("target.YOY", "sample.all.juvenile.ages", "sample.ALL.ages")
 #sample.scheme.vec <- c("sample.ALL.ages") #If wanting to just run one
-est.yr.tests <- 4 #Can be 1 or 4. If 1, that means we will only estimate abundance for the birth year of the second oldest individual in the dataset; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
+est.yr.tests <- 1 #Can be 1 or 4. If 1, that means we will estimate abundance in the present and at t0; if 4, then we will estimate abundance for 10 years before that, the present, and five years before the present. If running with the base-case CKMR model, then should set to 1
 
 #Assume we're not including aunt/niece pairs, but need to define the object. The specify.simulation code will adjust this setting if we are including aunt/niece pairs.
 test.decoys <- "no"
@@ -143,8 +149,6 @@ if(sample.props == "all"){
    
    #Specify the model we'll be using
    jags_file <- specify.model()
-   
-   #For some reason this isn't overwriting like it should in the function above so we'll just specify it here.
    jags_file <- paste0(jags.model_location, "HS.PO_wideLambda_annual_model_Conn.txt")
    
    #Subset for samples from focal sampling scheme
@@ -164,7 +168,7 @@ if(sample.props == "all"){
    if(s.scheme == "sample.ALL.ages"){
      HS.only <- "no"
      if(model == "multiennial.model"){
-       jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model.txt") #We are not testing the multiennial model with a changing population so we do not need to have a scenario where we use a wide lambda prior.
+       jags_file <- paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model_Conn.txt") #We are not testing the multiennial model with a changing population so we do not need to have a scenario where we use a wide lambda prior.
      }
    }
    
@@ -189,7 +193,7 @@ if(sample.props == "all"){
        pull(estimation.yr)
      
      #Make vector of estimation years: t0, t0-10, five years into the past, present
-     estimation.years <- c(est.year.calibrate, est.year.calibrate - 10, n_yrs - 5, n_yrs)
+     estimation.years <- c(n_yrs, est.year.calibrate, est.year.calibrate - 10, n_yrs - 5)
      
      #Save total sample size
      sample.size.iter <- sample.df_all.info %>% 
@@ -233,10 +237,6 @@ if(sample.props == "all"){
     dad_comps.all <- pairwise.out[[2]]
     positives.HS <- pairwise.out[[3]]
 
-    
-    ###### NEED TO PICK UP FROM HERE AFTER 09/01/2023
-    #Need to adjust function to split out into maternal and paternal lines so I can alter the appropriate df (mom_comps.all or dad_comps.all).
-    #First, need to review the function that identifies aunt|uncle / niece|nephew pairs and see how it's determining aunt or uncle and which line they are related through.
     
     if(test.decoys == "yes"){
       
@@ -297,49 +297,8 @@ if(sample.props == "all"){
       source("./02_Estimation.model/functions/RunJAGS_ConnParameterization.R")
 
 ########### Calculate truth ###################
-      #Calculate truth for lambda
-      lambda.pop.df <- pop_size.df %>% dplyr::filter(iteration == iter)
-      
-      lambda.truth <- (lambda.pop.df$Total.adult.pop[n_yrs]/lambda.pop.df$Total.adult.pop[est.year.calibrate])^(1/(n_yrs - est.year.calibrate))
-      
-      lambda.truth.df <- tibble(estimation.year = estimation.year,
-                                iteration = iter,
-                                seed = rseed,
-                                parameter = "lambda",
-                                all.truth = lambda.truth)
-      
-      
-      #Make dataframe of truth
-      truth.iter <- pop_size.df %>% dplyr::filter(iteration == iter,
-                                                year == estimation.year) %>% 
-        mutate(Nfb1 = Num.mothers,
-               Nmb1 = Num.fathers,
-               Nft = Female.adult.pop,
-               Nmt = Male.adult.pop) %>%
-        dplyr::select(Nf = Female.adult.pop,
-                      Nfb1,
-                      Nfb2 = Num.mothers,
-                      Nm = Male.adult.pop,
-                      Nmb1,
-                      Nmb2 = Num.fathers,
-                      Nft,
-                      Nmt,
-                      estimation.year = year,
-                      iteration = iteration,
-                      seed = seed) %>% 
-        pivot_longer(cols = starts_with("N"),
-                     names_to = "parameter",
-                     values_to = "all.truth") %>% 
-        bind_rows(lambda.truth.df) %>% 
-        mutate(sampling.scheme = s.scheme, 
-               sample.prop = sample.proportion,
-               T0 = est.year.calibrate)
-      
-    #Calculate expectations
-      #Define Nf and Nm as objects for calculations
-      Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf") %>% pull(all.truth)
-      
-      Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm") %>% pull(all.truth)
+      #REMOVED section for lambda truth to calc.truth function 10/04/2023
+      #REMOVED section for initial Nf/Nm truth calculation and moved to calc.Exp function 10/04/2023
       
       #Subset for just the present iteration
     pop.size.tibble <- pop_size.df %>% dplyr::filter(iteration == iter)
@@ -449,15 +408,14 @@ write.table(results2, file = paste0(results_location, results_prefix, "_", date.
 }
 #-------------Quick viz of results--------------#
 #Box plot of relative bias
-ggplot(data=results2, aes(x=factor(estimation.year))) +
-  geom_boxplot(aes(y=relative_bias, fill=parameter)) +
-  ylim(-100, 100) +
-  geom_hline(yintercept=0, col="black", size=1.25) +
-  annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
-  labs(x="Estimation year", y="Relative bias", title="Relative Bias by sample size") +
-  scale_fill_brewer(palette="Set2") +
-  font("title", size = 10, face = "bold") +
-  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme))
+# ggplot(data=results2, aes(x=factor(sample.proportion))) +
+#   geom_boxplot(aes(y=relative_bias, fill=parameter)) +
+#   ylim(-100, 100) +
+#   geom_hline(yintercept=0, col="black", size=1.25) +
+#   annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+#   labs(x="Sample size", y="Relative bias", title="Relative Bias by sample size") +
+#   scale_fill_brewer(palette="Set2") +
+#   font("title", size = 10, face = "bold")
 
 
 

@@ -291,7 +291,7 @@ if(objective == 1){
 
   #------------------------- Objective 3 common settings -------------------------#
   PopSim.lambda <- "lambda.1"
-  source("./02_Estimation.model/functions/Obj123.functions.R") #Changed name of script that includes pairwise comparison and other functions
+  source("./02_Estimation.model/functions/Obj123.functions_Conn.R") #Changed name of script that includes pairwise comparison and other functions
   mating.periodicity <- 2 #Overwrite below if triennial breeding
   
   cat(paste0("Testing multiennial breeding (Objective 3)"))
@@ -312,7 +312,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
 
     
   } else if(scenario == "scenario_3.2.1"){
@@ -332,7 +332,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "biennial.breeding_psi0.90" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")    
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")    
     
   } else if(scenario == "scenario_3.3.1"){
     #========================= Scenario 3.3 =========================
@@ -349,7 +349,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "biennial.breeding_psi0.75" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
     
     
   } else if(scenario == "scenario_3.4.1"){
@@ -369,7 +369,7 @@ if(objective == 1){
 
     PopSim.breeding.schedule <- "biennial.breeding_psi0.50" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
 
     
   } else if(scenario == "scenario_3.5.1"){
@@ -389,7 +389,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "triennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
     mating.periodicity <- 3
     
     
@@ -410,7 +410,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "biennial.breeding_psi1_offcycle" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
 
   } else if(scenario == "scenario_3.7.1"){
     #========================= Scenario 3.7: Annual breeding =========================
@@ -429,7 +429,7 @@ if(objective == 1){
     
     PopSim.breeding.schedule <- "annual.breeding" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
     mating.periodicity <- 1
     
   }
@@ -441,7 +441,7 @@ if(objective == 1){
   cat(paste0("Testing aging error (Objective 4)"))
   
   PopSim.lambda <- "lambda.1"
-  source("./02_Estimation.model/functions/Obj4.functions.R") #Changed name of script that includes pairwise comparison and other functions
+  source("./02_Estimation.model/functions/Obj4.functions_Conn.R") #Changed name of script that includes pairwise comparison and other functions
   
   
   if(scenario == "scenario_4.1"){
@@ -453,7 +453,7 @@ if(objective == 1){
     mating.periodicity <- 2
     PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
 
     
   }else if(scenario == "scenario_4.2"){
@@ -464,7 +464,7 @@ if(objective == 1){
     mating.periodicity <- 2
     PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
 
     
   }else if(scenario == "scenario_4.3"){
@@ -476,7 +476,7 @@ if(objective == 1){
     mating.periodicity <- 2
     PopSim.breeding.schedule <- "biennial.breeding_psi1" #Can be annual.breeding or biennial.breeding
     model <- "multiennial.model"
-    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nft0", "survival", "lambda", "psi")
+    jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
     
   }else if(scenario == "scenario_4.4"){
     
