@@ -41,7 +41,7 @@ model <- "multiennial.model"
 
 jags_params <- c("Nft", "Nfbt", "Nf0", "Nfb0", "survival", "lambda", "psi") #List the parameters to be estimated
 HS.only <- "yes"
-downsample <- "no"
+downsample <- "yes"
 down.perc <- .3
 
 jags_file <- paste0(jags.model_location, "MHS.only_narrowLambda_Skip_model_Conn.txt")
@@ -213,7 +213,8 @@ max(juv_ref.North$birth.year, na.rm = TRUE) #Latest capture
 #Remove unknown mothers, then for each group of full sibs keep just one
 NoFullSibs.df <- juv_ref.North %>% drop_na(mother.x) %>% 
   group_by(mother.x, father.x) %>% 
-  slice_sample(n = 1)
+  slice_sample(n = 1) %>% 
+  ungroup()
 
 #To keep the same individual each time
   # distinct(mother.x, father.x, .keep_all = TRUE) %>%
@@ -234,9 +235,11 @@ post.samps_list.block3 <- list()
 post.samps_list.block5 <- list()
 post.samps_list.all <- list()
 rseed <- sample(c(1:10000000), size = 1)
+iterations <- 50
 
 
 #------------------------Start loop-----------------------------------------
+for(iter in 1:iterations){
 for(block in first.est.year:n_yrs){
   
   rep <- 1
@@ -540,7 +543,7 @@ for(block in first.est.year:n_yrs){
         source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
     
     if(downsample == "yes"){
-      results.temp <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
+      results.temp.block3 <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
                                                 estimation.year = block) %>% 
         mutate(years_sampled = (block - oldest.block3) + 1,
                mom_HSPs = sum(mom_comps.all.block3$yes),
@@ -557,7 +560,8 @@ for(block in first.est.year:n_yrs){
     
         results.temp.block3 <- model.summary2 %>% 
         mutate(estimation.year = block,
-               T0 = est.year.calibrate.block3) %>% 
+               T0 = est.year.calibrate.block3,
+               num.samps_all = num.samps_all.block3) %>% 
         dplyr::select(parameter,
                       Q50,
                       HPD2.5,
@@ -867,7 +871,7 @@ for(block in first.est.year:n_yrs){
     source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
     
     if(downsample == "yes"){
-      results.temp <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
+      results.temp.block5 <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
                                                 estimation.year = block) %>% 
         mutate(years_sampled = (block - oldest.block5) + 1,
                mom_HSPs = sum(mom_comps.all.block5$yes),
@@ -884,7 +888,8 @@ for(block in first.est.year:n_yrs){
       
       results.temp.block5 <- model.summary2 %>% 
         mutate(estimation.year = block,
-               T0 = est.year.calibrate.block5) %>% 
+               T0 = est.year.calibrate.block5,
+               num.samps_all = num.samps_all.block5) %>% 
         dplyr::select(parameter,
                       Q50,
                       HPD2.5,
@@ -1185,7 +1190,7 @@ for(block in first.est.year:n_yrs){
     source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
     
     if(downsample == "yes"){
-      results.temp <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
+      results.temp.all <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
                                                 estimation.year = block) %>% 
         mutate(years_sampled = (block - oldest.all) + 1,
                mom_HSPs = sum(mom_comps.all.all$yes),
@@ -1202,7 +1207,8 @@ for(block in first.est.year:n_yrs){
       
       results.temp.all <- model.summary2 %>% 
         mutate(estimation.year = block,
-               T0 = est.year.calibrate.all) %>% 
+               T0 = est.year.calibrate.all,
+               num.samps_all = num.samps_all.all) %>% 
         dplyr::select(parameter,
                       Q50,
                       HPD2.5,
@@ -1265,14 +1271,29 @@ for(block in first.est.year:n_yrs){
   
   #-----------------Store output files iteratively--------------------
   #Results
+  if(downsample == "yes"){
+    results.temp.block3 <- results.temp.block3 %>% mutate(iteration = iter)
+    results.temp.block5 <- results.temp.block5 %>% mutate(iteration = iter)
+    results.temp.all <- results.temp.all %>% mutate(iteration = iter)
+  }
   results <- rbind(results, results.temp.block3, results.temp.block5, results.temp.all)
   
 rep <- rep+1
 
 }
+}
 
 #### End loop over blocks ####
+results %>% dplyr::filter(estimation.year >= 1997) %>% 
+  as_tibble() %>% 
+  arrange(time_window, estimation.year)
 
+write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/LS_data_ConnModel_2023.10.05.csv")
+
+#Save final pairwise comparison matrices
+saveRDS(mom.comps.tibble, file = paste0(results_location, "mom.comps_LS_data_ConnModel_2023.10.05"))
+
+saveRDS(dad.comps.tibble, file = paste0(results_location, "dad.comps_LS_data_ConnModel_2023.10.05"))
 
 
 

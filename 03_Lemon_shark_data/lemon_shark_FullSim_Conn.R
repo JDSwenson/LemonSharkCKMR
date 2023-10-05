@@ -218,7 +218,8 @@ for (iter in 1:iterations) { #Restart morning of 09/20/2023 - made it through it
   #Check on samples
   sample.info %>% dplyr::count(age.x) #Should all be 0
   sample.info %>% dplyr::count(birth.year) #Should be relatively even numbers across years
-    
+  
+  
   #Don't need this ...
   # aunt.unc_niece.nephew_pw.comps.all <- samples.out[[2]] %>% 
   #   as_tibble() %>% 
@@ -241,13 +242,19 @@ for(block in first.est.year:n_yrs){
 
   #-------------Split samples--------------
   #Blocked  samples - five year
-  samples.df.block5 <- sample.info %>% dplyr::filter(capture.year >= block - 4 & capture.year <= block)
+  samples.df.block5.temp <- sample.info %>% dplyr::filter(capture.year >= block - 4 & capture.year <= block)
+  filter.block5 <- filter.samples(samples = samples.df.block5.temp)
+  samples.df.block5 <- filter.block5[[2]]
   
   #Blocked  samples - three year
-  samples.df.block3 <- sample.info %>% dplyr::filter(capture.year >= block - 2 & capture.year <= block)
+  samples.df.block3.temp <- sample.info %>% dplyr::filter(capture.year >= block - 2 & capture.year <= block)
+  filter.block3 <- filter.samples(samples = samples.df.block3.temp)
+  samples.df.block3 <- filter.block3[[2]]
   
   #all samples
-  samples.df.all <- sample.info %>% dplyr::filter(capture.year <= block)
+  samples.df.all.temp <- sample.info %>% dplyr::filter(capture.year <= block)
+  filter.all <- filter.samples(samples = samples.df.all.temp)
+  samples.df.all <- filter.all[[2]]
   
 #--------------Calculate reference year--------------
   #Five year block

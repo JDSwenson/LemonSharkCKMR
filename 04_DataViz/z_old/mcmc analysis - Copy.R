@@ -19,49 +19,6 @@ MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.ou
 ############################################################################################################## Read in files###################################################################################################################
 
 #------------------------Population growth----------------------
-#------------------------Conn model-------------------------------
-#### Juveniles
-#Slight population decline, narrow lambda prior: scenario_2.4.1
-slight.pop.decline_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.1_annual.model_sample.all.juvenile.ages"))
-
-#Slight population growth, narrow lambda prior: scenario_2.4.2
-slight.pop.growth_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.2_annual.model_sample.all.juvenile.ages"))
-
-#severe population decline, diffuse lambda prior: scenario_2.4.3
-severe.pop.decline_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_04Oct2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.3_annual.model_sample.all.juvenile.ages"))
-
-#stable population, narrow lambda prior: scenario_2.2.4
-stable.pop_all.juvs <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.4_annual.model_sample.all.juvenile.ages"))
-
-
-#### All ages
-#Slight population decline, narrow lambda prior: scenario_2.4.1
-slight.pop.decline_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.1_annual.model_sample.ALL.ages"))
-
-#Slight population growth, narrow lambda prior: scenario_2.4.2
-slight.pop.growth_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.2_annual.model_sample.ALL.ages"))
-
-#severe population decline, diffuse lambda prior: scenario_2.4.3
-severe.pop.decline_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_04Oct2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.3_annual.model_sample.ALL.ages"))
-
-#stable population, narrow lambda prior: scenario_2.2.4
-stable.pop_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.4_annual.model_sample.ALL.ages"))
-
-#### YOY only
-#Slight population decline, narrow lambda prior: scenario_2.4.1
-slight.pop.decline_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.1_annual.model_target.YOY"))
-
-#Slight population growth, narrow lambda prior: scenario_2.4.2
-slight.pop.growth_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.2_annual.model_target.YOY"))
-
-#severe population decline, diffuse lambda prior: scenario_2.4.3
-severe.pop.decline_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_04Oct2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.3_annual.model_target.YOY"))
-
-#stable population, narrow lambda prior: scenario_2.2.4
-stable.pop_target.YOY <- readRDS(paste0(MCMC_location, "CKMR_modelout_26Sep2023_Seeds2022.04.15__thin20_draw40000_burn50000_scenario_2.4.4_annual.model_target.YOY"))
-
-
-#------------------------Old model--------------------------------
 #------------------------All juvs-------------------------------
 #Slight population decline, narrow lambda prior: scenario_2.2.1
 #T0
@@ -260,144 +217,38 @@ annual_all.ages <- readRDS(paste0(MCMC_location, "CKMR_modelout_08Sep2023_Seeds2
 ################################################################################################## Cross correlation among parameters##########################################################################################################
 
 #-----------------Sample all juveniles------------------------
-s2.2.1_cross.list.J_T0 = s2.2.1_cross.list.J_T0_10 = s2.2.1_cross.list.J_present_5 = s2.2.1_cross.list.J_present = s2.4.1_cross.list.J  <- NULL
-s2.2.2_cross.list.J_T0 = s2.2.2_cross.list.J_T0_10 = s2.2.2_cross.list.J_present_5 = s2.2.2_cross.list.J_present = s2.4.2_cross.list.J<- NULL
-s2.3.3_cross.list.J_T0 = s2.3.3_cross.list.J_T0_10 = s2.3.3_cross.list.J_present_5 = s2.3.3_cross.list.J_present = s2.4.3_cross.list.J<- NULL
-s2.2.4_cross.list.J_T0 = s2.2.4_cross.list.J_T0_10 = s2.2.4_cross.list.J_present_5 = s2.2.4_cross.list.J_present = s2.4.4_cross.list.J<- NULL
-
-s2.4.1_cross.list.A = s2.4.1_cross.list.Y = s2.4.2_cross.list.A = s2.4.2_cross.list.Y = s2.4.3_cross.list.A = s2.4.3_cross.list.Y = s2.4.4_cross.list.A = s2.4.4_cross.list.Y<- NULL
+s2.2.1_cross.list.J_T0 = s2.2.1_cross.list.J_T0_10 = s2.2.1_cross.list.J_present_5 = s2.2.1_cross.list.J_present  <- NULL
+s2.2.2_cross.list.J_T0 = s2.2.2_cross.list.J_T0_10 = s2.2.2_cross.list.J_present_5 = s2.2.2_cross.list.J_present <- NULL
+s2.3.3_cross.list.J_T0 = s2.3.3_cross.list.J_T0_10 = s2.3.3_cross.list.J_present_5 = s2.3.3_cross.list.J_present <- NULL
+s2.2.4_cross.list.J_T0 = s2.2.4_cross.list.J_T0_10 = s2.2.4_cross.list.J_present_5 = s2.2.4_cross.list.J_present <- NULL
 
 #Calculate cross correlation for every iteration
-for(cr in 1:length(slight.pop.decline_all.juvs)){
+for(cr in 1:length(slight.pop.decline_all.juvs_T0)){
   #Scenario 2.2.1
-  # s2.2.1_cross.list.J_T0[[cr]] <- crosscorr(slight.pop.decline_all.juvs_T0[[cr]]$samples)
-  # s2.2.1_cross.list.J_T0_10[[cr]] <- crosscorr(slight.pop.decline_all.juvs_T0_10[[cr]]$samples)
-  # s2.2.1_cross.list.J_present_5[[cr]] <- crosscorr(slight.pop.decline_all.juvs_present_5[[cr]]$samples)
-  # s2.2.1_cross.list.J_present[[cr]] <- crosscorr(slight.pop.decline_all.juvs_present[[cr]]$samples)
-  
+  s2.2.1_cross.list.J_T0[[cr]] <- crosscorr(slight.pop.decline_all.juvs_T0[[cr]]$samples)
+  s2.2.1_cross.list.J_T0_10[[cr]] <- crosscorr(slight.pop.decline_all.juvs_T0_10[[cr]]$samples)
+  s2.2.1_cross.list.J_present_5[[cr]] <- crosscorr(slight.pop.decline_all.juvs_present_5[[cr]]$samples)
+  s2.2.1_cross.list.J_present[[cr]] <- crosscorr(slight.pop.decline_all.juvs_present[[cr]]$samples)
 
   #Scenario 2.2.2
-  # s2.2.2_cross.list.J_T0[[cr]] <- crosscorr(slight.pop.growth_all.juvs_T0[[cr]]$samples)
-  # s2.2.2_cross.list.J_T0_10[[cr]] <- crosscorr(slight.pop.growth_all.juvs_T0_10[[cr]]$samples)
-  # s2.2.2_cross.list.J_present_5[[cr]] <- crosscorr(slight.pop.growth_all.juvs_present_5[[cr]]$samples)
-  # s2.2.2_cross.list.J_present[[cr]] <- crosscorr(slight.pop.growth_all.juvs_present[[cr]]$samples)
+  s2.2.2_cross.list.J_T0[[cr]] <- crosscorr(slight.pop.growth_all.juvs_T0[[cr]]$samples)
+  s2.2.2_cross.list.J_T0_10[[cr]] <- crosscorr(slight.pop.growth_all.juvs_T0_10[[cr]]$samples)
+  s2.2.2_cross.list.J_present_5[[cr]] <- crosscorr(slight.pop.growth_all.juvs_present_5[[cr]]$samples)
+  s2.2.2_cross.list.J_present[[cr]] <- crosscorr(slight.pop.growth_all.juvs_present[[cr]]$samples)
 
   #Scenario 2.3.3
-  # s2.3.3_cross.list.J_T0[[cr]] <- crosscorr(severe.pop.decline_all.juvs_T0[[cr]]$samples)
-  # s2.3.3_cross.list.J_T0_10[[cr]] <- crosscorr(severe.pop.decline_all.juvs_T0_10[[cr]]$samples)
-  # s2.3.3_cross.list.J_present_5[[cr]] <- crosscorr(severe.pop.decline_all.juvs_present_5[[cr]]$samples)
-  # s2.3.3_cross.list.J_present[[cr]] <- crosscorr(severe.pop.decline_all.juvs_present[[cr]]$samples)
+  s2.3.3_cross.list.J_T0[[cr]] <- crosscorr(severe.pop.decline_all.juvs_T0[[cr]]$samples)
+  s2.3.3_cross.list.J_T0_10[[cr]] <- crosscorr(severe.pop.decline_all.juvs_T0_10[[cr]]$samples)
+  s2.3.3_cross.list.J_present_5[[cr]] <- crosscorr(severe.pop.decline_all.juvs_present_5[[cr]]$samples)
+  s2.3.3_cross.list.J_present[[cr]] <- crosscorr(severe.pop.decline_all.juvs_present[[cr]]$samples)
   
   #Scenario 2.2.4
-  # s2.2.4_cross.list.J_T0[[cr]] <- crosscorr(stable.pop_all.juvs_T0[[cr]]$samples)
-  # s2.2.4_cross.list.J_T0_10[[cr]] <- crosscorr(stable.pop_all.juvs_T0_10[[cr]]$samples)
-  # s2.2.4_cross.list.J_present_5[[cr]] <- crosscorr(stable.pop_all.juvs_present_5[[cr]]$samples)
-  # s2.2.4_cross.list.J_present[[cr]] <- crosscorr(stable.pop_all.juvs_present[[cr]]$samples)
-
-  #Scenario 2.4.1
-  s2.4.1_cross.list.J[[cr]] <- crosscorr(slight.pop.decline_all.juvs[[cr]]$samples)
+  s2.2.4_cross.list.J_T0[[cr]] <- crosscorr(stable.pop_all.juvs_T0[[cr]]$samples)
+  s2.2.4_cross.list.J_T0_10[[cr]] <- crosscorr(stable.pop_all.juvs_T0_10[[cr]]$samples)
+  s2.2.4_cross.list.J_present_5[[cr]] <- crosscorr(stable.pop_all.juvs_present_5[[cr]]$samples)
+  s2.2.4_cross.list.J_present[[cr]] <- crosscorr(stable.pop_all.juvs_present[[cr]]$samples)
   
-  s2.4.1_cross.list.A[[cr]] <- crosscorr(slight.pop.decline_all.ages[[cr]]$samples)
-  
-  s2.4.1_cross.list.Y[[cr]] <- crosscorr(slight.pop.decline_target.YOY[[cr]]$samples)
-  
-  #Scenario 2.4.2
-  s2.4.2_cross.list.J[[cr]] <- crosscorr(slight.pop.growth_all.juvs[[cr]]$samples)
-  
-  s2.4.2_cross.list.A[[cr]] <- crosscorr(slight.pop.growth_all.ages[[cr]]$samples)
-  
-  s2.4.2_cross.list.Y[[cr]] <- crosscorr(slight.pop.growth_target.YOY[[cr]]$samples)
-  
-  #Scenario 2.4.3
-  s2.4.3_cross.list.J[[cr]] <- crosscorr(severe.pop.decline_all.juvs[[cr]]$samples)
-  
-  s2.4.3_cross.list.A[[cr]] <- crosscorr(severe.pop.decline_all.ages[[cr]]$samples)
-  
-  s2.4.3_cross.list.Y[[cr]] <- crosscorr(severe.pop.decline_target.YOY[[cr]]$samples)
-  
-  #Scenario 2.4.4
-  s2.4.4_cross.list.J[[cr]] <- crosscorr(stable.pop_all.juvs[[cr]]$samples)
-  
-  s2.4.4_cross.list.A[[cr]] <- crosscorr(stable.pop_all.ages[[cr]]$samples)
-  
-  s2.4.4_cross.list.Y[[cr]] <- crosscorr(stable.pop_target.YOY[[cr]]$samples)
-    
 }
-
-#Slight population decline
-(s2.4.1_cross.mean.J <- as.data.frame(Reduce("+", s2.4.1_cross.list.J) / length(s2.4.1_cross.list.J)) %>% 
-  mutate(sampling.scheme = "sample all juveniles") %>% 
-  rownames_to_column(var = "parameter"))
-
-(s2.4.1_cross.mean.A <- as.data.frame(Reduce("+", s2.4.1_cross.list.A) / length(s2.4.1_cross.list.A)) %>% 
-  mutate(sampling.scheme = "sample all ages") %>% 
-  rownames_to_column(var = "parameter"))
-
-(s2.4.1_cross.mean.Y <- as.data.frame(Reduce("+", s2.4.1_cross.list.Y) / length(s2.4.1_cross.list.Y)) %>% 
-  mutate(sampling.scheme = "target.YOY") %>% 
-  rownames_to_column(var = "parameter"))
-
-(s2.4.1_all <- bind_rows(s2.4.1_cross.mean.J, s2.4.1_cross.mean.A, s2.4.1_cross.mean.Y) %>% 
-  mutate(scenario = "scenario_2.4.1",
-         population.growth = "slight decline"))
-
-#Slight population growth
-(s2.4.2_cross.mean.J <- as.data.frame(Reduce("+", s2.4.2_cross.list.J) / length(s2.4.2_cross.list.J)) %>% 
-    mutate(sampling.scheme = "sample all juveniles") %>% 
-  rownames_to_column(var = "parameter"))
-
-(s2.4.2_cross.mean.A <- as.data.frame(Reduce("+", s2.4.2_cross.list.A) / length(s2.4.2_cross.list.A)) %>% 
-    mutate(sampling.scheme = "sample all ages") %>% 
-  rownames_to_column(var = "parameter"))
-
-(s2.4.2_cross.mean.Y <- as.data.frame(Reduce("+", s2.4.2_cross.list.Y) / length(s2.4.2_cross.list.Y)) %>% 
-    mutate(sampling.scheme = "target.YOY") %>% 
-  rownames_to_column(var = "parameter"))
-
-(s2.4.2_all <- bind_rows(s2.4.2_cross.mean.J, s2.4.2_cross.mean.A, s2.4.2_cross.mean.Y) %>% 
-    mutate(scenario = "scenario_2.4.2",
-           population.growth = "slight growth"))
-
-
-#Severe population decline
-(s2.4.3_cross.mean.J <- as.data.frame(Reduce("+", s2.4.3_cross.list.J) / length(s2.4.3_cross.list.J)) %>% 
-    mutate(sampling.scheme = "sample all juveniles") %>% 
-    rownames_to_column(var = "parameter"))
-
-(s2.4.3_cross.mean.A <- as.data.frame(Reduce("+", s2.4.3_cross.list.A) / length(s2.4.3_cross.list.A)) %>% 
-    mutate(sampling.scheme = "sample all ages") %>% 
-    rownames_to_column(var = "parameter"))
-
-(s2.4.3_cross.mean.Y <- as.data.frame(Reduce("+", s2.4.3_cross.list.Y) / length(s2.4.3_cross.list.Y)) %>% 
-    mutate(sampling.scheme = "target.YOY") %>% 
-    rownames_to_column(var = "parameter"))
-
-(s2.4.3_all <- bind_rows(s2.4.3_cross.mean.J, s2.4.3_cross.mean.A, s2.4.3_cross.mean.Y) %>% 
-    mutate(scenario = "scenario_2.4.3",
-           population.growth = "severe decline"))
-#Stable pop
-(s2.4.4_cross.mean.J <- as.data.frame(Reduce("+", s2.4.4_cross.list.J) / length(s2.4.4_cross.list.J)) %>% 
-    mutate(sampling.scheme = "sample all juveniles") %>% 
-    rownames_to_column(var = "parameter"))
-
-(s2.4.4_cross.mean.A <- as.data.frame(Reduce("+", s2.4.4_cross.list.A) / length(s2.4.4_cross.list.A)) %>% 
-    mutate(sampling.scheme = "sample all ages") %>% 
-    rownames_to_column(var = "parameter"))
-
-(s2.4.4_cross.mean.Y <- as.data.frame(Reduce("+", s2.4.4_cross.list.Y) / length(s2.4.4_cross.list.Y)) %>% 
-    mutate(sampling.scheme = "target.YOY") %>% 
-    rownames_to_column(var = "parameter"))
-
-(s2.4.4_all <- bind_rows(s2.4.4_cross.mean.J, s2.4.4_cross.mean.A, s2.4.4_cross.mean.Y) %>% 
-    mutate(scenario = "scenario_2.4.4",
-           population.growth = "stable"))
-
-
-crossCorr.all <- bind_rows(s2.4.1_all, s2.4.2_all, s2.4.3_all, s2.4.4_all) %>% 
-  dplyr::filter(parameter != "deviance")
-
-saveRDS(crossCorr.all, file = paste0(MCMC_location, "crossCorr/cross.corr_pop.growth_scenarios_ALL_UPDATED_2023.10.05"))
-
 
 #---------------Calculate mean cross-correlation among iterations ----------------#
 #Slight population decline

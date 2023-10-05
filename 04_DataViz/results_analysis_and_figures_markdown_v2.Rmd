@@ -71,7 +71,7 @@ results.raw %>% dplyr::count(parameter)
 results.raw %>% dplyr::count(is.na(relative_bias))
 #results.raw %>% dplyr::count(scenario) %>% View()
 results.raw %>% dplyr::filter(objective == "objective1") %>% 
-  count(estimation.sim)
+  dplyr::count(estimation.sim)
 results.raw %>% dplyr::count(scenario)
 results.raw %>% dplyr::count(objective)
 results.raw %>% dplyr::count(iteration) %>% 
@@ -453,10 +453,14 @@ obj2_results <- results.raw %>% dplyr::filter(objective == "objective2") %>%
                                            ifelse(scenario %in% slight_increase_scenarios, "slight increase",
                                                   ifelse(scenario %in% severe_decline_scenarios, "severe decline", NA))))) %>% 
   mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>%
+  mutate(estimation.sim = ifelse(estimation.year == 90, "present",
+                                       ifelse(estimation.year == 85, "present-5",
+                                              ifelse(estimation.year == 78 | estimation.year == 67, "T0-10",
+                                                     ifelse(estimation.year == 88 | estimation.year == 77, "T0", NA))))) %>% 
   mutate(estimation.sim.label = factor(estimation.sim, levels = c("T0-10", "T0", "present-5", "present"))) %>% 
   mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
                                       ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample juveniles", 
-                                             ifelse(sampling.scheme == "target.YOY", "target YOY", NA))))
+                                             ifelse(sampling.scheme == "target.YOY", "target YOY", NA)))) 
 
   # mutate(model.label = ifelse(scenario %in% no_lambda_scenarios, "naive",
   #                             ifelse(scenario %in% narrow_lambda_scenarios, "adapted (narrow lambda prior)", 
@@ -565,7 +569,7 @@ pop.size_all %>% group_by(population.growth, iteration) %>%
 
 obj2_results <- obj2_results %>% mutate(parameter = ifelse(parameter == "Nft", "Nf",
                                            ifelse(parameter == "Nmt", "Nm",
-                                                  parameter)))
+                                                  ifelse(parameter == "Nf0" & scenario == "scenario_2.4.3", "Nf", parameter))))
 
 #Check that Paul Conn's model registered appropriately
 obj2_results %>% dplyr::filter(parameter == "survival", population.growth != "stable") %>% dplyr::count(model)
@@ -730,7 +734,7 @@ obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
   ggplot(aes(x = relative_bias, 
              fill = sampling.scheme.label)) + #Changed TO model from model.label
   geom_density(alpha = 0.6) + 
-  labs(x="Relative bias", y="Estimation year") +
+  labs(x="Relative bias") +
   facet_grid(rows = vars(population.growth)) +
   geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
   scale_fill_manual(values = cp, #Changed to subset for red and blue 
@@ -751,83 +755,95 @@ obj2_results %>% dplyr::filter(parameter %in% c("lambda"),
 ggsave("SuppFig_lambda_Obj2.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 12, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
+#-------------------Cross correlation -----------------------------------#
+crossCorr.all <- readRDS(file = paste0(MCMC_location, "crossCorr/cross.corr_pop.growth_scenarios_ALL_UPDATED_2023.10.05"))
+
+cc.table <- crossCorr.all %>% as_tibble() %>% 
+  dplyr::filter(parameter == "Nf0") %>% 
+    dplyr::mutate(T0 = ifelse(sampling.scheme %in% c("sample all juveniles", "sample all ages"), 77, 88)) %>% 
+  dplyr::select(parameter, survival, lambda, T0, sampling.scheme, population.growth) 
+
+cc.table %>% 
+  write_xlsx(path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/peer_review_USE/crossCorr_table.xlsx")
+
+
 #-------------------Lambda comparison: avg vs indv-----------------------#
-lambda.df %>% 
-  ggplot(aes(x = factor(lambda.yrs), y = relative_bias, fill = factor(pop.growth))) +
-# geom_violin(draw_quantiles = 0.5, position = position_dodge(0.75), width = 4) +
-  #geom_violin(draw_quantiles = 0.5, width = 4) +
-  geom_jitter(width = 0.2, aes(col = factor(pop.growth)), alpha = 0.5) +
-  geom_boxplot() +
-#  geom_hline(yintercept=0, col="black", size=1.25) +
-  labs(x = "lambda years", y = "relative bias") +
-  theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        plot.title = element_text(size=25),
-        legend.title = element_blank())
-
-#Scatter plot of exact relative bias
-lambda.df %>% 
-  ggplot(aes(x = factor(pop.growth), y = relative_bias, fill = factor(pop.growth))) + 
-  geom_jitter() +
-  facet_wrap(~lambda.yrs)
-
-
-#-------------Compare total lambda vs adult lambda----------------
-yr0 <- 1
-yrs <- 90
-
-pop.size_all <- pop.size_all %>% mutate(juv.pop.size = population_size - Total.adult.pop)
-
-#Initialize df for saving values
-adult.lam_90 = total.lam_90 = juv.lam_90 <- NULL
-
-
-#NEED TO REFINE THIS 09/18/2023
-for(pg in 1:4){
-  pop.g.levels <- pop.size_all %>% distinct(population.growth) %>% pull(population.growth)
-  
-  pop.g <- pop.g.levels[pg]
-  
-  pop.g.df <- pop.size_all %>% dplyr::filter(population.growth == "pop.g")
-    
-for(i in 1:max(pop.size_all$iteration)){
-  #Subset for iteration of interest
-  iter <- pop.g.df %>% dplyr::filter(iteration == i)
-  
-  #Change calculation of lambda
-  mean.adult.lam_90 <- (iter$Total.adult.pop[yrs]/iter$Total.adult.pop[1])^(1/(yrs - yr0))
-  adult.lam_90 <- c(adult.lam_90, mean.adult.lam_90)
-
-  mean.total.lam_90 <- (iter$population_size[yrs]/iter$population_size[1])^(1/(yrs - yr0))
-  total.lam_90 <- c(total.lam_90, mean.total.lam_90)
-  
-  mean.juv.lam_90 <- (iter$juv.pop.size[yrs]/iter$juv.pop.size[1])^(1/(yrs - yr0))
-  juv.lam_90 <- c(juv.lam_90, mean.juv.lam_90)
-  
-}
-
-}
-
-
-#Compare lambda for difference age classes
-N90_lambda <- data.frame(total.lam_90, adult.lam_90, juv.lam_90) %>% 
-  mutate(total_v_adult = total.lam_90 - adult.lam_90,
-         total_v_juv = total.lam_90 - juv.lam_90,
-         adult_v_juv = adult.lam_90 - juv.lam_90)
-
-#Scatter plot
-N90_lambda %>% pivot_longer(cols = c(total_v_adult, total_v_juv, adult_v_juv),
-                            names_to = c("comparison"),
-                            values_to = "difference") %>% 
-  ggplot(aes(x = difference, y = factor(comparison), fill = factor(comparison))) +
-  geom_jitter(aes(col = factor(comparison))) +
-  geom_boxplot(alpha = 0.3)
-
-
+# lambda.df %>% 
+#   ggplot(aes(x = factor(lambda.yrs), y = relative_bias, fill = factor(pop.growth))) +
+# # geom_violin(draw_quantiles = 0.5, position = position_dodge(0.75), width = 4) +
+#   #geom_violin(draw_quantiles = 0.5, width = 4) +
+#   geom_jitter(width = 0.2, aes(col = factor(pop.growth)), alpha = 0.5) +
+#   geom_boxplot() +
+# #  geom_hline(yintercept=0, col="black", size=1.25) +
+#   labs(x = "lambda years", y = "relative bias") +
+#   theme_bw() +
+#   theme(axis.text = element_text(size = 12),
+#         axis.title = element_text(size = 20),
+#         strip.text.x = element_text(size = 15),
+#         strip.text.y = element_text(size = 15),
+#         legend.text = element_text(size = 15),
+#         plot.title = element_text(size=25),
+#         legend.title = element_blank())
+# 
+# #Scatter plot of exact relative bias
+# lambda.df %>% 
+#   ggplot(aes(x = factor(pop.growth), y = relative_bias, fill = factor(pop.growth))) + 
+#   geom_jitter() +
+#   facet_wrap(~lambda.yrs)
+# 
+# 
+# #-------------Compare total lambda vs adult lambda----------------
+# yr0 <- 1
+# yrs <- 90
+# 
+# pop.size_all <- pop.size_all %>% mutate(juv.pop.size = population_size - Total.adult.pop)
+# 
+# #Initialize df for saving values
+# adult.lam_90 = total.lam_90 = juv.lam_90 <- NULL
+# 
+# 
+# #NEED TO REFINE THIS 09/18/2023
+# for(pg in 1:4){
+#   pop.g.levels <- pop.size_all %>% distinct(population.growth) %>% pull(population.growth)
+#   
+#   pop.g <- pop.g.levels[pg]
+#   
+#   pop.g.df <- pop.size_all %>% dplyr::filter(population.growth == "pop.g")
+#     
+# for(i in 1:max(pop.size_all$iteration)){
+#   #Subset for iteration of interest
+#   iter <- pop.g.df %>% dplyr::filter(iteration == i)
+#   
+#   #Change calculation of lambda
+#   mean.adult.lam_90 <- (iter$Total.adult.pop[yrs]/iter$Total.adult.pop[1])^(1/(yrs - yr0))
+#   adult.lam_90 <- c(adult.lam_90, mean.adult.lam_90)
+# 
+#   mean.total.lam_90 <- (iter$population_size[yrs]/iter$population_size[1])^(1/(yrs - yr0))
+#   total.lam_90 <- c(total.lam_90, mean.total.lam_90)
+#   
+#   mean.juv.lam_90 <- (iter$juv.pop.size[yrs]/iter$juv.pop.size[1])^(1/(yrs - yr0))
+#   juv.lam_90 <- c(juv.lam_90, mean.juv.lam_90)
+#   
+# }
+# 
+# }
+# 
+# 
+# #Compare lambda for difference age classes
+# N90_lambda <- data.frame(total.lam_90, adult.lam_90, juv.lam_90) %>% 
+#   mutate(total_v_adult = total.lam_90 - adult.lam_90,
+#          total_v_juv = total.lam_90 - juv.lam_90,
+#          adult_v_juv = adult.lam_90 - juv.lam_90)
+# 
+# #Scatter plot
+# N90_lambda %>% pivot_longer(cols = c(total_v_adult, total_v_juv, adult_v_juv),
+#                             names_to = c("comparison"),
+#                             values_to = "difference") %>% 
+#   ggplot(aes(x = difference, y = factor(comparison), fill = factor(comparison))) +
+#   geom_jitter(aes(col = factor(comparison))) +
+#   geom_boxplot(alpha = 0.3)
+# 
+# 
 
 ```
 
@@ -1089,9 +1105,9 @@ obj4_results <- obj4_results %>%
   mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
                                       ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample all juveniles", 
                                              ifelse(sampling.scheme == "target.YOY", "target YOY", NA)))) %>% 
-    mutate(estimation.sim.label = factor(estimation.sim, levels = c("T0-10", "T0", "present-5", "present"))) %>% 
   mutate(cv.label = factor(cv.label, levels = c("accurate", "5% CV", "10% CV", "20% CV"), labels = c("accurate", "5% CV", "10% CV", "20% CV")))
 
+obj4_results %>% dplyr::count(estimation.year, scenario)
 
 #Apparently I only saved the last iteration of samples and only for the sample.ALL.ages scenario ... must overwrite in the script. For this supplemental figure, we can just use the figure from the first draft: haven't changed these simulations.
 # obj4.samples_5cv <- readRDS(paste0(results_location, "samples/samples.missassigned_06Aug2023_Seeds2022.04.15_scenario_4.1_multiennial.model")) %>% mutate(age.cv = "5% CV")
@@ -1114,8 +1130,8 @@ obj4_results <- obj4_results %>%
 ####################### Objective 4 Main Figure ##################################
 ##################################################################################
 #-------------------Objective 4 Density plots of relative bias-----------------------#
-      (fig4b <- obj4_results %>% dplyr::filter(parameter == "Nf" | parameter == "survival", estimation.sim.label == "present") %>% 
-  ggplot(aes(x=factor(cv.label), fill = model.label)) +
+      (fig4b <- obj4_results %>% dplyr::filter(parameter == "Nft" | parameter == "survival", estimation.year == 90) %>% 
+  ggplot(aes(x=cv.label, fill = model.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(y="Relative bias", x = "Age-length uncertainty") +
@@ -1243,7 +1259,7 @@ ls_dataSim %>% dplyr::count(parameter)
 #ls_dataSim <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_time_series_sims.csv")
 
 #----------------------Load population size for trajectory
-ls_dataTrend_raw <- readRDS(file = paste0(results_location, "/lemon_shark_sims/lemon_shark_time_series_sims_popSize_Conn3_temp"))
+ls_dataTrend_raw <- readRDS(file = paste0(results_location, "/lemon_shark_sims/lemon_shark_time_series_sims_popSize_Conn3"))
 
 min.yr <- ls_dataSim %>% dplyr::filter(parameter == "Nfbt") %>% summarize(min.yr = min(estimation.year)) %>% 
   pull(min.yr)
@@ -1253,9 +1269,9 @@ ls_dataTrend.df <- ls_dataTrend_raw %>% dplyr::group_by(year) %>%
                    Nm.trend = round(mean(Male.adult.pop), 0),
                    Nfb.trend = round(mean(Num.mothers), 0)
                    ) %>% 
-  mutate(Nf.trend.trans = Nf.trend * 4,
-         Nm.trend.trans = Nm.trend * 4,
-         Nfb.trend.trans = Nfb.trend * 4) %>% 
+  mutate(Nf.trend.trans = Nf.trend,
+         Nm.trend.trans = Nm.trend,
+         Nfb.trend.trans = Nfb.trend) %>% 
   dplyr::filter(year >= min.yr) %>% 
   mutate(type = "trend")
 
@@ -1284,12 +1300,12 @@ ls_truthSim.otherParams <- ls_truthSim %>% dplyr::filter(parameter %in% c("survi
 
 #
 #--------------------Load lemon shark data estimates---------
-ls_dataFull <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/z_old_files/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FullDataset_wLambda.csv") %>% 
-  mutate(num.samps = num.samps_all) %>% 
-  dplyr::select(-c(num.samps_all)) %>% 
-  dplyr::filter(estimation_year >= 1997)
+ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_2023.10.05.csv") %>% 
+  #mutate(num.samps = num.samps_all) %>% 
+  #dplyr::select(-c(num.samps_all)) %>% 
+  dplyr::filter(estimation.year >= 1997)
 
-ls_data.Fulldown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/z_old_files/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_DownsampledDataset_wLambda.csv") %>% 
+ls_data.Fulldown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_Down_2023.10.05.csv") %>% 
   mutate(mom_HSPs = mom_HSPs.down,
          num.samps = num.samps_down) %>% 
   dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all)) %>%
@@ -1301,33 +1317,6 @@ ls_data.Fulldown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/z_old_fi
  #   mutate(num.samps = num.samps_all) %>% 
  #   dplyr::select(-c(num.samps_all))
 
-#Five year intervals
-ls_dataFive <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/z_old_files/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FiveYearIntervals_wLambda.csv") %>% 
-  mutate(num.samps = num.samps_all) %>% 
-  dplyr::select(-c(num.samps_all)) %>% 
-  dplyr::filter(estimation_year >= 1997)
-
-
-# ls_data.Fivedown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.30_FullLitter_FiveYearIntervals_Downsample_wLambda.csv") %>% 
-#   mutate(mom_HSPs = mom_HSPs.down,
-#          num.samps = num.samps_down) %>% 
-#   dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all))
-
-
-ls_data.full4viz <- ls_dataFull %>% dplyr::filter(estimation_year > 1996) %>% 
-  mutate(Dataset = "Full")
-ls_data.Fulldown4viz <- ls_data.Fulldown %>% dplyr::filter(estimation_year > 1996) %>% 
-  mutate(Dataset = "Full | downsampled")
-
-ls_data.five4viz <- ls_dataFive %>% dplyr::filter(estimation_year > 1996) %>% 
-  mutate(Dataset = "Five year intervals")
-# ls_data.Fivedown4viz <- ls_data.Fivedown %>% dplyr::filter(estimation_year > 1996) %>% 
-#   mutate(Dataset = "Five year intervals | downsampled")
-
-ls_data4viz <- bind_rows(ls_data.full4viz, 
-                         ls_data.Fulldown4viz,
-                         ls_data.five4viz) %>% 
-  mutate(Dataset = factor(Dataset, levels = c("Full", "Full | downsampled", "Five year intervals")))
 ```
 
 
@@ -1335,25 +1324,75 @@ ls_data4viz <- bind_rows(ls_data.full4viz,
 #------------------- Simulation figs --------------------------
 brewer.pal.info #See different palette options from Rcolorbrewer
 cp5 <- brewer.pal(3, "Dark2") #Choose palette + number of colors
-cp5[4] <- "black"
+cp5[4] <- "black" #If not including average trendline on second plot
+#cp5[4] <- "darkslateblue" #If including average trendline on second plot
+#cp5[5] <- "black" #If including average trendline on second plot
 scales::show_col(cp5)
 
 #------- Box plot of relative bias for Nfb----------------#
 ls_Nfb_boxplot <- ls_dataSim %>% dplyr::filter(parameter %in% c("Nfbt")) %>% 
   ggplot() +
-  geom_boxplot(aes(x=factor(estimation.year), fill = time_window, y=relative_bias), notch = TRUE, outlier.alpha = 0.1) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  labs(y="Relative bias", x = "Year") +
-    geom_path(data = ls_dataTrend.df, aes(x = factor(year), y = Nfb.trend.trans, color = type, group = 1), linewidth = 1.25, linetype = "solid") +
-  scale_y_continuous(limits = c(-50, 200), breaks = c(-50, -25, 0, 25, 50, 75, 100, 125, 150, 175, 200),
-                         sec.axis = sec_axis(~. *1, name = "abundance")
-) +
+  geom_boxplot(aes(x=factor(estimation.year), 
+                   fill = time_window, 
+                   y=relative_bias), 
+               notch = TRUE, 
+               outlier.alpha = 0.1) +
+  geom_hline(yintercept=0, 
+             col="blue", 
+             size=1.25, 
+             linetype = "dashed") +
+  labs(y="Relative bias", 
+       x = "Year") +
+  scale_y_continuous(limits = c(-50, 200), 
+                     breaks = c(-50, -25, 0, 25, 50, 75, 100, 125, 150, 175, 200)) +
   scale_fill_manual(values = cp5) +
-  scale_color_manual(values = "darkslateblue", name = element_blank()) +
   #facet_wrap(~parameter, scales = "free", ncol = 2) +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
+        #axis.title.y = element_text(size = 20),
+        axis.title.y = element_blank(),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        #legend.position = "none",
+        plot.title = element_text(size=25),
+        axis.title.y.right = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  guides(fill=guide_legend(title="Sample window")) +
+  ggtitle("a) Nfb")
+
+ls_Nfb_boxplot
+
+#ggsave("LS_sim_Nfb_boxplot_2023.10.04.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+#------- Box plot of relative bias for lambda ----------------#
+ls_lambda_boxplot <- ls_dataSim %>% dplyr::filter(parameter %in% c("lambda")) %>% 
+  ggplot() +
+  geom_boxplot(aes(x=factor(estimation.year), fill = time_window, y=relative_bias)) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(y="Relative bias", x = "Year") +
+  scale_y_continuous(limits = c(-25, 50), breaks = c(-25, -25, 0, 25, 50),
+                         sec.axis = sec_axis(~. *1, name = "abundance")
+) +
+geom_path(data = ls_dataTrend.df, #Include if we want a trend line of the average realized abundance
+          aes(x = factor(year),
+              y = Nfb.trend.trans,
+              color = type,
+              group = 1),
+          size = 1.25,
+          linetype = "solid") +
+    scale_color_manual(values = "darkslateblue", name = element_blank()) +
+ # facet_wrap(~parameter,
+ #            scales = "free") +
+  scale_fill_manual(values = cp5) +
+  #facet_wrap(~parameter, scales = "free", ncol = 2) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        #axis.title = element_text(size = 20),
+        axis.title.y = element_blank(),
         strip.text.x = element_text(size = 15),
         strip.text.y = element_text(size = 15),
         legend.text = element_text(size = 15),
@@ -1362,11 +1401,16 @@ ls_Nfb_boxplot <- ls_dataSim %>% dplyr::filter(parameter %in% c("Nfbt")) %>%
         axis.title.y.right = element_blank(),
         axis.text.y.right = element_blank(),
         axis.ticks.y.right = element_blank()) +
-  guides(fill=guide_legend(title="Sample window"))
+  geom_vline(xintercept=7, col="darkslategrey", size=1.25, linetype = "twodash") +
+    geom_vline(xintercept=12, col="lightseagreen", size=1.25, linetype = "twodash") +
+  guides(fill=guide_legend(title="Sample window")) +
+  ggtitle(expression(paste("b) ", lambda)))
 
-ls_Nfb_boxplot
+LS.sim_boxplots <- ggarrange(ls_Nfb_boxplot, ls_lambda_boxplot, common.legend = FALSE, nrow = 2, legend = "right")
 
-ggsave("LS_sim_Nfb_boxplot_2023.10.04.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+LS.sim_boxplots.annotated <- annotate_figure(LS.sim_boxplots, left = text_grob("Relative Bias", rot = 90, size = 18, face = "bold", family = "sans"))
+
+ggsave("LS_sim_boxplots_2023.10.04.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #-----------------Single iteration abundance trend----------------
 params <- c("Nfbt")
@@ -1388,6 +1432,13 @@ fig5sim <- ls_estimatesSim %>% dplyr::filter(iteration == iter,
             aes(y = truth, 
                 color = type),
             size = 1) +
+  # geom_path(data = ls_dataTrend.df, #Include if we want a trend line of the average realized abundance
+  #           aes(x = year,
+  #               y = Nfb.trend.trans,
+  #               color = type,
+  #               group = 1),
+  #           size = 1.25,
+  #           linetype = "solid") +
 #  facet_wrap(~parameter, 
 #             scales = "free") +
   theme_bw() +
@@ -1407,14 +1458,11 @@ fig5sim
 
 ggsave("LS_sim_Nfb_singleTrend_2023.10.04.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 ######################################################################################################### Objective 5 Supplementary Figure(s) ####################################################################################################################
-
-
 ls_survival_boxplot <- ls_dataSim %>% dplyr::filter(parameter %in% c("survival")) %>% 
   ggplot() +
   geom_boxplot(aes(x=factor(estimation.year), fill = time_window, y=relative_bias)) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(y="Relative bias", x = "Year") +
-    geom_path(data = ls_dataTrend.df, aes(x = factor(year), y = Nfb.trend, group = 1), linewidth = 1.25, linetype = "solid", colour = "darkslateblue") +
   scale_y_continuous(limits = c(-50, 50), breaks = c(-50, -25, 0, 25, 50),
                          sec.axis = sec_axis(~. *1, name = "abundance")
 ) +
@@ -1437,29 +1485,9 @@ ls_survival_boxplot
 
 ggsave("SuppFig_survival_boxplot_2023.10.04.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
-#------- Box plot of relative bias for other parameters ----------------#
-ls_supp_boxplot <- ls_dataSim %>% dplyr::filter(parameter %in% c("Nfb", "Nm")) %>% 
-  ggplot(aes(x=factor(estimation.yr), fill = time_window)) +
-  geom_boxplot(aes(y=relative_bias)) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  labs(y="Relative bias", x = "Year") +
-    scale_y_continuous(limits = c(-50, 200), breaks = c(-50, -25, 0, 25, 50, 75, 100, 125, 150, 175, 200)) +
-  scale_fill_manual(values = cp5) +
-  facet_wrap(~parameter, scales = "free") +
-  theme_bw() +
-  theme(axis.text = element_text(size = 12),
-        axis.title = element_text(size = 20),
-        strip.text.x = element_text(size = 15),
-        strip.text.y = element_text(size = 15),
-        legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20),
-        plot.title = element_text(size=25)) +
-  guides(fill=guide_legend(title="Population + model"))
-
-ls_supp_boxplot
 
 #-------Single iteration abundance trend----------------#
-(iter <- sample(c(1:91, 93:101), size = 1)) #Iteration 16 is a good one for visualization
+(iter <- sample(c(1:100), size = 1)) #Iteration 16 is a good one for visualization
 
 ls_estimatesSim <- ls_dataSim %>% pivot_longer(cols = c(Q50, all.truth), names_to = "type", values_to = "estimate") %>% 
   dplyr::filter(type == "Q50",
@@ -1559,59 +1587,68 @@ ggsave("LemonSharkSim_SuppFig.tiff", plot = last_plot(), device = "tiff", dpi = 
 
 
 #---------------------LEMON SHARK DATA-----------------
-fig5a <- ls_data4viz %>% 
-  dplyr::filter(parameter == "Nfb2") %>%
-  ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
+x.ticks <- c(seq(1997, 2015, by = 1))
+x.tick.labels <- c("", "", "", "2000", rep("", times = 4), "2005", rep("", times = 4), "2010", rep("", times = 4), "2015")
+
+fig5a <- ls_data %>% 
+  dplyr::filter(parameter == "Nfbt") %>%
+  ggplot(aes(x = estimation.year, y = Q50, color = time_window)) + 
   #geom_point() + 
   geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
                   position = position_dodge(width = 0.5)) +
-  geom_smooth(method = "gam", se = FALSE, aes(linetype = Dataset)) +
+  geom_smooth(method = "gam", se = FALSE, aes(linetype = time_window), show.legend = FALSE) +
   #facet_wrap(~years.lab) +
   theme_bw() +
+  ylim(0, 75) +
   labs(x = "Estimation year", y = "Female abundance") +
-  scale_color_manual(values = cp5) +
-  ggtitle("a)") +
+  scale_color_manual(values = cp5, name = "Sample window") +
+#  ggtitle("a)") +
   theme(axis.text = element_text(size = 15),
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size = 15),
         strip.text.y = element_text(size = 15),
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))
+        plot.title = element_text(size=25)) +
+  scale_x_continuous(breaks = x.ticks,
+                     labels = x.tick.labels)
 
 fig5a
 
-#ggsave("Figure_5a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("LS_data_Nfb_trend_2023.10.05.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
 
 #-----------------------Fig5b: Survival------------------------------------#
-fig5b <- ls_data4viz %>% 
+fig5.survival <- ls_data %>% 
   dplyr::filter(parameter == "survival") %>%
-  ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
+  ggplot(aes(x = estimation.year, y = Q50, color = time_window)) + 
   #geom_point() + 
-  geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5, group = Dataset),
-                  position = position_dodge(width = 1)) +
-  geom_smooth(method = "gam", se = FALSE, aes(linetype = Dataset)) +
+  geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
+                  position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "gam", se = FALSE, aes(linetype = time_window), show.legend = FALSE) +
   #facet_wrap(~years.lab) +
   theme_bw() +
-  ylim(0.5, 1) +
+  #ylim(0, 75) +
   labs(x = "Estimation year", y = "Survival") +
-  ggtitle("b)") +
-  scale_color_manual(values = cp5) +
+  scale_color_manual(values = cp5, name = "Sample window") +
+#  ggtitle("a)") +
   theme(axis.text = element_text(size = 15),
         axis.title = element_text(size = 20),
         strip.text.x = element_text(size = 15),
         strip.text.y = element_text(size = 15),
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
-        plot.title = element_text(size=25))
+        plot.title = element_text(size=25)) +
+  scale_x_continuous(breaks = x.ticks,
+                     labels = x.tick.labels)
 
-fig5b
+fig5.survival
 
-#ggsave("Figure_5b_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("LS_data_survival_2023.10.05.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
-ggarrange(fig5a, fig5b, common.legend = TRUE, legend = "bottom")
+#ggarrange(fig5a, fig5b, common.legend = TRUE, legend = "bottom")
 
-ggsave("Figure_5_2023.01.02.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 12, height = 6, units = "in")
+#ggsave("Figure_5_2023.01.02.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 12, height = 6, units = "in")
 
 
 #Make table of full dataset and downsampled dataset results
