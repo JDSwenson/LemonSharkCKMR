@@ -143,6 +143,38 @@ HS.PO_narrowLambda_Skip_model_Conn = function(){
 }
 
 
+####
+MHS.only_narrowLambda_Skip_model_Conn = function(){
+  
+  #PRIORS - uninformative
+  mu ~ dunif(1, 10000)
+  sd ~ dunif(1, 10000)
+  Nf0 ~ dnorm(mu, 1/(sd^2)) # Uninformative prior for female abundance
+  survival ~ dunif(0.5,0.99) # Uninformative prior for adult survival
+  psi ~ dunif(0, 1) #Percent of animals breeding non-annually #Turn off if fixing psi
+  lambda ~ dunif(0.95, 1.05)
+  
+  #Likelihood
+  #Moms
+  #HS - even years
+  for(i in 1:mom.yrs_HS.on){ # Loop over maternal cohort comparisons
+    mom.positives_HS.on[i] ~ dbin((a*(survival^mom.mort.yrs_HS.on[i]))/((a + psi - (a*psi))*(Nf0*(lambda^mom.popGrowth.yrs_HS.on[i]))), mom.n.comps_HS.on[i]) # Sex-specific CKMR model equation
+  }
+  
+  #Moms
+  #HS - odd years
+  for(j in 1:mom.yrs_HS.off){ # Loop over maternal cohort comparisons
+    mom.positives_HS.off[j] ~ dbin(((survival^mom.mort.yrs_HS.off[j])*(1-psi)*a)/((a + psi - (a*psi))*(Nf0*(lambda^mom.popGrowth.yrs_HS.off[j]))), mom.n.comps_HS.off[j]) # Sex-specific CKMR model equation
+  }
+  
+  #Derived quantities
+  #derived quantities
+  Nft = Nf0 * lambda^(estimation.year - est.year.calibrate)
+  Nfb0 = Nf0/a
+  Nfbt = Nft/a
+}
+
+
 
 jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_annual_model_Conn.txt")
 write_model(HS.PO_narrowLambda_annual_model_Conn, jags_file)
@@ -155,3 +187,6 @@ write_model(HS.only_narrowLambda_Skip_model_Conn, jags_file)
 
 jags_file = paste0(jags.model_location, "HS.PO_narrowLambda_Skip_model_Conn.txt")
 write_model(HS.PO_narrowLambda_Skip_model_Conn, jags_file)
+
+jags_file = paste0(jags.model_location, "MHS.only_narrowLambda_Skip_model_Conn.txt")
+write_model(MHS.only_narrowLambda_Skip_model_Conn, jags_file)
