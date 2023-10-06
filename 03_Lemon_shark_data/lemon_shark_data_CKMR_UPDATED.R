@@ -1288,12 +1288,12 @@ results %>% dplyr::filter(estimation.year >= 1997) %>%
   as_tibble() %>% 
   arrange(time_window, estimation.year)
 
-write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/LS_data_ConnModel_2023.10.05.csv")
+write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_Down_2023.10.05.csv")
 
 #Save final pairwise comparison matrices
-saveRDS(mom.comps.tibble, file = paste0(results_location, "mom.comps_LS_data_ConnModel_2023.10.05"))
+saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_sims/mom.comps_LS_data_ConnModel_Down_2023.10.05"))
 
-saveRDS(dad.comps.tibble, file = paste0(results_location, "dad.comps_LS_data_ConnModel_2023.10.05"))
+saveRDS(dad.comps.tibble, file = paste0(results_location, "lemon_shark_sims/dad.comps_LS_data_ConnModel_Down_2023.10.05"))
 
 
 
