@@ -1,14 +1,13 @@
 #Load packages
-library(tidyverse) # safe to ignore conflicts with filter() and lag()
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tibble) # safe to ignore conflicts with filter() and lag()
 library(MASS)
 library(popbio)
-library(mpmtools)  # not at CRAN;
-# install.packages("devtools")
-#devtools::install_github("BruceKendall/mpmtools")
+library(mpmtools)
 library(ggpubr)
-# The rjags package is just an interface to the JAGS library
-# Make sure you have installed JAGS-4.x.y.exe (for any x >=0, y>=0) from
-# http://www.sourceforge.net/projects/mcmc-jags/files
 library(rjags)
 library(R2jags)
 library(jagsUI)
@@ -16,6 +15,7 @@ library(Rlab)
 library(runjags)
 library(postpack)
 library(coda)
+library(FSA)
 
 rm(list = ls())
 options(dplyr.summarise.inform = FALSE)
@@ -30,21 +30,20 @@ parents_prefix <- "parents.breakdown"
 sample_prefix <- "sample.info"
 pop.size.prefix <- "pop.size"
 truth.prefix <- "truth"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.output/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/JAGS_models/" #Location of JAGS models
+MCMC_location <- "./output/output_peer_review/Model.output/"
+results_location <- "./output/output_peer_review/Model.results/"
+jags.model_location <- "./output/JAGS_models/" #Location of JAGS models
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
 jags.model.prefix <- "CKMR.JAGS_"
 mom.comps.prefix <- "mom.comps"
 dad.comps.prefix <- "dad.comps"
-samples.prefix <- "samples/samples.missassigned"
 
 PopSim.breeding.schedule <- "biennial.breeding" #Can be annual.breeding or biennial.breeding
 model <- "multiennial.model"
 
-jags_params <- c("Nft", "Nfbt", "Nmt", "Nf0", "Nfb0", "Nm0", "survival", "lambda", "psi") #List the parameters to be estimated
+jags_params <- c("Nft", "Nfbt", "Nf0", "Nfb0", "survival", "lambda", "psi") #List the parameters to be estimated
 HS.only <- "yes"
 
 ########################## MCMC & model parameters #########################
@@ -53,7 +52,7 @@ nb <- 50000 # number of burn-in samples
 nt <- 20     # thinning rate
 nc <- 2      # number of chains
 
-jags_file <- paste0(jags.model_location, "HS.only_narrowLambda_Skip_model_Conn.txt")
+jags_file <- paste0(jags.model_location, "MHS.only_narrowLambda_Skip_model_Conn.txt")
 
 
 #################### Simulation parameters ####################
@@ -232,7 +231,7 @@ sampled.mothers <- unique(sample.info$mother.x)
 sampled.fathers <- unique(sample.info$father.x)
 
 #First year of estimation will be four years after the first year of sampling
-first.est.year <- sample.years + 4
+first.est.year <- min(sample.years) + 4
 
 #------------ Run loop of sampling over five year interval ------------------#
 for(block in first.est.year:n_yrs){
@@ -244,23 +243,33 @@ for(block in first.est.year:n_yrs){
   #Blocked  samples - five year
   samples.df.block5.temp <- sample.info %>% dplyr::filter(capture.year >= block - 4 & capture.year <= block)
   
-  set.seed(rseed)
+  samples.df.block5 <- samples.df.block5.temp
+  # set.seed(rseed)
   filter.block5 <- filter.samples(samples = samples.df.block5.temp)
-  samples.df.block5 <- filter.block5[[2]]
+  # samples.df.block5 <- filter.block5[[2]]
+  full.sibs.block5 <- filter.block5[[4]] #Number of full siblings
+  diff.cohort.sibs.block5 <- filter.block5[[5]] #Number of full siblings from different cohorts
+  
   
   #Blocked  samples - three year
   samples.df.block3.temp <- sample.info %>% dplyr::filter(capture.year >= block - 2 & capture.year <= block)
   
-  set.seed(rseed)
+  samples.df.block3 <- samples.df.block3.temp
+  # set.seed(rseed)
   filter.block3 <- filter.samples(samples = samples.df.block3.temp)
-  samples.df.block3 <- filter.block3[[2]]
+  # samples.df.block3 <- filter.block3[[2]]
+  full.sibs.block3 <- filter.block3[[4]] #Number of full siblings
+  diff.cohort.sibs.block3 <- filter.block3[[5]] #Number of full siblings from different cohorts
   
   #all samples
   samples.df.all.temp <- sample.info %>% dplyr::filter(capture.year <= block)
   
-  set.seed(rseed)
+  samples.df.all <- samples.df.all.temp
+  # set.seed(rseed)
   filter.all <- filter.samples(samples = samples.df.all.temp)
-  samples.df.all <- filter.all[[2]]
+  # samples.df.all <- filter.all[[2]]
+  full.sibs.all <- filter.all[[4]] #Number of full siblings
+  diff.cohort.sibs.all <- filter.all[[5]] #Number of full siblings from different cohorts
   
 #--------------Calculate reference year--------------
   #Five year block
@@ -347,7 +356,7 @@ for(block in first.est.year:n_yrs){
   cat(paste0("Using samples from year ", block - 2, " to ", block, "\n"))
   
   est.year.calibrate <- est.year.calibrate.block3
-  source("./03_Lemon_shark_data/functions/Obj5_runJAGS_ConnParameterization.R")
+  source("./03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
   
   
   ########### Calculate truth ###################
@@ -369,11 +378,9 @@ for(block in first.est.year:n_yrs){
   #NOTE (old):that bc of the way the pairwise comparison matrix is constructed, estimates at time T will be staggered and will not be appropriate for the subset dataframes. So, we will ignore these. Estimates at t0 are the estimates in the estimation year.
   truth.iter.temp <- pop.size.tibble %>% dplyr::filter(year == estimation.year) %>% 
     mutate(Nfbt = Num.mothers,
-           Nft = Female.adult.pop,
-           Nmt = Male.adult.pop) %>%
+           Nft = Female.adult.pop) %>%
     dplyr::select(Nfbt,
                   Nft,
-                  Nmt,
                   estimation.year = year,
                   iteration = iteration,
                   seed = seed) %>% 
@@ -383,11 +390,9 @@ for(block in first.est.year:n_yrs){
   
   truth.iter <- pop.size.tibble %>% dplyr::filter(year == est.year.calibrate) %>% 
     mutate(Nfb0 = Num.mothers,
-           Nf0 = Female.adult.pop,
-           Nm0 = Male.adult.pop) %>%
+           Nf0 = Female.adult.pop) %>%
     dplyr::select(Nfb0,
                   Nf0,
-                  Nm0,
                   estimation.year = year,
                   iteration = iteration,
                   seed = seed) %>%
@@ -399,21 +404,20 @@ for(block in first.est.year:n_yrs){
   
   #Define Nf and Nm as objects for calculations
   Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf0") %>% pull(all.truth)
-  
-  Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm0") %>% pull(all.truth)
+
   
   #Subset for just the present iteration
-  Exp.block3 <- calc.Exp(mom_comps.all.block3, dad_comps.all.block3)
-  mom.Exp.HS.block3 <- Exp.block3[[1]]
-  mom.Exp.PO.block3 <- Exp.block3[[2]]
-  dad.Exp.HS.block3 <- Exp.block3[[3]]
-  dad.Exp.PO.block3 <- Exp.block3[[4]]
+  # Exp.block3 <- calc.Exp(mom_comps.all.block3, dad_comps.all.block3)
+  # mom.Exp.HS.block3 <- Exp.block3[[1]]
+  # mom.Exp.PO.block3 <- Exp.block3[[2]]
+  # dad.Exp.HS.block3 <- Exp.block3[[3]]
+  # dad.Exp.PO.block3 <- Exp.block3[[4]]
   
   sampled.mothers <- unique(sample.df_all.info$mother.x)
   sampled.fathers <- unique(sample.df_all.info$father.x)
   
   
-  results.temp.block3 <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
+  results.temp.block3 <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "seed")) %>% 
     dplyr::select(parameter,
                   Q50,
                   all.truth,
@@ -429,11 +433,10 @@ for(block in first.est.year:n_yrs){
                   iteration,
                   neff,
                   seed) %>% 
-    mutate(HSPs_detected = ifelse(parameter %in% c("Nf0", "Nfb0", "Nft", "Nfbt", "psi"), mom.HSPs.block3, 
-                                  ifelse(parameter %in% c("Nm0", "Nmt"), dad.HSPs.block3, mom.HSPs.block3 + dad.HSPs.block3)),
-           HSPs_expected = ifelse(parameter %in% c("Nf0", "Nfb0", "Nft", "Nfbt", "psi"), mom.Exp.HS.block3, 
-                                  ifelse(parameter %in% c("Nm0", "Nmt"), dad.Exp.HS.block3, mom.Exp.HS.block3 + dad.Exp.HS.block3))) %>% 
-    mutate(time_window = "three year block")
+    mutate(HSPs_detected =mom.HSPs.block3) %>% 
+    mutate(time_window = "three year block",
+           all.FSPs = full.sibs.block3,
+           diff.cohort.FSPs = diff.cohort.sibs.block3)
   
   gc()
   
@@ -499,32 +502,31 @@ for(block in first.est.year:n_yrs){
   cat(paste0("Using samples from year ", block - 4, " to ", block, "\n"))
   
   est.year.calibrate <- est.year.calibrate.block5
-  source("./03_Lemon_shark_data/functions/Obj5_runJAGS_ConnParameterization.R")
-
+  source("./03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
+  
+  
   ########### Calculate truth ###################
   #Calculate truth for survival and psi
   #results in a file called "true.values" that contains the truth for survival and psi
   ref.year <- ref.year.block5
   source("./03_Lemon_shark_data/functions/PopSim_truth.R")
   
-  #Calculate truth for lambda
+  #Pull lambda truth
   lambda.truth <- (pop.size.tibble$adult.lambda[block])
-  
   lambda.truth.df <- tibble(estimation.year = estimation.year,
                             iteration = iter,
                             seed = rseed,
                             parameter = "lambda",
                             all.truth = lambda.truth)
   
+  #Make dataframe of truth
   #NOTE: The NOTE below is leftover from different iterations of the script. At present, we want to compare estimates at Nt. 
   #NOTE (old):that bc of the way the pairwise comparison matrix is constructed, estimates at time T will be staggered and will not be appropriate for the subset dataframes. So, we will ignore these. Estimates at t0 are the estimates in the estimation year.
   truth.iter.temp <- pop.size.tibble %>% dplyr::filter(year == estimation.year) %>% 
     mutate(Nfbt = Num.mothers,
-           Nft = Female.adult.pop,
-           Nmt = Male.adult.pop) %>%
+           Nft = Female.adult.pop) %>%
     dplyr::select(Nfbt,
                   Nft,
-                  Nmt,
                   estimation.year = year,
                   iteration = iteration,
                   seed = seed) %>% 
@@ -534,11 +536,9 @@ for(block in first.est.year:n_yrs){
   
   truth.iter <- pop.size.tibble %>% dplyr::filter(year == est.year.calibrate) %>% 
     mutate(Nfb0 = Num.mothers,
-           Nf0 = Female.adult.pop,
-           Nm0 = Male.adult.pop) %>%
+           Nf0 = Female.adult.pop) %>%
     dplyr::select(Nfb0,
                   Nf0,
-                  Nm0,
                   estimation.year = year,
                   iteration = iteration,
                   seed = seed) %>%
@@ -551,20 +551,19 @@ for(block in first.est.year:n_yrs){
   #Define Nf and Nm as objects for calculations
   Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf0") %>% pull(all.truth)
   
-  Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm0") %>% pull(all.truth)
   
   #Subset for just the present iteration
-  Exp.block5 <- calc.Exp(mom_comps.all.block5, dad_comps.all.block5)
-  mom.Exp.HS.block5 <- Exp.block5[[1]]
-  mom.Exp.PO.block5 <- Exp.block5[[2]]
-  dad.Exp.HS.block5 <- Exp.block5[[3]]
-  dad.Exp.PO.block5 <- Exp.block5[[4]]
+  # Exp.block5 <- calc.Exp(mom_comps.all.block5, dad_comps.all.block5)
+  # mom.Exp.HS.block5 <- Exp.block5[[1]]
+  # mom.Exp.PO.block5 <- Exp.block5[[2]]
+  # dad.Exp.HS.block5 <- Exp.block5[[3]]
+  # dad.Exp.PO.block5 <- Exp.block5[[4]]
   
   sampled.mothers <- unique(sample.df_all.info$mother.x)
   sampled.fathers <- unique(sample.df_all.info$father.x)
   
   
-  results.temp.block5 <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
+  results.temp.block5 <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "seed")) %>% 
     dplyr::select(parameter,
                   Q50,
                   all.truth,
@@ -580,11 +579,10 @@ for(block in first.est.year:n_yrs){
                   iteration,
                   neff,
                   seed) %>% 
-    mutate(HSPs_detected = ifelse(parameter %in% c("Nf0", "Nfb0", "Nft", "Nfbt", "psi"), mom.HSPs.block5, 
-                                  ifelse(parameter %in% c("Nm0", "Nmt"), dad.HSPs.block5, mom.HSPs.block5 + dad.HSPs.block5)),
-           HSPs_expected = ifelse(parameter %in% c("Nf0", "Nfb0", "Nft", "Nfbt", "psi"), mom.Exp.HS.block5, 
-                                  ifelse(parameter %in% c("Nm0", "Nmt"), dad.Exp.HS.block5, mom.Exp.HS.block5 + dad.Exp.HS.block5))) %>% 
-    mutate(time_window = "five year block")
+    mutate(HSPs_detected = mom.HSPs.block5) %>% 
+    mutate(time_window = "five year block",
+           all.FSPs = full.sibs.block5,
+           diff.cohort.FSPs = diff.cohort.sibs.block5)
   
   gc()
   
@@ -652,16 +650,17 @@ for(block in first.est.year:n_yrs){
   set.seed(rseed)
   cat(paste0("Using all samples with estimation year ", block, "\n"))
   
-  source("./03_Lemon_shark_data/functions/Obj5_runJAGS_ConnParameterization.R")
+  source("./03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
+  
   
   ########### Calculate truth ###################
   #Calculate truth for survival and psi
   #results in a file called "true.values" that contains the truth for survival and psi
+  ref.year <- ref.year.all
   source("./03_Lemon_shark_data/functions/PopSim_truth.R")
   
-  #Calculate truth for lambda
+  #Pull lambda truth
   lambda.truth <- (pop.size.tibble$adult.lambda[block])
-  
   lambda.truth.df <- tibble(estimation.year = estimation.year,
                             iteration = iter,
                             seed = rseed,
@@ -669,13 +668,13 @@ for(block in first.est.year:n_yrs){
                             all.truth = lambda.truth)
   
   #Make dataframe of truth
+  #NOTE: The NOTE below is leftover from different iterations of the script. At present, we want to compare estimates at Nt. 
+  #NOTE (old):that bc of the way the pairwise comparison matrix is constructed, estimates at time T will be staggered and will not be appropriate for the subset dataframes. So, we will ignore these. Estimates at t0 are the estimates in the estimation year.
   truth.iter.temp <- pop.size.tibble %>% dplyr::filter(year == estimation.year) %>% 
     mutate(Nfbt = Num.mothers,
-           Nft = Female.adult.pop,
-           Nmt = Male.adult.pop) %>%
+           Nft = Female.adult.pop) %>%
     dplyr::select(Nfbt,
                   Nft,
-                  Nmt,
                   estimation.year = year,
                   iteration = iteration,
                   seed = seed) %>% 
@@ -685,11 +684,9 @@ for(block in first.est.year:n_yrs){
   
   truth.iter <- pop.size.tibble %>% dplyr::filter(year == est.year.calibrate) %>% 
     mutate(Nfb0 = Num.mothers,
-           Nf0 = Female.adult.pop,
-           Nm0 = Male.adult.pop) %>%
+           Nf0 = Female.adult.pop) %>%
     dplyr::select(Nfb0,
                   Nf0,
-                  Nm0,
                   estimation.year = year,
                   iteration = iteration,
                   seed = seed) %>%
@@ -702,20 +699,19 @@ for(block in first.est.year:n_yrs){
   #Define Nf and Nm as objects for calculations
   Nf.truth <- truth.iter %>% dplyr::filter(parameter == "Nf0") %>% pull(all.truth)
   
-  Nm.truth <- truth.iter %>% dplyr::filter(parameter == "Nm0") %>% pull(all.truth)
   
   #Subset for just the present iteration
-  Exp.all <- calc.Exp(mom_comps.all.all, dad_comps.all.all)
-  mom.Exp.HS.all <- Exp.all[[1]]
-  mom.Exp.PO.all <- Exp.all[[2]]
-  dad.Exp.HS.all <- Exp.all[[3]]
-  dad.Exp.PO.all <- Exp.all[[4]]
+  # Exp.block5 <- calc.Exp(mom_comps.all.block5, dad_comps.all.block5)
+  # mom.Exp.HS.block5 <- Exp.block5[[1]]
+  # mom.Exp.PO.block5 <- Exp.block5[[2]]
+  # dad.Exp.HS.block5 <- Exp.block5[[3]]
+  # dad.Exp.PO.block5 <- Exp.block5[[4]]
   
   sampled.mothers <- unique(sample.df_all.info$mother.x)
   sampled.fathers <- unique(sample.df_all.info$father.x)
   
   
-  results.temp.all <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "iteration", "seed")) %>% 
+  results.temp.all <- model.summary2 %>% left_join(truth.iter, by = c("parameter", "seed")) %>% 
     dplyr::select(parameter,
                   Q50,
                   all.truth,
@@ -731,11 +727,10 @@ for(block in first.est.year:n_yrs){
                   iteration,
                   neff,
                   seed) %>% 
-    mutate(HSPs_detected = ifelse(parameter %in% c("Nf0", "Nfb0", "Nft", "Nfbt", "psi"), mom.HSPs.all, 
-                                  ifelse(parameter %in% c("Nm0", "Nmt"), dad.HSPs.all, mom.HSPs.all + dad.HSPs.all)),
-           HSPs_expected = ifelse(parameter %in% c("Nf0", "Nfb0", "Nft", "Nfbt", "psi"), mom.Exp.HS.all, 
-                                  ifelse(parameter %in% c("Nm0", "Nmt"), dad.Exp.HS.all, mom.Exp.HS.all + dad.Exp.HS.all))) %>% 
-    mutate(time_window = "all samples")
+    mutate(HSPs_detected = mom.HSPs.all) %>% 
+    mutate(time_window = "all available samples",
+           all.FSPs = full.sibs.all,
+           diff.cohort.FSPs = diff.cohort.sibs.all)
   
   
   ####------------------------ Combine block and all ----------------####
@@ -791,18 +786,24 @@ truth.all <- bind_rows(truth.all, true.values)
 
 if(iter %% 10 == 0){
 
-  write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims_results_Conn3_temp.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+  #If using all individuals for Nf truth, instead of breeders
+  results2 <- results %>%
+    mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+    mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>%
+    as_tibble()
+  
+  write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims_results_Conn5_allSibs_temp.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
   
   #Save pop size estimates
-  saveRDS(pop.size.tibble_all, file = paste0(results_location, "lemon_shark_time_series_sims_popSize_Conn3_temp"))
+  saveRDS(pop.size.tibble_all, file = paste0(results_location, "lemon_shark_time_series_sims_popSize_Conn5_allSibs_temp"))
   
   #Save draws from posterior for model diagnostics 
   #saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 1
   
   #Save final pairwise comparison matrices
-  saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_mom.comps_Conn3_temp"))
+  saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_mom.comps_Conn5_allSibs_temp"))
   
-  saveRDS(dad.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_dad.comps_Conn3_temp"))
+  saveRDS(dad.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_dad.comps_Conn5_allSibs_temp"))
 
 }
   sim.end <- Sys.time()
@@ -834,18 +835,18 @@ results2 %>% group_by(parameter, time_window) %>%
 #-----------------------------Save major output files---------------------------------------------
 #Home computer: Dell Precision
 #Save model estimates
-write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims_results_Conn3.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
+write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims_results_Conn5_allSibs.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
 
 #Save pop size estimates
-saveRDS(pop.size.tibble_all, file = paste0(results_location, "lemon_shark_time_series_sims_popSize_Conn3"))
+saveRDS(pop.size.tibble_all, file = paste0(results_location, "lemon_shark_time_series_sims_popSize_Conn5_allSibs"))
 
 #Save draws from posterior for model diagnostics 
 #saveRDS(sims.list.1, file = paste0(MCMC_location, MCMC_prefix, "_", date.of.simulation, "_", outSeeds, "_", sim.samples.1, "_", MCMC.settings, "_", scenario, "_", model)) #Sample size 1
 
 #Save final pairwise comparison matrices
-saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_mom.comps_Conn3"))
+saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_mom.comps_Conn5_allSibs"))
 
-saveRDS(dad.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_dad.comps_Conn3"))
+saveRDS(dad.comps.tibble, file = paste0(results_location, "lemon_shark_time_series_sims_dad.comps_Conn5_allSibs"))
 
 #-------------Quick viz of results--------------#
 results2 %>% ggplot(aes(x = relative_bias,

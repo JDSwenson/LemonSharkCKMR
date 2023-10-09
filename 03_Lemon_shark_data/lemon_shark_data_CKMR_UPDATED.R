@@ -41,7 +41,7 @@ model <- "multiennial.model"
 
 jags_params <- c("Nft", "Nfbt", "Nf0", "Nfb0", "survival", "lambda", "psi") #List the parameters to be estimated
 HS.only <- "yes"
-downsample <- "yes"
+downsample <- "no"
 down.perc <- .3
 
 jags_file <- paste0(jags.model_location, "MHS.only_narrowLambda_Skip_model_Conn.txt")
@@ -216,6 +216,19 @@ NoFullSibs.df <- juv_ref.North %>% drop_na(mother.x) %>%
   slice_sample(n = 1) %>% 
   ungroup()
 
+#Look at number of full sibs
+total.sibs <- nrow(juv_ref.North) - nrow(NoFullSibs.df) #Calculate number of full sibs
+
+#Different cohort sibs
+juv_ref.North %>% group_by(mother.x, father.x) %>%
+  filter(n() > 1) %>% 
+  distinct(birth.year) %>%
+  ungroup() %>% 
+  group_by(mother.x, father.x) %>% 
+  summarize(distinct.birth.years = n()) %>% 
+  filter(distinct.birth.years > 1) %>% 
+  nrow()
+
 #To keep the same individual each time
   # distinct(mother.x, father.x, .keep_all = TRUE) %>%
   # as_tibble() #If there is more than one individual with the same mother AND father, then only keep one.
@@ -235,7 +248,10 @@ post.samps_list.block3 <- list()
 post.samps_list.block5 <- list()
 post.samps_list.all <- list()
 rseed <- sample(c(1:10000000), size = 1)
-iterations <- 50
+
+if(downsample == "yes"){
+  iterations <- 100
+} else iterations <- 1
 
 
 #------------------------Start loop-----------------------------------------
@@ -275,7 +291,7 @@ for(block in first.est.year:n_yrs){
   #----------------Start with blocked data ---------------------#
   #---------------Three year block------------------------
   #-------------Construct pairwise comparison matrix--------------
-  cat(paste0("\nBuilding pairwise comparison matrix for three year sample blocks\n"))
+  cat(paste0("\nBuilding pairwise comparison matrix for three year sample blocks for iteration ", iter, ".\n"))
 
     filtered.samples.HS.df.block3 <- samples.df.block3 %>% dplyr::arrange(birth.year) %>% 
       ungroup()
@@ -524,7 +540,7 @@ for(block in first.est.year:n_yrs){
   dad.positives <- dad_comps.all.block3$yes
   dad.yrs <- nrow(dad_comps.all.block3)
   
-  cat("Running model using three year blocks of samples\n")
+  cat("Running model using three year blocks of samples for iteration ", iter, ".\n")
   
   set.seed(rseed)
   cat(paste0("Using samples from year ", block - 2, " to ", block, "\n"))
@@ -574,7 +590,8 @@ for(block in first.est.year:n_yrs){
                       estimation.year,
                       T0,
                       neff,
-                      seed) %>% 
+                      seed,
+                      num.samps_all) %>% 
         mutate(HSPs_detected = mom.HSPs.block3) %>% 
         mutate(time_window = "three year block")
       
@@ -603,7 +620,7 @@ for(block in first.est.year:n_yrs){
   sim <- "five year block"
   
   #-------------Construct pairwise comparison matrix--------------
-  cat(paste0("\nBuilding pairwise comparison matrix for five year sample blocks\n"))
+  cat(paste0("\nBuilding pairwise comparison matrix for five year sample blocks for iteration ", iter, ".\n"))
   
   filtered.samples.HS.df.block5 <- samples.df.block5 %>% dplyr::arrange(birth.year) %>% 
     ungroup()
@@ -852,7 +869,7 @@ for(block in first.est.year:n_yrs){
   dad.positives <- dad_comps.all.block5$yes
   dad.yrs <- nrow(dad_comps.all.block5)
   
-  cat("Running model using five year blocks of samples\n")
+  cat("Running model using five year blocks of samples for iteration ", iter, ".\n")
   
   set.seed(rseed)
   cat(paste0("Using samples from year ", block - 4, " to ", block, "\n"))
@@ -902,7 +919,8 @@ for(block in first.est.year:n_yrs){
                       estimation.year,
                       T0,
                       neff,
-                      seed) %>% 
+                      seed,
+                      num.samps_all) %>% 
         mutate(HSPs_detected = mom.HSPs.block5) %>% 
         mutate(time_window = "five year block")
       
@@ -921,7 +939,7 @@ for(block in first.est.year:n_yrs){
   #-------------Construct pairwise comparison matrix--------------
   sim <- "all"
   #All samples - set up so we don't have to build the pairwise comparison matrix with every shift in estimation year
-  cat(paste0("\nBuilding pairwise comparison matrix for all samples\n"))
+  cat(paste0("\nBuilding pairwise comparison matrix for all samples for iteration ", iter, ".\n"))
 
 
   filtered.samples.HS.df.all <- samples.df.all %>% dplyr::arrange(birth.year) %>% 
@@ -1171,7 +1189,7 @@ for(block in first.est.year:n_yrs){
   dad.positives <- dad_comps.all.all$yes
   dad.yrs <- nrow(dad_comps.all.all)
   
-  cat("Running model using all available samples\n")
+  cat("Running model using all available samples for iteration ", iter, ".\n")
   
   set.seed(rseed)
   cat(paste0("Using samples from year ", oldest.all, " to ", block, "\n"))
@@ -1221,7 +1239,8 @@ for(block in first.est.year:n_yrs){
                       estimation.year,
                       T0,
                       neff,
-                      seed) %>% 
+                      seed,
+                      num.samps_all) %>% 
         mutate(HSPs_detected = mom.HSPs.all) %>% 
         mutate(time_window = "all available samples")
       
@@ -1288,12 +1307,12 @@ results %>% dplyr::filter(estimation.year >= 1997) %>%
   as_tibble() %>% 
   arrange(time_window, estimation.year)
 
-write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_Down_2023.10.05.csv")
+write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_AllSibs_2023.10.08.csv")
 
 #Save final pairwise comparison matrices
-saveRDS(mom.comps.tibble, file = paste0(results_location, "lemon_shark_sims/mom.comps_LS_data_ConnModel_Down_2023.10.05"))
+saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_AllSibs_2023.10.08")
 
-saveRDS(dad.comps.tibble, file = paste0(results_location, "lemon_shark_sims/dad.comps_LS_data_ConnModel_Down_2023.10.05"))
+saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_AllSibs_2023.10.05")
 
 
 

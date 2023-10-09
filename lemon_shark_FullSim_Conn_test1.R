@@ -1,14 +1,13 @@
 #Load packages
-library(tidyverse) # safe to ignore conflicts with filter() and lag()
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(tibble) # safe to ignore conflicts with filter() and lag()
 library(MASS)
 library(popbio)
-library(mpmtools)  # not at CRAN;
-# install.packages("devtools")
-#devtools::install_github("BruceKendall/mpmtools")
+library(mpmtools)
 library(ggpubr)
-# The rjags package is just an interface to the JAGS library
-# Make sure you have installed JAGS-4.x.y.exe (for any x >=0, y>=0) from
-# http://www.sourceforge.net/projects/mcmc-jags/files
 library(rjags)
 library(R2jags)
 library(jagsUI)
@@ -16,6 +15,7 @@ library(Rlab)
 library(runjags)
 library(postpack)
 library(coda)
+library(FSA)
 
 rm(list = ls())
 options(dplyr.summarise.inform = FALSE)
@@ -30,9 +30,9 @@ parents_prefix <- "parents.breakdown"
 sample_prefix <- "sample.info"
 pop.size.prefix <- "pop.size"
 truth.prefix <- "truth"
-MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.output/"
-results_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/"
-jags.model_location <- "G://My Drive/Personal_Drive/R/CKMR/JAGS_models/" #Location of JAGS models
+MCMC_location <- "./output/output_peer_review/Model.output/"
+results_location <- "./output/output_peer_review/Model.results/"
+jags.model_location <- "./output/JAGS_models/" #Location of JAGS models
 
 results_prefix <- "CKMR_results"
 MCMC_prefix <- "CKMR_modelout"
@@ -218,8 +218,7 @@ for (iter in 1:iterations) { #Restart morning of 09/20/2023 - made it through it
   #Check on samples
   sample.info %>% dplyr::count(age.x) #Should all be 0
   sample.info %>% dplyr::count(birth.year) #Should be relatively even numbers across years
-  
-  
+    
   #Don't need this ...
   # aunt.unc_niece.nephew_pw.comps.all <- samples.out[[2]] %>% 
   #   as_tibble() %>% 
@@ -242,25 +241,13 @@ for(block in first.est.year:n_yrs){
 
   #-------------Split samples--------------
   #Blocked  samples - five year
-  samples.df.block5.temp <- sample.info %>% dplyr::filter(capture.year >= block - 4 & capture.year <= block)
-  
-  set.seed(rseed)
-  filter.block5 <- filter.samples(samples = samples.df.block5.temp)
-  samples.df.block5 <- filter.block5[[2]]
+  samples.df.block5 <- sample.info %>% dplyr::filter(capture.year >= block - 4 & capture.year <= block)
   
   #Blocked  samples - three year
-  samples.df.block3.temp <- sample.info %>% dplyr::filter(capture.year >= block - 2 & capture.year <= block)
-  
-  set.seed(rseed)
-  filter.block3 <- filter.samples(samples = samples.df.block3.temp)
-  samples.df.block3 <- filter.block3[[2]]
+  samples.df.block3 <- sample.info %>% dplyr::filter(capture.year >= block - 2 & capture.year <= block)
   
   #all samples
-  samples.df.all.temp <- sample.info %>% dplyr::filter(capture.year <= block)
-  
-  set.seed(rseed)
-  filter.all <- filter.samples(samples = samples.df.all.temp)
-  samples.df.all <- filter.all[[2]]
+  samples.df.all <- sample.info %>% dplyr::filter(capture.year <= block)
   
 #--------------Calculate reference year--------------
   #Five year block
@@ -791,6 +778,11 @@ truth.all <- bind_rows(truth.all, true.values)
 
 if(iter %% 10 == 0){
 
+results2 <- results %>%
+  mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+  mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>%
+  as_tibble()
+  
   write.table(results2, file = paste0(results_location, "lemon_shark_time_series_sims_results_Conn3_temp.csv"), sep=",", dec=".", qmethod="double", row.names=FALSE)
   
   #Save pop size estimates

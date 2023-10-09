@@ -214,7 +214,7 @@ if(sample.props == "all"){
         
  
     PO.samps.list <- filter1.out[[1]] #Output is a list where each list element corresponds to the offspring birth year and contains the potential parents and offspring for that year.
-    HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings i.e. kept one of the two
+    HS.samps.df <- filter1.out[[2]] #Output is just the dataframe of samples but filtered for full siblings i.e. kept one
     NoFullSibs.df <- filter1.out[[3]] #Save NoFullSibs.df so can downsample if desired
     full.sibs <- filter1.out[[4]] #Number of full siblings
     diff.cohort.sibs <- filter1.out[[5]] #Number of full siblings from different cohorts

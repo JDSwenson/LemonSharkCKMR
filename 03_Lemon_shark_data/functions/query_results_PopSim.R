@@ -15,18 +15,23 @@ for(l in 2:nrow(pop.size.tibble)){
 
 #Calculate population growth for adults only
 adult.lambda <- NULL
+female.lambda <- NULL
 for(l in 2:nrow(pop.size.tibble)){ 
   adult.lambda.1 <- pop.size.tibble$Total.adult.pop[l]/pop.size.tibble$Total.adult.pop[l-1]
   adult.lambda <- c(adult.lambda, adult.lambda.1)
+  female.lambda.1 <- pop.size.tibble$Female.adult.pop[l]/pop.size.tibble$Female.adult.pop[l-1]
+  female.lambda <- c(female.lambda, female.lambda.1)
 }
 
 #Add NA to first element of population growth vectors
 total.lambda <- c(NA, total.lambda)
 adult.lambda <- c(NA, adult.lambda)
+female.lambda <- c(NA, female.lambda)
 
 #Add population growth per year to pop.size dataframe
 pop.size.tibble$total.lambda <- total.lambda
 pop.size.tibble$adult.lambda <- adult.lambda
+pop.size.tibble$female.lambda <- female.lambda
 
 #plot(total.lambda[(burn.in+1):n_yrs], pch=19)
 #abline(h=1, lty=3)
