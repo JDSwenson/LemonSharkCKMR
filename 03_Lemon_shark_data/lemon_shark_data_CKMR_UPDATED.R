@@ -41,8 +41,9 @@ model <- "multiennial.model"
 
 jags_params <- c("Nft", "Nfbt", "Nf0", "Nfb0", "survival", "lambda", "psi") #List the parameters to be estimated
 HS.only <- "yes"
-downsample <- "no"
+downsample <- "yes"
 down.perc <- .3
+filter.full.sibs <- "yes"
 
 jags_file <- paste0(jags.model_location, "MHS.only_narrowLambda_Skip_model_Conn.txt")
 
@@ -295,6 +296,14 @@ for(block in first.est.year:n_yrs){
 
     filtered.samples.HS.df.block3 <- samples.df.block3 %>% dplyr::arrange(birth.year) %>% 
       ungroup()
+    
+    if(filter.full.sibs == "yes"){
+      filtered.samples.HS.df.block3 <- filtered.samples.HS.df.block3 %>%
+        drop_na(mother.x) %>%
+        group_by(mother.x, father.x) %>%
+        slice_sample(n = 1) %>%
+        ungroup()
+    }
 
   pairwise.df.HS.block3 <- data.frame(t(combn(filtered.samples.HS.df.block3$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
   colnames(pairwise.df.HS.block3) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
@@ -413,8 +422,18 @@ for(block in first.est.year:n_yrs){
     }
     
     num.samps_down.block3 <- nrow(HS.samps.df.down.block3)
-    
+
+    #----------------Filter full sibs------------------
+    if(filter.full.sibs == "yes"){
+      HS.samps.df.down.block3 <- HS.samps.df.down.block3 %>%
+        drop_na(mother.x) %>%
+        group_by(mother.x, father.x) %>%
+        slice_sample(n = 1) %>%
+        ungroup()
+    }
+        
     ####----------------Construct pairwise comparison matrix after downsampling----------####
+    
     pairwise.df.HS.block3 <- data.frame(t(combn(HS.samps.df.down.block3$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
     colnames(pairwise.df.HS.block3) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
     
@@ -605,17 +624,7 @@ for(block in first.est.year:n_yrs){
 
 #### End Three year block ####
   
-####PICK UP HERE ON 10/5/2023: 
-#Copy and paste above to five year window and all samples and edit ".block3" suffix
-#Start testing
-#Run on all samples (for main text)
-#Run on downsampled samples (for supplementary)
-#
 
-
-  
-  
-    
   #---------------Five year block------------------------
   sim <- "five year block"
   
@@ -624,6 +633,14 @@ for(block in first.est.year:n_yrs){
   
   filtered.samples.HS.df.block5 <- samples.df.block5 %>% dplyr::arrange(birth.year) %>% 
     ungroup()
+  
+  if(filter.full.sibs == "yes"){
+    filtered.samples.HS.df.block5 <- filtered.samples.HS.df.block5 %>%
+      drop_na(mother.x) %>%
+      group_by(mother.x, father.x) %>%
+      slice_sample(n = 1) %>%
+      ungroup()
+  }
   
   pairwise.df.HS.block5 <- data.frame(t(combn(filtered.samples.HS.df.block5$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
   colnames(pairwise.df.HS.block5) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
@@ -742,6 +759,16 @@ for(block in first.est.year:n_yrs){
     }
     
     num.samps_down.block5 <- nrow(HS.samps.df.down.block5)
+    
+    #----------------Filter full sibs------------------
+    if(filter.full.sibs == "yes"){
+      HS.samps.df.down.block5 <- HS.samps.df.down.block5 %>%
+        drop_na(mother.x) %>%
+        group_by(mother.x, father.x) %>%
+        slice_sample(n = 1) %>%
+        ungroup()
+    }
+    
     
     ####----------------Construct pairwise comparison matrix after downsampling----------####
     pairwise.df.HS.block5 <- data.frame(t(combn(HS.samps.df.down.block5$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
@@ -945,6 +972,14 @@ for(block in first.est.year:n_yrs){
   filtered.samples.HS.df.all <- samples.df.all %>% dplyr::arrange(birth.year) %>% 
     ungroup()
   
+  if(filter.full.sibs == "yes"){
+    filtered.samples.HS.df.all <- filtered.samples.HS.df.all %>%
+      drop_na(mother.x) %>%
+      group_by(mother.x, father.x) %>%
+      slice_sample(n = 1) %>%
+      ungroup()
+  }
+  
   pairwise.df.HS.all <- data.frame(t(combn(filtered.samples.HS.df.all$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
   colnames(pairwise.df.HS.all) <- c("older.sib", "indv.name") #Rename columns so they can easily be joined
   
@@ -1062,6 +1097,16 @@ for(block in first.est.year:n_yrs){
     }
     
     num.samps_down.all <- nrow(HS.samps.df.down.all)
+    
+    #----------------Filter full sibs------------------
+    if(filter.full.sibs == "yes"){
+      HS.samps.df.down.all <- HS.samps.df.down.all %>%
+        drop_na(mother.x) %>%
+        group_by(mother.x, father.x) %>%
+        slice_sample(n = 1) %>%
+        ungroup()
+    }
+    
     
     ####----------------Construct pairwise comparison matrix after downsampling----------####
     pairwise.df.HS.all <- data.frame(t(combn(HS.samps.df.down.all$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
@@ -1307,12 +1352,12 @@ results %>% dplyr::filter(estimation.year >= 1997) %>%
   as_tibble() %>% 
   arrange(time_window, estimation.year)
 
-write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_AllSibs_2023.10.08.csv")
+write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_filterSibsDown_2023.10.25.csv")
 
 #Save final pairwise comparison matrices
-saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_AllSibs_2023.10.08")
+saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_filterSibsDown_2023.10.25")
 
-saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_AllSibs_2023.10.05")
+saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_filterSibsDown_2023.10.25")
 
 
 
