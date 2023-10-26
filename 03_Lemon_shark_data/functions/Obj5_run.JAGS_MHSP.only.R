@@ -31,7 +31,7 @@ jags_inits = function(nc) {
   for(c in 1:nc){
     inits[[c]] = list(
       survival = runif(1, min=0.5, max=0.95),
-      Nf0 = rnorm(1, mean = 500, sd = 100),
+      Nf0 = rnorm(1, mean = 500, sd = 50),
       psi = runif(1, min=0, max=1),
       lambda = 1
     )

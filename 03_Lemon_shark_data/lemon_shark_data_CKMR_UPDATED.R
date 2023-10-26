@@ -296,7 +296,9 @@ for(block in first.est.year:n_yrs){
 
     filtered.samples.HS.df.block3 <- samples.df.block3 %>% dplyr::arrange(birth.year) %>% 
       ungroup()
-    
+  
+    if(downsample != "yes"){
+      
     if(filter.full.sibs == "yes"){
       filtered.samples.HS.df.block3 <- filtered.samples.HS.df.block3 %>%
         drop_na(mother.x) %>%
@@ -391,7 +393,7 @@ for(block in first.est.year:n_yrs){
   mom.pos_all.block3 <- sum(mom_positives.all.block3$yes)
   
   #----------------------------Downsample----------------------------------------------#
-  if(downsample == "yes"){
+  }else if(downsample == "yes"){
     #Downsample for HSPs
     #Calculate proportion of samples born in each birth year
     HS.samps.props.block3 <- filtered.samples.HS.df.block3 %>% group_by(birth.year) %>%
@@ -477,12 +479,12 @@ for(block in first.est.year:n_yrs){
     #nrow(positives.HS)
     
     #Sex-specific half-sib
-    mom_positives.HS.block3 <- positives.HS.block3 %>% filter(shared.parent == "mother") %>% 
+    mom_positives.all.block3 <- positives.HS.block3 %>% filter(shared.parent == "mother") %>% 
       dplyr::select(older.sib.birth, younger.sib.birth) %>% 
       plyr::count() %>% 
       dplyr::rename(yes = freq)
     
-    dad_positives.HS.block3 <- positives.HS.block3 %>% filter(shared.parent == "father")  %>%
+    dad_positives.all.block3 <- positives.HS.block3 %>% filter(shared.parent == "father")  %>%
       dplyr::select(older.sib.birth, younger.sib.birth) %>%
       plyr::count() %>% 
       dplyr::rename(yes = freq)
@@ -497,7 +499,7 @@ for(block in first.est.year:n_yrs){
     
     mom_comps.all.block3 <- hsp.negs.block3 %>% 
       dplyr::rename(no = freq) %>% 
-      left_join(mom_positives.HS.block3, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+      left_join(mom_positives.all.block3, by = c("older.sib.birth", "younger.sib.birth")) %>% 
       mutate(yes = replace_na(yes, 0)) %>% 
       mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
       mutate(all = yes + no) %>% 
@@ -508,7 +510,7 @@ for(block in first.est.year:n_yrs){
     
     dad_comps.all.block3 <- hsp.negs.block3 %>% 
       dplyr::rename(no = freq) %>% 
-      left_join(dad_positives.HS.block3, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+      left_join(dad_positives.all.block3, by = c("older.sib.birth", "younger.sib.birth")) %>% 
       mutate(yes = replace_na(yes, 0)) %>% 
       mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
       mutate(all = yes + no) %>% 
@@ -583,9 +585,7 @@ for(block in first.est.year:n_yrs){
         mutate(years_sampled = (block - oldest.block3) + 1,
                mom_HSPs = sum(mom_comps.all.block3$yes),
                estimation_year = estimation.year,
-               num.samps_all = num.samps_all.block3,
                num.samps_down = num.samps_down.block3,
-               mom_HSPS.all = mom.pos_all.block3,
                mom_HSPs.down = mom.pos_down.block3,
                seed = rseed,
                time_window = "three year block") %>% 
@@ -633,6 +633,8 @@ for(block in first.est.year:n_yrs){
   
   filtered.samples.HS.df.block5 <- samples.df.block5 %>% dplyr::arrange(birth.year) %>% 
     ungroup()
+  
+  if(downsample != "yes"){
   
   if(filter.full.sibs == "yes"){
     filtered.samples.HS.df.block5 <- filtered.samples.HS.df.block5 %>%
@@ -728,7 +730,7 @@ for(block in first.est.year:n_yrs){
   mom.pos_all.block5 <- sum(mom_positives.all.block5$yes)
   
   #----------------------------Downsample----------------------------------------------#
-  if(downsample == "yes"){
+} else if(downsample == "yes"){
     #Downsample for HSPs
     #Calculate proportion of samples born in each birth year
     HS.samps.props.block5 <- filtered.samples.HS.df.block5 %>% group_by(birth.year) %>%
@@ -814,12 +816,12 @@ for(block in first.est.year:n_yrs){
     #nrow(positives.HS)
     
     #Sex-specific half-sib
-    mom_positives.HS.block5 <- positives.HS.block5 %>% filter(shared.parent == "mother") %>% 
+    mom_positives.all.block5 <- positives.HS.block5 %>% filter(shared.parent == "mother") %>% 
       dplyr::select(older.sib.birth, younger.sib.birth) %>% 
       plyr::count() %>% 
       dplyr::rename(yes = freq)
     
-    dad_positives.HS.block5 <- positives.HS.block5 %>% filter(shared.parent == "father")  %>%
+    dad_positives.all.block5 <- positives.HS.block5 %>% filter(shared.parent == "father")  %>%
       dplyr::select(older.sib.birth, younger.sib.birth) %>%
       plyr::count() %>% 
       dplyr::rename(yes = freq)
@@ -834,7 +836,7 @@ for(block in first.est.year:n_yrs){
     
     mom_comps.all.block5 <- hsp.negs.block5 %>% 
       dplyr::rename(no = freq) %>% 
-      left_join(mom_positives.HS.block5, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+      left_join(mom_positives.all.block5, by = c("older.sib.birth", "younger.sib.birth")) %>% 
       mutate(yes = replace_na(yes, 0)) %>% 
       mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
       mutate(all = yes + no) %>% 
@@ -845,7 +847,7 @@ for(block in first.est.year:n_yrs){
     
     dad_comps.all.block5 <- hsp.negs.block5 %>% 
       dplyr::rename(no = freq) %>% 
-      left_join(dad_positives.HS.block5, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+      left_join(dad_positives.all.block5, by = c("older.sib.birth", "younger.sib.birth")) %>% 
       mutate(yes = replace_na(yes, 0)) %>% 
       mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
       mutate(all = yes + no) %>% 
@@ -920,9 +922,7 @@ for(block in first.est.year:n_yrs){
         mutate(years_sampled = (block - oldest.block5) + 1,
                mom_HSPs = sum(mom_comps.all.block5$yes),
                estimation_year = estimation.year,
-               num.samps_all = num.samps_all.block5,
                num.samps_down = num.samps_down.block5,
-               mom_HSPS.all = mom.pos_all.block5,
                mom_HSPs.down = mom.pos_down.block5,
                seed = rseed,
                time_window = "five year block") %>% 
@@ -968,10 +968,11 @@ for(block in first.est.year:n_yrs){
   #All samples - set up so we don't have to build the pairwise comparison matrix with every shift in estimation year
   cat(paste0("\nBuilding pairwise comparison matrix for all samples for iteration ", iter, ".\n"))
 
-
   filtered.samples.HS.df.all <- samples.df.all %>% dplyr::arrange(birth.year) %>% 
     ungroup()
   
+  if(downsample != "yes"){
+    
   if(filter.full.sibs == "yes"){
     filtered.samples.HS.df.all <- filtered.samples.HS.df.all %>%
       drop_na(mother.x) %>%
@@ -1066,7 +1067,7 @@ for(block in first.est.year:n_yrs){
   mom.pos_all.all <- sum(mom_positives.all.all$yes)
   
   #----------------------------Downsample----------------------------------------------#
-  if(downsample == "yes"){
+} else if(downsample == "yes"){
     #Downsample for HSPs
     #Calculate proportion of samples born in each birth year
     HS.samps.props.all <- filtered.samples.HS.df.all %>% group_by(birth.year) %>%
@@ -1152,12 +1153,12 @@ for(block in first.est.year:n_yrs){
     #nrow(positives.HS)
     
     #Sex-specific half-sib
-    mom_positives.HS.all <- positives.HS.all %>% filter(shared.parent == "mother") %>% 
+    mom_positives.all.all <- positives.HS.all %>% filter(shared.parent == "mother") %>% 
       dplyr::select(older.sib.birth, younger.sib.birth) %>% 
       plyr::count() %>% 
       dplyr::rename(yes = freq)
     
-    dad_positives.HS.all <- positives.HS.all %>% filter(shared.parent == "father")  %>%
+    dad_positives.all.all <- positives.HS.all %>% filter(shared.parent == "father")  %>%
       dplyr::select(older.sib.birth, younger.sib.birth) %>%
       plyr::count() %>% 
       dplyr::rename(yes = freq)
@@ -1172,7 +1173,7 @@ for(block in first.est.year:n_yrs){
     
     mom_comps.all.all <- hsp.negs.all %>% 
       dplyr::rename(no = freq) %>% 
-      left_join(mom_positives.HS.all, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+      left_join(mom_positives.all.all, by = c("older.sib.birth", "younger.sib.birth")) %>% 
       mutate(yes = replace_na(yes, 0)) %>% 
       mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
       mutate(all = yes + no) %>% 
@@ -1183,7 +1184,7 @@ for(block in first.est.year:n_yrs){
     
     dad_comps.all.all <- hsp.negs.all %>% 
       dplyr::rename(no = freq) %>% 
-      left_join(dad_positives.HS.all, by = c("older.sib.birth", "younger.sib.birth")) %>% 
+      left_join(dad_positives.all.all, by = c("older.sib.birth", "younger.sib.birth")) %>% 
       mutate(yes = replace_na(yes, 0)) %>% 
       mutate(year_gap = younger.sib.birth - older.sib.birth) %>% 
       mutate(all = yes + no) %>% 
@@ -1258,9 +1259,7 @@ for(block in first.est.year:n_yrs){
         mutate(years_sampled = (block - oldest.all) + 1,
                mom_HSPs = sum(mom_comps.all.all$yes),
                estimation_year = estimation.year,
-               num.samps_all = num.samps_all.all,
                num.samps_down = num.samps_down.all,
-               mom_HSPS.all = mom.pos_all.all,
                mom_HSPs.down = mom.pos_down.all,
                seed = rseed,
                time_window = "all available samples") %>% 
@@ -1345,9 +1344,21 @@ for(block in first.est.year:n_yrs){
 rep <- rep+1
 
 }
+  
+  #Save as temporary files so they save and overwrite every iteration. Also will ask Shelley to run the code at the end.
+  write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_filterSibsDown_2023.10.25_temp.csv")
+  
+  #Save final pairwise comparison matrices
+  saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_filterSibsDown_2023.10.25_temp")
+  
+  saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_filterSibsDown_2023.10.25_temp")
+  
 }
 
 #### End loop over blocks ####
+
+#Shelley, I love you! Will you please highlight the rows from here to row 1374 and run the code? You can highlight the text (without the mouse) by holding shift and repeatedly pressing the down arrow. When the text is highlighted, hit ctrl+enter. The words in the window to the right will change and that means it worked! Then you can close R (or not, it doesn't matter) and put the computer to sleep to reduce its energy consumption. There's nothing you can do that will ruin the code or experiment. I love you!
+
 results %>% dplyr::filter(estimation.year >= 1997) %>% 
   as_tibble() %>% 
   arrange(time_window, estimation.year)
@@ -1360,7 +1371,7 @@ saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer
 saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_filterSibsDown_2023.10.25")
 
 
-
+#Shelley stop here :)
 
 
 #######################################################################################-
