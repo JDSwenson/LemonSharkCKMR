@@ -1,0 +1,1682 @@
+---
+title: "Presentation_graphs"
+author: "Baron Stacks"
+date: '2023-06-22'
+output: html_document
+---
+
+---
+title: "CKMR results 07/21/2022"
+output: 
+  html_document:
+    df_print: tibble
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+#devtools::install_github("pconn/HierarchicalGOF/HierarchicalGOF")
+#install.packages("ggmcmc")
+library(tidyverse)
+library(ggpubr)
+library(RColorBrewer)
+library(coda)
+library(runjags)
+library(ggmcmc)
+library(viridis)
+library(scales)
+library(ggridges)
+library(ggpattern)
+
+rm(list=ls())
+today <- format(Sys.Date(), "%d%b%Y")
+
+```
+
+
+```{r set-file-locations and read in files, include = FALSE}
+#------------- Simulation parameters and labels  ----------------#
+objective_1_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.output/"
+objective_1_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.results/"
+objective_1_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.validation/Pre_Nov2022/Model.results/figures/"
+
+objective_2_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.output/"
+objective_2_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.results/"
+objective_2_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_population.growth/Pre_Nov2022/Model.results/figures/"
+
+objective_3_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.output/"
+objective_3_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.results/"
+objective_3_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.3_intermittent.breeding/Nov2022/Model.results/figures/"
+
+objective_4_MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.output/"
+objective_4_results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/"
+objective_4_results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.4_aging.error/Nov2022/Model.results/figures/"
+
+
+results_prefix <- "CKMR_results"
+MCMC_prefix <- "CKMR_modelout"
+parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
+sample.prefix <- "sample_info/CKMR_sample.info"
+pop.size.prefix <- "pop_size/CKMR_pop.size"
+mom.comps.prefix <- "comparisons/mom.comps"
+dad.comps.prefix <- "comparisons/dad.comps"
+
+
+```
+
+
+```{r read in files}
+# source(file = "~/R/working_directory/LemonSharkCKMR/02_DataViz/functions/truth_calcs.R")
+# obj1.truth.df
+# obj2.truth.df
+# obj3.truth.df_psi1
+# obj4.truth.df <- obj3.truth.df_psi1 #They're the same
+
+#--------------------- Objective 1 ---------------------------------
+obj1_results <- read_csv(file = paste0(objective_1_results_location, "obj1_collated_results.csv")) %>%
+  mutate(sampling.scheme = ifelse(sampling.scheme == "sample all age classes", "sample all ages",
+                                                 ifelse(sampling.scheme == "sample all juvenile ages", "sample all juveniles", "target YOY"))) %>% 
+  mutate(sampling.scheme = factor(sampling.scheme),
+         prop.sampled = factor(prop.sampled)) %>% 
+  dplyr::filter(survival.prior == "informed")
+
+#--------------------- Objective 2 ---------------------------------
+obj2_results <- read_csv(file = paste0(objective_2_results_location, "obj2_collated_results.csv")) %>% 
+  mutate(sampling.scheme = ifelse(sampling.scheme == "sample all age classes", "sample all ages",
+                                                 ifelse(sampling.scheme == "sample all juvenile ages", "sample all juveniles", "target YOY"))) %>% 
+  mutate(prop.sampled = factor(sample.prop.juvs)) %>% 
+  mutate(population.growth = ifelse(population.growth == "extreme negative", "severe decline",
+                                    ifelse(population.growth == "slight negative", "slight decline",
+                                           ifelse(population.growth == "slight positive", "slight increase", "stable")))) %>% 
+  mutate(prop.sampled.lab = paste0(prop.sampled, " percent sampled"),
+         sampling.scheme = factor(sampling.scheme),
+         population.growth = factor(population.growth),
+         lambda.prior = factor(lambda.prior, levels = c( "none", "diffuse (0.80 - 1.20)", "tight (0.95 - 1.05)"))) %>% 
+  dplyr::filter(prop.sampled == 1.5)
+
+
+#--------------------- Objective 3 ---------------------------------
+# obj3_results.ben <- read_csv(file = paste0(objective_3_results_location, "obj3_collated_results_Ben.csv")) %>% 
+#     mutate(prop.sampled = factor(prop.sampled),
+#            sampling.scheme = factor(sampling.scheme),
+#          population.growth = factor(population.growth)) %>% 
+#   mutate(prop.sampled.lab = paste0(prop.sampled, " percent sampled")) %>% 
+#   replace_na(list(lambda.prior = "none")) %>% 
+#   mutate(est.yr.lab = ifelse(est.yr == 80, "10 years past",
+#                              ifelse(est.yr == 85, "5 years past", "present"))) %>% 
+#   mutate(relative_bias = ifelse(parameter == "Nf", 
+#          round(((Q50 - breed.truth)/breed.truth)*100, 1),
+#          round(((Q50 - all.truth)/all.truth)*100, 1))) %>% 
+#   mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>% 
+#   mutate(psi.prior = ifelse(model_used == "annual", "none", "uniform"))
+
+
+
+obj3_results <- read.csv(file = paste0(objective_3_results_location, "obj3_collated_results.csv")) %>% as_tibble() %>% 
+  mutate(est.yr.lab = ifelse(est.yr == 85, "5 years past", "present"))
+
+
+#--------------------- Objective 4 ---------------------------------
+#Correct ages
+annual.correct <- obj2_results %>% dplyr::filter(population.growth == "stable", 
+                               lambda.prior == "tight (0.95 - 1.05)",
+                               est.yr == 85 | est.yr == 90) %>%
+  mutate(mean.adult.lambda_last.10 = mean.adult.lambda.last10,
+         sample.prop = as.numeric(prop.sampled),
+         age.error_cv = "ages correct",
+         model = "annual",
+         population.growth = "lambda.1",
+         sample.prop = 1.5)
+
+
+#Correct ages
+biennial.correct <- obj3_results %>% dplyr::filter(popsim.psi == 1,
+                                                   mating.periodicity == 2,
+                                                   model == "multiennial") %>% 
+  mutate(age.error_cv = "ages correct")
+
+#Objective 4 results only
+obj4_results <- read.csv(file = paste0(objective_4_results_location, "obj4_collated_results.csv")) %>% as_tibble() %>% 
+  mutate(sampling.scheme = factor(sampling.scheme),
+         lambda.prior = "tight (0.95 - 1.05)") %>% 
+  bind_rows(annual.correct, biennial.correct) %>% 
+    mutate(age.error_cv = ifelse(age.error_cv == "ages correct", "accurate", age.error_cv)) %>%
+  mutate(age.error_cv = factor(age.error_cv))
+
+
+
+#-----------------------------Load and subset samples from Obj 4 --------------------------#
+#All samples from objective 4 including yrs off
+# obj4_samps <- read_csv(file = paste0(objective_4_results_location, "scenario_4.samps.csv")) %>% 
+#     mutate(age = factor(age.x))
+# 
+#### Want to randomly subset for one iteration to use in a figure
+# random.iter <- sample(c(1:500), size = 1)
+# random.iter
+
+# scenario_4.samps.subset <- obj4_samps %>% dplyr::filter(iteration == random.iter)
+# write_csv(scenario_4.samps.subset, file = paste0(objective_4_results_location, "scenario_4.samps.subset.csv"))
+
+obj4_samps <- read_csv(file = paste0(objective_4_results_location, "scenario_4.samps.subset.csv"))
+```
+
+
+
+```{r quick-results-analysis-and-filtering, echo = FALSE, include = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+#-------------Objective 1 --------------------
+#Check that all sampling schemes and population growth scenarios are represented
+#Should be equal
+obj1_results %>% group_by(sampling.scheme) %>% 
+  summarize(number = n())
+
+#Average number of samples per sampling scheme
+obj1_results %>% group_by(sampling.scheme) %>% 
+  summarize(mean.samps = mean(total.sample.size, na.rm = TRUE))
+
+#Should all be lambda.1
+obj1_results %>% group_by(population.growth) %>% 
+  summarize(number = n())
+
+#Should all be equal
+obj1_results %>% group_by(prop.sampled) %>% 
+  summarize(number = n())
+
+#Should all be equal
+obj1_results %>% group_by(parameter) %>% 
+  summarize(number = n())
+
+#Should all be equal
+obj1_results %>% group_by(survival.prior) %>% 
+  summarize(number = n())
+
+#-------------Objective 2 --------------------
+#Check that all sampling schemes and population growth scenarios are represented
+#Should be equal
+obj2_results %>% group_by(sampling.scheme) %>% 
+  summarize(number = n())
+
+#Should be equal
+obj2_results %>% group_by(population.growth) %>% 
+  summarize(number = n())
+
+#Should be equal
+obj2_results %>% group_by(est.yr) %>% 
+  summarize(number = n())
+
+#Should only be 1.5
+obj2_results %>% group_by(prop.sampled) %>% 
+  summarize(number = n())
+
+obj2_results %>% group_by(parameter) %>% 
+  summarize(number = n())
+
+
+
+#-------------Objective 3 --------------------
+#Check that all sampling schemes and population growth scenarios are represented
+
+#Should be equal
+obj3_results %>% group_by(sampling.scheme) %>% 
+  summarize(number = n())
+
+#Total number should equal:
+#Should have half as many estimates of psi as other parameters bc half were annual model and half were multiennial model
+obj3_results %>% group_by(parameter) %>% 
+  summarize(number = n())
+
+#Total = 135000
+obj3_results %>% group_by(population.growth) %>% 
+  summarize(number = n())
+
+#Should be 85 or 90 - half and half
+obj3_results %>% group_by(est.yr) %>% 
+  summarize(number = n())
+
+#Should all be 1.5
+obj3_results %>% group_by(sample.prop) %>% 
+  summarize(number = n())
+
+#Should be twice as many with 1 bc of triennial breeding
+obj3_results %>% group_by(popsim.psi) %>% 
+  summarize(number = n())
+
+# Should be four times as many 2 as 3
+obj3_results %>% group_by(mating.periodicity) %>% 
+  summarize(number = n())
+
+#-------------Objective 4 --------------------
+#Check that all sampling schemes and population growth scenarios are represented
+obj4_results %>% group_by(sampling.scheme) %>% 
+  summarize(number = n())
+
+obj4_results %>% group_by(population.growth) %>% 
+  summarize(number = n())
+
+obj4_results %>% group_by(est.yr) %>% 
+  summarize(number = n())
+
+obj4_results %>% group_by(sample.prop) %>% 
+  summarize(number = n())
+
+obj4_results %>% group_by(parameter) %>% 
+  summarize(number = n())
+
+obj4_results %>% group_by(age.error_cv) %>% 
+  summarize(number = n())
+
+obj4_results %>% group_by(model) %>% 
+  summarize(number = n())
+
+
+#See how many instances failed to converge so they can be removed later from the HPDI dataframes
+obj1_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+obj2_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+#obj3_results.ben %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+obj3_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+obj4_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+
+#Remove instances that failed to converge
+obj1_results <- obj1_results %>% dplyr::filter(Rhat < 1.01)
+obj2_results <- obj2_results %>% dplyr::filter(Rhat < 1.01)
+#obj3_results.ben <- obj3_results.ben %>% dplyr::filter(Rhat < 1.01)
+obj3_results <- obj3_results %>% dplyr::filter(Rhat < 1.01)
+obj4_results <- obj4_results %>% dplyr::filter(Rhat < 1.01)
+```
+
+
+This is the initial model validation graph, where lambda was approximately stable in the population simulations and the model didn't include lambda, but rather averaged over abundance values.
+It appears to me that a) the model works well overall, and b) targeted sampling of young-of-year starts to bias a little high at higher sample sizes. I'm thinking this may arise because we are sampling from fewer cohorts, and may be oversampling some parents.
+```{r Obj1, echo=FALSE, out.width = "120%"}
+#---------------Figure 1---------------------
+#Randomly selected palette with nice colors
+#plot.colors <- c("aquamarine", "aquamarine4", "indianred1", "indianred4", "khaki4")
+#plot.colors.fig2 <- c("aquamarine4", "indianred1", "lightyellow2")
+#scales::show_col(plot.colors.fig2)
+
+#color blind-friendly palette from online
+#cbPalette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","#999999")
+#scales::show_col(cbPalette)
+
+#Palette I want to use
+brewer.pal.info #See different palette options from Rcolorbrewer
+cp <- brewer.pal(3, "Set2") #Choose palette + number of colors
+scales::show_col(cp)
+
+#-------------------Objective 1 Density plots-------------------------#
+fig2.a <- obj1_results %>% dplyr::filter(survival.prior == "informed",
+                               parameter != "survival") %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = sampling.scheme)) + 
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Relative bias", y="Parameter") +
+#  theme_ridges() + 
+  facet_wrap(~prop.sampled.lab) + 
+  theme_bw() +
+  xlim(-100, 100) +
+  scale_fill_manual(values = cp) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank(),
+        legend.position = "none")
+
+fig2.a
+
+ggsave("Figure_1a_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+
+fig2.b <- obj1_results %>% dplyr::filter(survival.prior == "informed",
+                               parameter != "survival") %>% 
+ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
+  geom_violin(aes(y=cv), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="CV") +
+  theme_bw() +
+  scale_fill_manual(values = cp) +
+  #ggtitle("B)") +
+  facet_wrap(~prop.sampled.lab) +
+  theme() +
+  scale_y_log10() +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank(),
+        legend.position = "none")
+
+fig2.b
+
+ggsave("Figure_1b_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+
+
+fig2.c <- obj1_results %>% dplyr::filter(survival.prior == "informed",
+                               parameter != "survival") %>% 
+  ggplot(aes(x = HSPs_detected, fill = sampling.scheme)) +
+    geom_density(alpha = 0.6) + 
+#    ggtitle("C)") + 
+    labs(x = "HSPs") +
+    theme_bw() + 
+    ylab("Density") +
+    scale_fill_manual(values = cp) +
+    scale_color_manual(values = cp) +
+    facet_wrap(~prop.sampled.lab, scales = "free_y") + 
+  scale_x_continuous(breaks = c(50, 100, 150, 200, 250, 300, 350)) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank(),
+          legend.position = "bottom")
+
+fig2.c
+
+ggsave("Figure_1c_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+
+
+fig2.d <- obj1_results %>% dplyr::filter(survival.prior == "informed",
+                               parameter != "survival") %>% 
+  ggplot(aes(x = POPs_detected, fill = sampling.scheme)) +
+    geom_density(alpha = 0.6) + 
+    #ggtitle("D)") + 
+    labs(x = "POPs") +
+    theme_bw() + 
+#    theme(legend.title = element_blank(), #For ggarrange
+#          axis.title.y = element_blank()) + 
+    scale_fill_manual(values = cp) +
+    scale_color_manual(values = cp) +
+      ylab("Density") +
+    facet_wrap(~prop.sampled.lab, scales = "free_y") +
+   theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        plot.title = element_text(size=25),
+        legend.title = element_blank(),
+          legend.position = "bottom")
+
+fig2.d
+
+ggsave("Figure_1d_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 3694, height = 1894, units = "px")
+
+
+ggarrange(fig2.a, fig2.b, fig2.c, fig2.d, common.legend = TRUE, nrow = 2, ncol = 2, legend = "bottom") #OK to ignore warnings; the first two are values > the x axis limit in 1A); the 7998 missing values are from plotting POPs
+
+ggsave("Figure_2ALL_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 500, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 5000, height = 3000, units = "px")
+
+
+```
+
+
+```{r Obj2, echo=FALSE, out.width = "120%"}
+#---------Figure 2----------------------------
+# plot.colors.fig2.1 <- c("lightslateblue", "lightblue1", "indianred3")
+# scales::show_col(plot.colors.fig2.1)
+
+#Palette I want to use
+brewer.pal.info #See different palette options from Rcolorbrewer
+cp2 <- brewer.pal(3, "RdYlBu") #Choose palette + number of colors
+scales::show_col(cp2)
+
+#-------------------Objective 2 Density plots-------------------------#
+#Include specific lambda prior values
+(fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
+    mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>% 
+    mutate(lam.label = ifelse(lambda.prior == "none", "naive",
+                          ifelse(lambda.prior == "diffuse (0.80 - 1.20)", "adapted (diffuse lambda prior)", "adapted (narrow lambda prior)"))) %>% 
+    mutate(lam.label = factor(lam.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
+    dplyr::filter(sampling.scheme %in% c("sample all juveniles"), lam.label != "adapted (narrow lambda prior)") %>% #, population.growth != "severe decline"
+  ggplot(aes(x = relative_bias,
+             y = est.yr.lab, 
+             fill = lam.label)) + 
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Relative bias", y="Estimation year") +
+  #theme_ridges() + 
+  #facet_wrap(~sampling.scheme) + 
+  facet_grid(rows = vars(population.growth)) + #, cols = vars(sampling.scheme)
+  #theme(strip.text.y = element_blank()) + 
+  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = c(cp2[3], cp2[1]), 
+                    name = "Model") +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+    theme_bw() +
+    theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.position = "none")) 
+
+
+#Include all lambda prior values
+(fig3.1 <- obj2_results %>% dplyr::filter(parameter %in% c("Nf")) %>% 
+    mutate(population.growth = factor(population.growth, levels = c("stable", "slight increase", "slight decline", "severe decline"))) %>% 
+    mutate(lam.label = ifelse(lambda.prior == "none", "naive",
+                          ifelse(lambda.prior == "diffuse (0.80 - 1.20)", "adapted (diffuse lambda prior)", "adapted (narrow lambda prior)"))) %>% 
+    mutate(lam.label = factor(lam.label, levels = c("naive", "adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"))) %>% 
+    dplyr::mutate(real.lam.label = ifelse(lam.label %in% c("adapted (narrow lambda prior)", "adapted (diffuse lambda prior)"), "adapted", "naive")) %>% 
+    dplyr::mutate(filter.column = paste0(population.growth,"_", lam.label)) %>% 
+    dplyr::filter(filter.column %in% c("slight decline_naive", "slight increase_naive", "severe decline_naive", "stable_naive", "slight decline_adapted (narrow lambda prior)", "slight increase_adapted (narrow lambda prior)", "stable_adapted (narrow lambda prior)", "severe decline_adapted (diffuse lambda prior)")) %>% 
+    dplyr::filter(sampling.scheme %in% c("sample all juveniles")) %>% #, population.growth != "severe decline"
+  ggplot(aes(x = relative_bias,
+             y = est.yr.lab, 
+             fill = real.lam.label)) + 
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Relative bias", y="Estimation year") +
+  #theme_ridges() + 
+  #facet_wrap(~sampling.scheme) + 
+  facet_grid(rows = vars(population.growth)) + #, cols = vars(sampling.scheme)
+  #theme(strip.text.y = element_blank()) + 
+  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = c(cp2[1], cp2[3]), 
+                    name = "Model") +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+    theme_bw() +
+    theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.position = "none")) 
+
+#      ggsave("Figure_3a_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+
+#---------Objective 3-------------------------#
+cp3 <- brewer.pal(3, "RdBu") #Choose palette + number of colors
+cp3.sub <- cp3[c(3,1)]
+scales::show_col(cp3.sub)
+
+obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.periodicity == 2, "biennial", "triennial")) %>% 
+  mutate(popsim.psi = factor(popsim.psi, levels = c("1", "1*", "0.9", "0.75", "0.5"))) %>% 
+  mutate(sampling.scheme = ifelse(sampling.scheme == "sample ALL ages", "sample all ages", sampling.scheme))
+
+(fig4a <- obj3_results_4plot %>% dplyr::filter(parameter == "Nf", breeding.schedule %in% c("biennial", "triennial"), popsim.psi %in% c("1", "1*"), est.yr == 85, sampling.scheme == "sample all juveniles") %>% 
+    dplyr::mutate(graph.lab = ifelse(popsim.psi == "1*", "Biennial + random", ifelse(
+      breeding.schedule == "triennial", "Triennial", "Biennial")),
+      model.lab = ifelse(model == "annual", "naive", "adapted")) %>% 
+    mutate(model.lab = factor(model.lab, levels = c("naive", "adapted"))) %>% 
+  ggplot(aes(x=factor(graph.lab), fill = model.lab)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  #geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(x="Breeding cycle", y="Relative bias") +
+  scale_fill_manual(values = cp3.sub) +
+  #facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "fixed") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        #legend.position = "none",
+        plot.title = element_text(size=25))) +
+  guides(fill=guide_legend(title="Model")) #+
+  #ggtitle("a) Intermittent breeding")
+
+      #---------Objective 4-------------------------#
+      brewer.pal.info #See different palette options from Rcolorbrewer
+      cp4 <- brewer.pal(3, "Paired") #Choose palette + number of colors
+scales::show_col(cp4)
+
+obj4_results %>% dplyr::filter(est.yr == 85) %>% 
+  group_by(model, sampling.scheme, age.error_cv) %>% 
+  summarize(number = n())
+
+obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.scheme == "sample ALL ages", "sample all ages", sampling.scheme)) %>% 
+  mutate(age.error_cv = factor(age.error_cv, levels = c("accurate", "5% CV", "10% CV", "20% CV")))
+
+      (fig4b <- obj4_results_4plot %>% dplyr::filter(parameter == "Nf", est.yr == 85, sampling.scheme %in% c("sample all juveniles", "target YOY")) %>% 
+          mutate(model.lab = ifelse(model == "annual", "annual", "biennial")) %>% 
+  ggplot(aes(x=factor(age.error_cv), fill = model.lab)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  #geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  geom_hline(yintercept=c(-10, 10), col="black", size=1, linetype = "dashed") +
+  labs(y="Relative bias", x = "Age-length uncertainty") +
+  scale_fill_manual(values = cp4) +
+  facet_grid(cols = vars(sampling.scheme), scales = "free") + #, rows = vars(parameter), 
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))) +
+  guides(fill=guide_legend(title="Population + model")) #+
+#  ggtitle("b) Aging error")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Very pretty histogram but not sure what to do with it ...
+# (fig3.b <- lambda.extreme_comps4viz %>% ggplot(aes(x = ref.yrs, fill = sampling.scheme)) +
+#   geom_histogram(binwidth = 1,
+#                  alpha = 0.6,
+#                  position = "identity",
+#                  lwd = 0.75,
+#                  linetype = 1,
+#                  colour = "black") +
+#   labs(x="Reference year gap") +
+#   theme(legend.position = "none") +
+#   facet_grid(rows = vars(est.yr.lab), cols = vars(sampling.scheme)) +
+# #  facet_wrap(~est.yr.lab) +
+#   scale_fill_manual(values = plot.colors.fig1,
+#                     name = "Sampling scheme")) +
+#   theme_bw()
+#   #geom_density(alpha = 0.6) +
+  
+      
+      #---------Figure S1----------------------------
+#Show model performance when there is an informed vs diffuse prior on lambda and "extreme" population decline
+      #Palette I want to use
+# brewer.pal.info #See different palette options from Rcolorbrewer
+# cps1 <- brewer.pal(2, "PuOr") #Choose palette + number of colors
+# scales::show_col(cps1)
+
+plot.colors.figS1 <- c("lightblue1", "indianred3")
+scales::show_col(plot.colors.figS1)
+
+(figS1a <- obj2_results %>% dplyr::filter(parameter %in% c("lambda", "survival"),
+                                         lambda.prior == "diffuse (0.80 - 1.20)") %>% 
+  ggplot(aes(x = relative_bias,
+             y = est.yr.lab, 
+             fill = sampling.scheme)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+  labs(x="Relative bias", y="Estimation year") +
+#  theme_ridges() + 
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+#  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
+  facet_wrap(~parameter) +
+   theme(strip.text = element_text(size = 15),
+         legend.position = "bottom",
+         legend.title = element_blank(),
+         legend.text = element_text(size = 15),
+         axis.text = element_text(size = 15),
+         axis.title = element_text(size = 20)) +
+  #       axis.title.y = element_blank(),
+  #       axis.text.y = element_blank(),
+  #       axis.ticks.y = element_blank()) + 
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05))) +
+  #xlim(-100, 200) +
+  scale_fill_manual(values = cp))
+
+ggsave("Figure_S1_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+
+#--------------------------------Figure S2-------------------------------------
+      #Plot comparisons
+source(file = "~/R/working_directory/LemonSharkCKMR/03_DataViz/functions/Truth_comps_samples_analysis_ToSource.R")
+
+#How often did the model predict the direction of lambda correctly? 
+plot.colors.fig3.2 <- c("tomato3", "steelblue2")
+scales::show_col(plot.colors.fig3.2)
+
+(figS2 <- obj2_lam.results_4viz %>% 
+    mutate(est.yr = factor(est.yr),
+           degree.plot = ifelse(degree == "substantial decline", "severe decline", degree)) %>%
+    mutate(degree.plot = factor(degree.plot, levels = c("slight change", "severe decline"))) %>% 
+  mutate(perc.lab = paste0(percent.summ, "%")) %>% 
+  ggplot(aes(x = est.yr,
+             y = percent.summ, 
+             fill = status,
+             pattern = est.yr)) + 
+  geom_bar(position = "stack", 
+           stat = "identity", 
+           color = "black") +
+    geom_text(aes(label = perc.lab),
+                  size = 4, 
+              fontface = "bold",
+            position = position_stack(vjust = 0.5)) +
+  facet_grid(rows = vars(degree.plot), cols = vars(sampling.scheme)) +
+    labs(x="\nEstimation year", y="Percent") +
+    #This adjusts the x axis labels to stagger them. "points" is the unit by which to stagger, but could use others e.g. cm, in, etc.
+    #theme(axis.text.x = element_text(vjust = grid::unit(c(-1, 0, 1), "points"))) +
+#  facet_wrap(~sampling.scheme) +
+  #xlim(-100, 200) +
+  scale_fill_manual(values = plot.colors.fig3.2)) +
+  theme_bw() +
+    theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_blank())
+
+
+ggsave("Figure_S2_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 9, units = "in")
+
+```
+
+
+
+```{r Obj3.4 Viz}
+#Palette I want to use
+
+cp3 <- brewer.pal(3, "RdBu") #Choose palette + number of colors
+cp3.sub <- cp3[c(1,3)]
+scales::show_col(cp3.sub)
+
+
+#---------Figure 4----------------------------
+#---------Objective 3-------------------------#
+obj3_results_4plot <- obj3_results %>% mutate(breeding.schedule = ifelse(mating.periodicity == 2, "biennial", "triennial")) %>% 
+  mutate(popsim.psi = factor(popsim.psi, levels = c("1", "1*", "0.9", "0.75", "0.5"))) %>% 
+  mutate(sampling.scheme = ifelse(sampling.scheme == "sample ALL ages", "sample all ages", sampling.scheme))
+
+(fig4a <- obj3_results_4plot %>% dplyr::filter(parameter == "Nf", breeding.schedule %in% c("biennial", "triennial"), popsim.psi %in% c("1", "1*"), est.yr == 85, sampling.scheme == "sample all juveniles") %>% 
+    dplyr::mutate(graph.lab = ifelse(popsim.psi == "1*", "Biennial*", ifelse(
+      breeding.schedule == "triennial", "Triennial", "Biennial"))) %>% 
+  ggplot(aes(x=factor(graph.lab), fill = model)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(x="Proportion biennial breeders", y="Relative bias") +
+  scale_fill_manual(values = cp3.sub) +
+  #facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "fixed") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))) +
+  guides(fill=guide_legend(title="Model")) #+
+  #ggtitle("a) Intermittent breeding")
+
+#      ggsave("Figure_4a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
+
+      
+      #---------Objective 4-------------------------#
+      brewer.pal.info #See different palette options from Rcolorbrewer
+      cp4 <- brewer.pal(3, "Paired") #Choose palette + number of colors
+scales::show_col(cp4)
+
+obj4_results %>% dplyr::filter(est.yr == 85) %>% 
+  group_by(model, sampling.scheme, age.error_cv) %>% 
+  summarize(number = n())
+
+obj4_results_4plot <- obj4_results %>% mutate(sampling.scheme = ifelse(sampling.scheme == "sample ALL ages", "sample all ages", sampling.scheme)) %>% 
+  mutate(age.error_cv = factor(age.error_cv, levels = c("accurate", "5% CV", "10% CV", "20% CV")))
+
+      (fig4b <- obj4_results_4plot %>% dplyr::filter(parameter == "Nf", est.yr == 85, sampling.scheme %in% c("sample all juveniles", "target YOY")) %>% 
+  ggplot(aes(x=factor(age.error_cv), fill = model)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  #geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  geom_hline(yintercept=c(-10, 10), col="black", size=1, linetype = "dashed") +
+  labs(y="Relative bias", x = "Age-length uncertainty") +
+  scale_fill_manual(values = cp4) +
+  facet_grid(cols = vars(sampling.scheme), scales = "free") + #, rows = vars(parameter), 
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))) +
+  guides(fill=guide_legend(title="Population + model")) #+
+#  ggtitle("b) Aging error")
+
+      #ggsave("Figure_4b_2022.12.16.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
+
+
+  #------------------Figure S3--------------------------
+      #biennial vs annual model w/ biennial breeding: lambda (violin), survival (violin), psi (boxplot)
+
+(figS3a <- obj3_results_4plot %>% dplyr::filter(parameter %in% c("survival", "lambda"), breeding.schedule == "biennial", est.yr == 85) %>% 
+   mutate(parameter = factor(parameter, levels = c("survival", "lambda"))) %>% 
+  ggplot(aes(x=factor(popsim.psi), fill = model)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(x="Proportion biennial breeders", y="Relative bias") +
+  scale_fill_manual(values = cp3.sub) +
+  facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "free") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))) +
+  guides(fill=guide_legend(title="Model"))
+
+      ggsave("Figure_S3a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 7.35, units = "in")
+      
+      #psi
+      (figS3b <- obj3_results_4plot %>% dplyr::filter(parameter == "psi", breeding.schedule == "biennial", est.yr == 85) %>% 
+  ggplot(aes(x=factor(popsim.psi), fill = model)) +
+  geom_boxplot(aes(y=relative_bias), draw_quantiles = 0.5) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(x="Proportion biennial breeders", y="Relative bias") +
+  scale_fill_manual(values = cp3.sub[2]) +
+  facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "fixed") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.position = "none",
+        plot.title = element_text(size=25)))
+
+      ggsave("Figure_S3b_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+      
+        #------------------Figure S4--------------------------
+      #triennial breeding, all parameters
+      (figS4 <- obj3_results_4plot %>% dplyr::filter(breeding.schedule == "triennial", est.yr == 85, parameter != "psi") %>% 
+         mutate(parameter = factor(parameter, levels = c("Nf", "Nm", "survival", "lambda"))) %>% 
+  ggplot(aes(x=model, fill = model)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(x="Model", y="Relative bias") +
+  scale_fill_manual(values = cp3.sub) +
+  facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "free") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        plot.title = element_text(size=25),
+        legend.position = "none")) +
+  guides(fill=guide_legend(title="Model")) +
+  ggtitle("Intermittent breeding")
+
+      ggsave("Figure_S4_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+      
+      #-------------------Figure S5---------------------------
+      #VonBert curve + ages misassigned
+      ages <- 0:50
+vonBert <- vbFuns(param = "Typical")
+tmp <- growthFunShow("vonBertalanffy","Typical")
+
+plot(vonBert(t = ages, Linf = 317.65, K = 0.057, t0 = -2.302), pch = 19, type = "b", main = tmp, ylab = "Length", xlab = "Age")
+
+#Save previous plot manually
+
+      #Graph 2: real age on x axis, misassigned age on y axis
+(figS5 <- obj4_samps %>%
+   mutate(age.cv = factor(age.cv, levels = c("5% CV", "10% CV", "20% CV"))) %>% 
+    mutate(sampling.scheme = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages",
+                                    ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample all juveniles", "target YOY"))) %>% 
+  ggplot(aes(x = yrs.off,
+             y = age.x)) + 
+  geom_jitter(alpha = 0.6) + 
+  labs(x="Years off", y="True age") +
+ # theme_ridges() + 
+  facet_grid(rows = vars(age.cv), cols = vars(sampling.scheme)) +
+#  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) +
+  theme_bw() +
+      theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15)))
+
+      
+            ggsave("Figure_S5b_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+      
+      
+      #-------------------Figure S6---------------------------
+      #Estimates of lambda and Nm when ages are misassigned
+      
+      (figS6 <- obj4_results_4plot %>% dplyr::filter(parameter %in% c("Nm", "lambda"), est.yr == 85) %>% 
+  ggplot(aes(x=factor(age.error_cv), fill = model)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(y="Relative bias", x = "Age-length uncertainty") +
+  scale_fill_manual(values = cp4) +
+  facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "free") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))) +
+  guides(fill=guide_legend(title="Population + model")) +
+  ggtitle("Aging error")
+            
+ggsave("Figure_s6_2022.11.29.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")  
+  
+  
+  
+#--------------------------------------------------------------#
+
+
+
+
+
+
+#Graph 2: real age on x axis, misassigned age on y axis
+figs4.b <- obj4_samps %>% dplyr::filter(lambda.prior == "none") %>% #There aren't many individuals older than 25
+  ggplot(aes(x = yrs.off,
+             y = age.x)) + 
+  geom_jitter(alpha = 0.6) + 
+  labs(x="Years off", y="Age") +
+ # theme_ridges() + 
+  facet_wrap(~sampling.scheme) + 
+  facet_grid(rows = vars(miss.cv), cols = vars(sampling.scheme)) +
+#  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = plot.colors.fig3) +
+  
+
+figs4.b
+
+ggarrange(figs4.a, figs4.b)
+
+ggsave("Figure_s4b_2022.09.26.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+
+#--------------------Supplementary Obj4---------------------------
+plot.colors.figs5 <- c("pink", "salmon", "tomato3", "indianred4")
+scales::show_col(plot.colors.figs5)
+
+
+```
+
+
+
+```{r objective 5 viz}
+#Full dataset
+ls_dataFull <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FullDataset_wLambda.csv") %>% 
+  mutate(num.samps = num.samps_all) %>% 
+  dplyr::select(-c(num.samps_all)) %>% 
+  dplyr::filter(estimation_year >= 1997)
+
+ls_data.Fulldown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_DownsampledDataset_wLambda.csv") %>% 
+  mutate(mom_HSPs = mom_HSPs.down,
+         num.samps = num.samps_down) %>% 
+  dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all)) %>%
+  dplyr::filter(estimation_year >= 1997)
+
+
+#One individual per litter - shows the same results as when using the full litter
+ # ls_data <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.30_OneIndvPerLitter_wLambda.csv") %>% 
+ #   mutate(num.samps = num.samps_all) %>% 
+ #   dplyr::select(-c(num.samps_all))
+
+#Five year intervals
+ls_dataFive <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.01.01_FullLitter_FiveYearIntervals_wLambda.csv") %>% 
+  mutate(num.samps = num.samps_all) %>% 
+  dplyr::select(-c(num.samps_all)) %>% 
+  dplyr::filter(estimation_year >= 1997)
+
+#Four year intervals
+ls_dataFour <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2023.06.22_FullLitter_FourYearIntervals_wLambda.csv") %>% 
+  mutate(num.samps = num.samps_all) %>% 
+  dplyr::select(-c(num.samps_all)) %>% 
+  dplyr::filter(estimation_year >= 1997)
+
+# ls_data.Fivedown <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.5_lemon_shark_data/Model.results/CKMR_results_2022.12.30_FullLitter_FiveYearIntervals_Downsample_wLambda.csv") %>% 
+#   mutate(mom_HSPs = mom_HSPs.down,
+#          num.samps = num.samps_down) %>% 
+#   dplyr::select(-c(mom_HSPs.down, num.samps_down, num.samps_all, mom_HSPS.all))
+
+
+ls_data.full4viz <- ls_dataFull %>% dplyr::filter(estimation_year > 1996) %>% 
+  mutate(Dataset = "Full")
+ls_data.Fulldown4viz <- ls_data.Fulldown %>% dplyr::filter(estimation_year > 1996) %>% 
+  mutate(Dataset = "Full | downsampled")
+
+ls_data.five4viz <- ls_dataFive %>% dplyr::filter(estimation_year > 1996) %>% 
+  mutate(Dataset = "Five year intervals")
+# ls_data.Fivedown4viz <- ls_data.Fivedown %>% dplyr::filter(estimation_year > 1996) %>% 
+#   mutate(Dataset = "Five year intervals | downsampled")
+
+ls_data.four4viz <- ls_dataFour %>% dplyr::filter(estimation_year > 1996) %>% 
+  mutate(Dataset = "Four year intervals")
+
+ls_data4viz <- bind_rows(ls_data.full4viz, 
+                         ls_data.Fulldown4viz,
+                         ls_data.four4viz) %>% 
+  mutate(Dataset = factor(Dataset, levels = c("Full", "Full | downsampled", "Four year intervals")))
+
+#------------------------------Fig 5a: Nf-----------------------------------------#
+brewer.pal.info #See different palette options from Rcolorbrewer
+cp5 <- brewer.pal(3, "Dark2") #Choose palette + number of colors
+scales::show_col(cp5)
+
+fig5_full <- ls_data4viz %>% 
+  dplyr::filter(parameter == "Nfb2", Dataset == "Four year intervals") %>%
+  ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
+  #geom_point() + 
+  geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
+                  position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "gam", se = FALSE, aes(linetype = Dataset)) +
+  #facet_wrap(~years.lab) +
+  theme_bw() +
+  labs(x = "Estimation year", y = "Female abundance") +
+  scale_color_manual(values = cp5[3]) +
+  #ggtitle("a)") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.position = "none",
+        plot.title = element_text(size=25))
+
+fig5_full
+
+#ggsave("Figure_5a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+#-----------------------Fig5b: Survival------------------------------------#
+fig5b <- ls_data4viz %>% 
+  dplyr::filter(parameter == "survival") %>%
+  ggplot(aes(x = estimation_year, y = Q50, color = Dataset)) + 
+  #geom_point() + 
+  geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5, group = Dataset),
+                  position = position_dodge(width = 1)) +
+  geom_smooth(method = "gam", se = FALSE, aes(linetype = Dataset)) +
+  #facet_wrap(~years.lab) +
+  theme_bw() +
+  ylim(0.5, 1) +
+  labs(x = "Estimation year", y = "Survival") +
+  ggtitle("b)") +
+  scale_color_manual(values = cp5) +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25))
+
+fig5b
+
+#ggsave("Figure_5b_2022.12.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+
+ggarrange(fig5a, fig5b, common.legend = TRUE, legend = "bottom")
+
+ggsave("Figure_5_2023.01.02.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 12, height = 6, units = "in")
+
+
+#Make table of full dataset and downsampled dataset results
+#Start with bind rows bc it's before converting Dataset to a factor
+table4 <- bind_rows(ls_data.full4viz, ls_data.Fulldown4viz, ls_data.five4viz) %>%
+  dplyr::filter(parameter == "Nfb2") %>% 
+  mutate(HPDI = paste0("(", round(HPD2.5, 0)," - ", round(HPD97.5, 0), ")")) %>%
+  dplyr::select(Median = Q50,
+                HPDI,
+                `Estimation year` = estimation_year,
+                `Number of samples` = num.samps,
+                `Mom HSPs` = mom_HSPs,
+                Dataset)
+
+write_csv(table4, file = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/tables/table4_2023.01.02.csv")
+```
+
+
+
+```{r calculate relative bias and % in HPDI}
+#To get this in the table, I ran the script and then manually translated over the to table in Word. Perhaps there's a way I can just export this to a CSV file and copy and paste ... 
+#Check percent in interval; can change proportion sampled
+obj1_results %>% dplyr::filter(prop.sampled == 1.5) %>% 
+  dplyr::filter(survival.prior == "informed", parameter == "Nf") %>% 
+  group_by(parameter, sampling.scheme, prop.sampled) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+#-------------Objective 2 --------------------#
+#See how many instances failed to converge so they can be removed later from the HPDI dataframes
+obj2_results %>% dplyr::filter(Rhat > 1.01) %>% nrow()
+
+#Remove instances that failed to converge
+obj2_results <- obj2_results %>% dplyr::filter(Rhat < 1.01)
+
+#2.1 - slight population decline; tight prior on lambda
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 85, population.growth == "slight decline", lambda.prior == "tight (0.95 - 1.05)", parameter == "Nf") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#2.2 - slight population growth; tight prior on lambda
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 85, population.growth == "slight increase", lambda.prior == "tight (0.95 - 1.05)", parameter == "Nf") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#2.3 - severe population decline; diffuse prior on lambda
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 85, population.growth == "severe decline", lambda.prior == "diffuse (0.80 - 1.20)", parameter == "Nf") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+
+#3.1: psi = 1
+obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 1, parameter == "Nf", model == "multiennial", mating.periodicity == 2) %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#3.2: psi = 0.90
+obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 0.9, parameter == "Nf", model == "multiennial", mating.periodicity == 2) %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#3.2: psi = 0.75
+obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 0.75, parameter == "Nf", model == "multiennial", mating.periodicity == 2) %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#3.4: psi = 0.50
+obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 0.5, parameter == "Nf", model == "multiennial", mating.periodicity == 2) %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#3.5: mating periodicity = 3; psi = 1
+obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == 1, parameter == "Nf", model == "multiennial", mating.periodicity == 3) %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#3.6: psi = 1*
+obj3_results %>% dplyr::filter(est.yr == 85, popsim.psi == "1*", parameter == "Nf", model == "multiennial", mating.periodicity == 2) %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#4.1: 5% CV - annual breeding
+obj4_results %>% dplyr::filter(est.yr == 85, parameter == "Nf", model == "annual", age.error_cv != "accurate", age.error_cv == "5% CV") %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#4.1: 5% CV - biennial breeding
+obj4_results %>% dplyr::filter(est.yr == 85, parameter == "Nf", model == "multiennial", age.error_cv != "accurate", age.error_cv == "5% CV") %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+#4.2: 10% CV - annual breeding
+obj4_results %>% dplyr::filter(est.yr == 85, parameter == "Nf", model == "annual", age.error_cv != "accurate", age.error_cv == "10% CV") %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#4.2: 10% CV - biennial breeding
+obj4_results %>% dplyr::filter(est.yr == 85, parameter == "Nf", model == "multiennial", age.error_cv != "accurate", age.error_cv == "10% CV") %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+#4.3: 20% CV - annual breeding
+obj4_results %>% dplyr::filter(est.yr == 85, parameter == "Nf", model == "annual", age.error_cv != "accurate", age.error_cv == "20% CV") %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#4.3: 20% CV - biennial breeding
+obj4_results %>% dplyr::filter(est.yr == 85, parameter == "Nf", model == "multiennial", age.error_cv != "accurate", age.error_cv == "20% CV") %>%
+  group_by(parameter, sampling.scheme) %>% 
+  dplyr::summarize(mean.bias = mean(relative_bias),
+                   percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.cv = mean(cv),
+                   mean.HSPs = mean(HSPs_detected),
+                   mean.POPs = mean(POPs_detected)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+```
+
+
+
+
+```{r Supplementary calculations}
+#2.1 naive - yr 80
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 80, population.growth != "extreme negative", lambda.prior == "none") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#2.1 adapted - yr 80
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 80, population.growth != "extreme negative", lambda.prior == "diffuse") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#2.2 naive - yr 80
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 80, population.growth == "extreme negative", lambda.prior == "none") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#2.2 adapted - yr 80
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 80, population.growth == "extreme negative", lambda.prior == "diffuse") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+#2.1 naive - yr 90
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 90, population.growth != "extreme negative", lambda.prior == "none") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#2.1 adapted - yr 90
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 90, population.growth != "extreme negative", lambda.prior == "diffuse") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#2.2 naive - yr 90
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 90, population.growth == "extreme negative", lambda.prior == "none") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+#2.2 adapted - yr 90
+obj2_results %>% dplyr::filter(prop.sampled == 1.5, est.yr == 90, population.growth == "extreme negative", lambda.prior == "diffuse") %>% 
+  group_by(parameter, sampling.scheme, lambda.prior) %>% 
+  dplyr::summarize(percent_in_interval = sum(in_interval == "Y")/n() * 100,
+                   mean.bias = mean(relative_bias),
+                   mean.cv = mean(cv)) %>%
+  dplyr::arrange(parameter, sampling.scheme)
+
+
+#Mean realized lambda 
+obj2_results %>% dplyr::filter(population.growth == "severe decline",
+                               est.yr == 85,
+                               sampling.scheme == "target YOY",
+                               lambda.prior == "diffuse (0.80 - 1.20)",
+                               parameter == "lambda") %>% 
+  summarize(mean(all.truth))
+
+```
+
+
+
+
+
+
+```{r Obj3 supplementary calculations}
+#------------------------------------calculate average lambda over last 10 years------------------#
+#Lambda should be the same for the parameters, sampling schemes, and lambda.prior, so just select one of each
+obj3_results %>% dplyr::filter(parameter == "Nf", 
+                                   sampling.scheme == "sample all juveniles",
+                               est.yr == 85,
+                               mating.periodicity == 3,
+                               model == "multiennial") %>% 
+  group_by(popsim.psi) %>% 
+  summarize(mean.lam = mean(mean.adult.lambda_last.10),
+            sd.lam = sd(mean.adult.lambda))
+
+
+
+#-------------------------------------compare Ben and Liz viz----------------------------#
+plot.colors.fig3 <- c("lightslateblue", "lightblue1", "darkslateblue", "aquamarine")
+scales::show_col(plot.colors.fig3)
+
+obj3_results.all <- bind_rows(obj3_results.ben, obj3_results.liz) %>% 
+  dplyr::filter(psi.prior == "uniform",
+                sim.psi == 1,
+                lambda.prior == "none")
+
+
+#-------------------Compare Ben and Liz models-------------------------#
+#Abundance
+obj3_results.all %>% dplyr::filter(parameter != "psi") %>% 
+ggplot(aes(x=factor(parameter), fill = factor(model_used))) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="Relative bias") +
+  scale_fill_manual(values = plot.colors.fig3) +
+#  ggtitle("B)") +
+#  ylim(-100, 100) +
+  facet_grid(rows = vars(sampling.scheme), cols = vars(parameter), scales = "free") +
+  #facet_wrap(~sampling.scheme) +
+  theme(legend.title = element_blank())
+
+
+
+#------------------------------Visualize Ben's estimates of psi-----------------
+obj3_results.ben %>% dplyr::filter(psi.prior == "uniform") %>% 
+  ggplot(aes(x = relative_bias,
+             y = factor(sim.psi), 
+             fill = factor(sim.psi))) + 
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Relative bias", y="non conformists") +
+#  theme_ridges() + 
+  #facet_wrap(~sampling.scheme) + 
+  facet_grid(cols = vars(sampling.scheme), rows = vars(parameter), scales = "free") +
+  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = plot.colors.fig3, 
+                    name = "simulation psi") +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05)))
+
+
+obj3_results %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival"),
+                                         lambda.prior == "tight",
+                                         model == "adapted") %>% 
+  ggplot(aes(x = relative_bias,
+             y = non.conformists, 
+             fill = psi.prior)) + 
+  geom_density_ridges(alpha = 0.6) + 
+  labs(x="Relative bias", y="non conformists") +
+#  theme_ridges() + 
+  #facet_wrap(~sampling.scheme) + 
+  facet_grid(rows = vars(parameter), cols = vars(sampling.scheme)) +
+  xlim(-100, 100) +
+  geom_vline(xintercept = 0, color = "blue", linetype = "dashed", size = 1.1) + 
+  scale_fill_manual(values = plot.colors.fig3, 
+                    name = "psi prior") +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .05)))
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r Obj2.make-Density-Plots, echo=FALSE, include=FALSE}
+#Density plot for Nf
+# (obj1.fig.Nf <- obj1_results %>% dplyr::filter(parameter == "Nf",
+#                                               survival.prior == "diffuse") %>% 
+#     ggplot(aes(x = relative_bias, color = sampling.scheme, fill = sampling.scheme)) +
+#     geom_density(alpha = 0.6) + 
+#     ggtitle("A) Nf") + 
+#     labs(x = "Relative bias of posterior median") +
+#     geom_vline(xintercept=c(0), linetype="dotted") +
+#     theme_bw() + 
+#     theme(legend.title = element_blank()) + 
+#     scale_fill_manual(values = plot.colors.fig1) +
+#     scale_color_manual(values = plot.colors.fig1) +
+#     facet_wrap(~prop.sampled) +
+#     xlim(-100, 100))
+
+#-------------------Objective 2 Density plots-------------------------#
+#Target YOY
+obj2.YOY.p1 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="negative",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "target YOY") %>% 
+  mutate(est.yr.lab = ifelse(est.yr == 80, "10 years past",
+                             ifelse(est.yr == 85, "5 years past", "present"))) %>% 
+    dplyr::rename(`Lambda prior` = lambda.prior) %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = `Lambda prior`)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+  scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+  ggtitle("Negative population growth")
+
+obj2.YOY.p2 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="neutral",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "target YOY") %>% 
+    mutate(est.yr.lab = ifelse(est.yr == 80, "10 years past",
+                             ifelse(est.yr == 85, "5 years past", "present"))) %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = lambda.prior)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+    scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+    ggtitle("Neutral population growth")
+
+
+
+obj2.YOY.p3 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="positive",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "target YOY") %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = lambda.prior)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+    scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+  ggtitle("Positive population growth")
+
+
+obj2.YOY.plots <- ggarrange(obj2.YOY.p1, obj2.YOY.p2, obj2.YOY.p3, common.legend = TRUE, nrow = 3, legend = "bottom")
+
+
+
+#Sample all juvenile ages
+obj2.juvs.p1 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="negative",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "sample all juvenile ages") %>% 
+    dplyr::rename(`Lambda prior` = lambda.prior) %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = `Lambda prior`)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+    scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+  ggtitle("Negative population growth")
+
+obj2.juvs.p2 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="neutral",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "sample all juvenile ages") %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = lambda.prior)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+    scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+    ggtitle("Neutral population growth")
+
+
+
+obj2.juvs.p3 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="positive",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "sample all juvenile ages") %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = lambda.prior)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+    scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+  ggtitle("Positive population growth")
+
+
+obj2.juv.plots <- ggarrange(obj2.juvs.p1, obj2.juvs.p2, obj2.juvs.p3, common.legend = TRUE, nrow = 3, legend = "bottom")
+
+
+#Sample ALL age classes
+obj2.allages.p1 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="negative",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "sample all age classes") %>% 
+    dplyr::rename(`Lambda prior` = lambda.prior) %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = `Lambda prior`)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+    scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+  ggtitle("Negative population growth")
+
+obj2.allages.p2 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="neutral",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "sample all age classes") %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = lambda.prior)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+    scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+    ggtitle("Neutral population growth")
+
+
+
+obj2.allages.p3 <- obj2_results %>% dplyr::filter(!parameter %in% c("lambda", "survival"), 
+                               population.growth =="positive",
+                               prop.sampled.lab == "1.5 percent sampled",
+                               sampling.scheme == "sample all age classes") %>% 
+  ggplot(aes(x = relative_bias,
+             y = parameter, 
+             fill = lambda.prior)) + 
+  geom_density_ridges(alpha = 0.6, scale = 0.9) + 
+#  theme_ridges() + 
+  facet_wrap(~est.yr.lab) + 
+#  theme(legend.title = element_blank()) + 
+  xlim(-100, 100) +
+    scale_y_discrete(expand = expansion(mult = c(0.01, .7))) +
+  ggtitle("Positive population growth")
+
+
+obj2.allages.plots <- ggarrange(obj2.allages.p1, obj2.allages.p2, obj2.allages.p3, common.legend = TRUE, nrow = 3, legend = "bottom")
+
+
+# (fig1.p1.violin <- obj1_results %>% 
+#   ggplot(aes(x=factor(parameter), fill = factor(sampling.scheme))) +
+#   geom_violin(aes(y=cv), draw_quantiles = 0.5) +
+#   #ylim(-50, 160) +
+#   geom_hline(yintercept=0, col="black", size=1.25) +
+#   #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+#   labs(x="Parameter", y="CV", title="D) CV") +
+#   scale_fill_manual(values = plot.colors.fig1) +
+#   font("title", size = 10, face = "bold")) +
+#   facet_wrap(~prop.sampled) +
+#   theme(legend.title = element_blank())
+
+
+```
+\
+\
+The next graphs are examining how the model performs when population growth is positive, negative or neutral, comparing one model that accounts for this with a prior for lambda (uniform(0.95, 1.05)) and one that does not. In each case, the truth used to calculate relative bias is a specific year (vs the mean in model validation).
+\
+First, with targeted sampling of young-of-year, it looks like the model actually performs *worse* with lambda when the year of estimation is 10 years in the past. At 5 years past and present, the two appear to perform equivalently, suggesting that if limited population growth is expected, with targeted sampling of YOY at least, there's no real reason to include lambda in the model.
+```{r Obj2.YOY-Density-Plots, echo=FALSE, out.width = "120%", fig.height = 10}
+annotate_figure(obj2.YOY.plots, top = text_grob("Target young-of-year", size = 14, face = "bold"))
+```
+\
+\
+The results are similar when all juvenile age classes are sampled, except estimates 10 years in the past are more accurate than with targeted sampling of young-of-year. This is likely a consequence of having more age classes over which to estimate survival and lambda.
+```{r Obj2.juv-Density-Plots, echo=FALSE, out.width = "120%", fig.height = 10}
+annotate_figure(obj2.juv.plots, top = text_grob("Sample all juvenile ages", size = 14, face = "bold"))
+```
+\
+\
+The best performing model is the model that samples across age classes and includes parent-offspring pairs, as expected. Here, the model performs better with a diffuse prior on lambda than when lambda is not included.
+```{r Obj2.allages-Density-Plots, echo=FALSE, out.width = "120%", fig.height = 10}
+annotate_figure(obj2.allages.plots, top = text_grob("sample all age classes", size = 14, face = "bold"))
+```
+
+
+
+
+
+Notes to self:
+Objective 1: What drives bias when kin pairs match expectations?
+Inconclusive so far (07/19/2022). I should return to this later
+```{r, echo=FALSE, include=FALSE}
+# obj1_results %>% dplyr::filter(HSPs_detected == HSPs_expected & sampling.scheme != "sample all age classes" & survival.prior == "diffuse") %>% 
+#   dplyr::arrange(iteration) %>% 
+#   dplyr::select(parameter, prop.sampled, iteration, sampling.scheme, relative_bias, survival.prior, HSPs_expected, HSPs_detected) %>% 
+#   View()
+# 
+# mom_comps <- readRDS(paste0(obj1.2_results_location, mom.comps.prefix, "_", date.of.simulation.obj1.2J, "_", seeds, "_", purpose.obj1.2J)) %>% 
+#   dplyr::filter(iteration == 36 & sample.prop.juvs == 1 | iteration == 85 & sample.prop.juvs == 0.5) %>% 
+#   dplyr::filter(yes > 0) %>% 
+#   mutate(iteration = factor(iteration))
+# 
+# dad_comps <- readRDS(paste0(obj1.2_results_location, dad.comps.prefix, "_", date.of.simulation.obj1.2J, "_", seeds, "_", purpose.obj1.2J)) %>% 
+#   dplyr::filter(iteration == 36 & sample.prop.juvs == 1 | iteration == 85 & sample.prop.juvs == 0.5) %>% 
+#   dplyr::filter(yes > 0) %>% 
+#   mutate(iteration = factor(iteration))
+# 
+# plot.colors.fig1 <- c("aquamarine4", "indianred1", "indianred4")
+# scales::show_col(plot.colors.fig1)
+# 
+# #Split "yes" up into separate rows so we can make a histogram of mort years
+# mom_comps %>% uncount(yes) %>% 
+#   ggplot(aes(x = mort.yrs, fill = iteration)) +
+#   geom_density(alpha = 0.6) +
+#   scale_color_manual(values = plot.colors.fig1)
+# 
+# dad_comps %>% uncount(yes) %>% 
+#   ggplot(aes(x = mort.yrs, fill = iteration)) +
+#   geom_density(alpha = 0.6) +
+#   scale_color_manual(values = plot.colors.fig1)
+
+#Interesting iterations: not bad bias
+#iteration 36 (not bad bias): all parameters, 1_prop_sampled, sample_all_juvenile_ages;
+#Nf, iteration_21, 1.0_prop_sampled, sample_all_juvenile_ages
+#survival: iteration_28, 2.0_prop_sampled, sample_all_juvenile_ages
+#Bad bias
+##iteration 85 all parameters: 0.5_prop_sampled, sample_all_juvenile_ages;
+#other bad biases: Nf, iteration 44, 1.0_prop_sampled, sample_all_juvenile_ages
+
+
+```
+
+Things to tackle next:
+1. Objective 1: Look into the number of individual parents that are sampled in the initial model validation runs to see if we are oversampling some parents, particularly with targeted sampling of YOY.

@@ -212,13 +212,21 @@ min(juv_ref.North$birth.year, na.rm = TRUE) #Earliest capture
 max(juv_ref.North$birth.year, na.rm = TRUE) #Latest capture
 
 #Remove unknown mothers, then for each group of full sibs keep just one
-NoFullSibs.df <- juv_ref.North %>% drop_na(mother.x) %>% 
-  group_by(mother.x, father.x) %>% 
-  slice_sample(n = 1) %>% 
+NoFullSibs.df <- juv_ref.North %>% drop_na(mother.x) %>%
+  group_by(mother.x, father.x) %>%
+  slice_sample(n = 1) %>%
   ungroup()
 
 #Look at number of full sibs
 total.sibs <- nrow(juv_ref.North) - nrow(NoFullSibs.df) #Calculate number of full sibs
+
+#Number of individuals contributing to full sibs -- need to work on this
+juv_ref.North %>% drop_na(mother.x) %>% 
+  group_by(mother.x, father.x) %>% 
+  summarize(n = n()) %>% 
+  ungroup() %>% 
+  dplyr::filter(n > 1) %>% 
+  dplyr::summarize(sum(n))
 
 #Different cohort sibs
 juv_ref.North %>% group_by(mother.x, father.x) %>%
@@ -235,31 +243,37 @@ juv_ref.North %>% group_by(mother.x, father.x) %>%
   # as_tibble() #If there is more than one individual with the same mother AND father, then only keep one.
 
 #save the years over which samples were taken
-sample.years <- c(min(NoFullSibs.df$birth.year):max(NoFullSibs.df$birth.year))
+sample.years <- c(min(juv_ref.North$birth.year):max(juv_ref.North$birth.year))
 #First year of estimation will be three years after the first year of sampling - that's the second year with solid data
-first.est.year <- sample.years + 3
+first.est.year <- min(sample.years) + 4
 n_yrs <- max(sample.years)
 
 #Save samples
-sample.info <- NoFullSibs.df %>% mutate(birth.year = as.integer(birth.year))
+sample.info <- juv_ref.North %>% mutate(birth.year = as.integer(birth.year))
 results <- NULL
 mom.comps.tibble <- NULL
 dad.comps.tibble <- NULL
 post.samps_list.block3 <- list()
 post.samps_list.block5 <- list()
 post.samps_list.all <- list()
-rseed <- sample(c(1:10000000), size = 1)
 
 if(downsample == "yes"){
-  iterations <- 100
+  iterations <- 50
 } else iterations <- 1
 
+#If need to pick up from a stopping point:
+# results <- read_csv(paste0(results_location, "/LS_data_ConnModel_allSibsDown_2023.10.29_temp.csv"))
+# 
+# mom.comps.tibble <- readRDS(paste0(results_location, "/comps/mom.comps_LS_data_ConnModel_allSibsDown_2023.10.29_temp"))
+# 
+# dad.comps.tibble <- readRDS(paste0(results_location, "/comps/dad.comps_LS_data_ConnModel_allSibsDown_2023.10.29_temp"))
 
 #------------------------Start loop-----------------------------------------
-for(iter in 1:iterations){
+for(iter in 51:iterations){
 for(block in first.est.year:n_yrs){
+    rep <- 1
   
-  rep <- 1
+  rseed <- sample(c(1:10000000), size = 1)
   
   #Estimate Nt in the present
   estimation.year <- block
@@ -422,8 +436,6 @@ for(block in first.est.year:n_yrs){
       HS.samps.df.down.block3 <- bind_rows(HS.samps.df.down.block3, HS.samps.temp.block3)
       
     }
-    
-    num.samps_down.block3 <- nrow(HS.samps.df.down.block3)
 
     #----------------Filter full sibs------------------
     if(filter.full.sibs == "yes"){
@@ -433,7 +445,9 @@ for(block in first.est.year:n_yrs){
         slice_sample(n = 1) %>%
         ungroup()
     }
-        
+    
+    num.samps_down.block3 <- nrow(HS.samps.df.down.block3) 
+       
     ####----------------Construct pairwise comparison matrix after downsampling----------####
     
     pairwise.df.HS.block3 <- data.frame(t(combn(HS.samps.df.down.block3$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
@@ -577,6 +591,7 @@ for(block in first.est.year:n_yrs){
     #MHSP only model
     set.seed(rseed)
 
+    tryCatch({
         source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
     
     if(downsample == "yes"){
@@ -620,6 +635,7 @@ for(block in first.est.year:n_yrs){
     names(post.samps_list.block3)[[rep]] <- paste0("yrs_", oldest.block3, "_to_", block)
     
     print(paste0("Finished comparison ", oldest.block3, " to ", block))
+    }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
   } else {next}
 
 #### End Three year block ####
@@ -759,9 +775,7 @@ for(block in first.est.year:n_yrs){
       HS.samps.df.down.block5 <- bind_rows(HS.samps.df.down.block5, HS.samps.temp.block5)
       
     }
-    
-    num.samps_down.block5 <- nrow(HS.samps.df.down.block5)
-    
+  
     #----------------Filter full sibs------------------
     if(filter.full.sibs == "yes"){
       HS.samps.df.down.block5 <- HS.samps.df.down.block5 %>%
@@ -770,6 +784,8 @@ for(block in first.est.year:n_yrs){
         slice_sample(n = 1) %>%
         ungroup()
     }
+  
+    num.samps_down.block5 <- nrow(HS.samps.df.down.block5)
     
     
     ####----------------Construct pairwise comparison matrix after downsampling----------####
@@ -914,6 +930,7 @@ for(block in first.est.year:n_yrs){
     #MHSP only model
     set.seed(rseed)
     
+    tryCatch({
     source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
     
     if(downsample == "yes"){
@@ -957,6 +974,8 @@ for(block in first.est.year:n_yrs){
     names(post.samps_list.block5)[[rep]] <- paste0("yrs_", oldest.block5, "_to_", block)
     
     print(paste0("Finished comparison ", oldest.block5, " to ", block))
+    }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+    
   } else {next}
   
 
@@ -1097,8 +1116,6 @@ for(block in first.est.year:n_yrs){
       
     }
     
-    num.samps_down.all <- nrow(HS.samps.df.down.all)
-    
     #----------------Filter full sibs------------------
     if(filter.full.sibs == "yes"){
       HS.samps.df.down.all <- HS.samps.df.down.all %>%
@@ -1107,6 +1124,8 @@ for(block in first.est.year:n_yrs){
         slice_sample(n = 1) %>%
         ungroup()
     }
+    
+    num.samps_down.all <- nrow(HS.samps.df.down.all)
     
     
     ####----------------Construct pairwise comparison matrix after downsampling----------####
@@ -1251,6 +1270,7 @@ for(block in first.est.year:n_yrs){
     #MHSP only model
     set.seed(rseed)
     
+    tryCatch({
     source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
     
     if(downsample == "yes"){
@@ -1294,6 +1314,9 @@ for(block in first.est.year:n_yrs){
     names(post.samps_list.all)[[rep]] <- paste0("yrs_", oldest.all, "_to_", block)
     
     print(paste0("Finished comparison ", oldest.all, " to ", block))
+    
+    }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+    
   } else {next}
   
   
@@ -1346,32 +1369,40 @@ rep <- rep+1
 }
   
   #Save as temporary files so they save and overwrite every iteration. Also will ask Shelley to run the code at the end.
-  write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_filterSibsDown_2023.10.25_temp.csv")
+  write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_filterSibsDown_2023.10.29_temp.csv")
   
   #Save final pairwise comparison matrices
-  saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_filterSibsDown_2023.10.25_temp")
+  saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_filterSibsDown_2023.10.29_temp")
   
-  saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_filterSibsDown_2023.10.25_temp")
+  saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_filterSibsDown_2023.10.29_temp")
   
 }
 
 #### End loop over blocks ####
 
-#Shelley, I love you! Will you please highlight the rows from here to row 1374 and run the code? You can highlight the text (without the mouse) by holding shift and repeatedly pressing the down arrow. When the text is highlighted, hit ctrl+enter. The words in the window to the right will change and that means it worked! Then you can close R (or not, it doesn't matter) and put the computer to sleep to reduce its energy consumption. There's nothing you can do that will ruin the code or experiment. I love you!
-
 results %>% dplyr::filter(estimation.year >= 1997) %>% 
   as_tibble() %>% 
   arrange(time_window, estimation.year)
 
-write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_filterSibsDown_2023.10.25.csv")
+results %>% dplyr::filter(parameter == "Nfbt", time_window == "all available samples", estimation.year == 2002) %>% distinct(.keep_all = TRUE)
+
+#JAGS seemed to struggle, and kept throwing errors. Not sure why, since the model has been working fine: when filtering for one sibling it worked fine, and when downsampling it was fine, but not when downsampling AND filtering for one sibling. For some reason, some model runs got duplicated. But we can remove them.
+results %>% distinct(.keep_all = TRUE) %>% dplyr::filter(parameter == "Nfbt", time_window == "all available samples") %>% dplyr::count(estimation.year)
+
+results %>% distinct(.keep_all = TRUE) %>% 
+  write_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_filterSibsDown_2023.10.29.csv")
 
 #Save final pairwise comparison matrices
-saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_filterSibsDown_2023.10.25")
+saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_filterSibsDown_2023.10.29")
 
-saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_filterSibsDown_2023.10.25")
+saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_filterSibsDown_2023.10.29")
 
 
-#Shelley stop here :)
+
+
+
+
+
 
 
 #######################################################################################-

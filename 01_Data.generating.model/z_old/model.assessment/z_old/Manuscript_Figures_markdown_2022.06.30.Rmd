@@ -1,0 +1,818 @@
+---
+title: "Results for CKMR manuscript 06/19/2022"
+output: 
+  html_document:
+    df_print: tibble
+    toc: true
+    toc_depth: 3
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+#devtools::install_github("pconn/HierarchicalGOF/HierarchicalGOF")
+#install.packages("ggmcmc")
+library(tidyverse)
+library(ggpubr)
+library(RColorBrewer)
+library(coda)
+library(runjags)
+library(ggmcmc)
+library(viridis)
+library(scales)
+
+rm(list=ls())
+today <- format(Sys.Date(), "%d%b%Y")
+
+```
+
+
+
+```{r read-in-files, include = FALSE}
+#------------- Simulation parameters and labels  ----------------#
+obj1.MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.output/"
+obj1.results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/"
+obj1.results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.1_model.construction/Model.results/figures/"
+
+obj2.MCMC_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/Model.output/"
+obj2.results_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/Model.results/"
+obj2.results_plots_location <- "G://My Drive/Personal_Drive/R/CKMR/Objective.2_sampling_schemes/Model.results/figures/"
+
+results_prefix <- "CKMR_results"
+MCMC_prefix <- "CKMR_modelout"
+parents_prefix <- "parents_breakdown/CKMR_parents.breakdown"
+sample.prefix <- "sample_info/CKMR_sample.info"
+survival.prefix <- "survival/CKMR_survival"
+pop.size.prefix <- "pop_size/CKMR_pop.size"
+mom.comps.prefix <- "comparisons/mom.comps"
+dad.comps.prefix <- "comparisons/dad.comps"
+
+#-------------Objective 1 --------------------#
+date.of.simulation.obj1.1 <- "29Jun2022"
+purpose.obj1.1 <- "Obj1.1_model.validation"
+purpose.obj1.1.lab <- "Target YOY | PopSim Lambda 1 | Informed priors"
+model.type.obj1.1 <- "HS.only"
+
+date.of.simulation.obj1.2 <- "29Jun2022"
+purpose.obj1.2 <- "Obj1.2_PopSimLambda.1_uniform.lambda.prior"
+purpose.obj1.2.lab <- "Target YOY | PopSim Lambda 1 | Uniform lambda"
+model.type.obj1.2 <- "HS.only"
+
+date.of.simulation.obj1.3 <- "29Jun2022"
+purpose.obj1.3 <- "Obj1.2_PopSimLambda.1_fixed.lambda.prior"
+purpose.obj1.3.lab <- "Target YOY | PopSim Lambda 1 | Fixed lambda"
+model.type.obj1.3 <- "HS.only"
+
+date.of.simulation.obj1.4 <- "29Jun2022"
+purpose.obj1.4 <- "Obj1.2_PopSimLambda.variable_uniform.lambda.prior"
+purpose.obj1.4.lab <- "Target YOY | PopPSim Lambda variable | Uniform lambda"
+model.type.obj1.4 <- "HS.only"
+
+date.of.simulation.obj1.5 <- "29Jun2022"
+purpose.obj1.5 <- "Obj1.2_PopSimLambda.variable_fixed.lambda.prior"
+purpose.obj1.5.lab <- "Target YOY | PopSim Lambda variable | Fixed lambda prior"
+model.type.obj1.5 <- "HS.only"
+
+
+seeds <- "Seeds2022.04.15"
+sim.samples.obj1 <- "1prop.sampled" #Label on file output
+samples.obj1.lab <- "1 percent sampled" #Label for dataframe and figures
+
+
+#Set results to NULL and the script will run regardless of how many actual results are being compared
+results.obj1.1 = results.obj1.2 = results.obj1.3 = results.obj1.4 <- results.obj1.5 <- NULL
+
+results.obj1.1 <- read_csv(paste0(obj1.results_location, results_prefix, "_", date.of.simulation.obj1.1, "_", seeds, "_", purpose.obj1.1, ".csv")) %>% 
+  mutate(model_type = model.type.obj1.1, 
+         purpose.lab = purpose.obj1.1.lab)
+
+results.obj1.2 <- read_csv(paste0(obj1.results_location, results_prefix, "_", date.of.simulation.obj1.2, "_", seeds, "_", purpose.obj1.2, ".csv")) %>% 
+  mutate(model_type = model.type.obj1.2,
+         purpose.lab = purpose.obj1.2.lab)
+
+results.obj1.3 <- read_csv(paste0(obj1.results_location, results_prefix, "_", date.of.simulation.obj1.3, "_", seeds, "_", purpose.obj1.3, "allCombined.csv")) %>%
+  mutate(model_type = model.type.obj1.3,
+         purpose.lab = purpose.obj1.3.lab)
+
+results.obj1.4 <- read_csv(paste0(obj1.results_location, results_prefix, "_", date.of.simulation.obj1.4, "_", seeds, "_", purpose.obj1.4, ".csv")) %>%
+  mutate(model_type = model.type.obj1.4,
+         purpose.lab = purpose.obj1.4.lab)
+
+results.obj1.5 <- read_csv(paste0(obj1.results_location, results_prefix, "_", date.of.simulation.obj1.5, "_", seeds, "_", purpose.obj1.5, "allCombined.csv")) %>% 
+  mutate(model_type = model.type.obj1.5, 
+         purpose.lab = purpose.obj1.5.lab)
+
+#-------------Objective 2 --------------------#
+date.of.simulation.obj2.1 <- "30Jun2022"
+purpose.obj2.1 <- "Obj2.1_target.YOY"
+purpose.obj2.1.lab <- "Target YOY"
+model.type.obj2.1 <- "HS.only"
+
+date.of.simulation.obj2.2 <- "30Jun2022"
+purpose.obj2.2 <- "Obj2.1_sample.all.juveniles"
+purpose.obj2.2.lab <- "Sample all juvenile ages"
+model.type.obj2.2 <- "HS.only"
+
+date.of.simulation.obj2.3 <- "30Jun2022"
+purpose.obj2.3 <- "Obj2.1_sample.ALL.ages"
+purpose.obj2.3.lab <- "Sample all ages"
+model.type.obj2.3 <- "HS.PO"
+
+sim.samples.obj2.1 <- "0.5prop.sampled" #Label on file output
+samples1.obj2.lab <- "0.5 percent sampled" #Label for dataframe and figures
+sim.samples.obj2.2 <- "1prop.sampled" #Label on file output
+samples2.obj2.lab <- "1 percent sampled" #Label for dataframe and figures
+sim.samples.obj2.3 <- "1.5prop.sampled"  #Label on file output
+samples3.obj2.lab <- "1.5 percent sampled" #Label for dataframe and figures
+sim.samples.obj2.4 <- "2prop.sampled" #Label on file output
+samples4.obj2.lab <- "2 percent sampled" #Label for dataframe and figures
+sim.samples.obj2.all <- c(0.5, 1, 1.5, 2) #This is the number of samples when sampling specific proportions of the juvenile population for the HS only model. Current as of 05/03/2022
+
+sim.samples.labs.obj2.all <- c(samples1.obj2.lab, samples2.obj2.lab, samples3.obj2.lab, samples4.obj2.lab)
+
+#Set results to NULL and the script will run regardless of how many actual results are being compared
+results.obj2.1 = results.obj2.2 = results.obj2.3 <- NULL
+
+results.obj2.1 <- read_csv(paste0(obj2.results_location, results_prefix, "_", date.of.simulation.obj2.1, "_", seeds, "_", purpose.obj2.1, ".csv")) %>% 
+  mutate(model_type = model.type.obj2.1, 
+         purpose.lab = purpose.obj2.1.lab) %>% 
+    dplyr::rename(total.sample.size = sample.size.juvs,
+                proportion.sampled = sample.prop.juvs)
+
+results.obj2.2 <- read_csv(paste0(obj2.results_location, results_prefix, "_", date.of.simulation.obj2.2, "_", seeds, "_", purpose.obj2.2, ".csv")) %>% 
+  mutate(model_type = model.type.obj2.2,
+         purpose.lab = purpose.obj2.2.lab) %>% 
+    dplyr::rename(total.sample.size = sample.size.juvs,
+                proportion.sampled = sample.prop.juvs)
+
+results.obj2.3 <- read_csv(paste0(obj2.results_location, results_prefix, "_", date.of.simulation.obj2.3, "_", seeds, "_", purpose.obj2.3, ".csv")) %>%
+  mutate(model_type = model.type.obj2.3,
+         purpose.lab = purpose.obj2.3.lab) %>% 
+  mutate(total.sample.size = total.sample.size * 4) %>%  #Because I saved the annual sample size, rather than the total sample size (and sampled annually for four years)
+      dplyr::rename(proportion.sampled = sample.prop.juvs)
+
+
+
+```
+
+```{r prep-results, echo = FALSE, include = FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60)}
+#-------------Objective 1 --------------------#
+results.obj1.all <- results.obj1.1 %>% 
+  bind_rows(results.obj1.2, results.obj1.3, results.obj1.4, results.obj1.5) %>% 
+  #mutate(total_samples = total_juvenile_samples + total_adult_samples) %>%
+  mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+  mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>% 
+  mutate(cv = (sd/mean)*100) %>% 
+  mutate(samples.lab = paste0(sample.prop.juvs, " percent sampled")) %>% 
+  separate(col = purpose.lab, into = "sampling.scheme", sep = " -", remove = FALSE)
+
+mean_cv.obj1 <-  results.obj1.all %>% group_by(parameter, purpose.lab, samples.lab) %>% summarize(mean.cv = round(mean(cv), 1))
+
+results.obj1.all <- results.obj1.all %>% inner_join(mean_cv.obj1, by = c("parameter", "purpose.lab", "samples.lab"))
+
+results.obj1.all$samples.lab <- factor(results.obj1.all$samples.lab, levels = c(samples.obj1.lab))
+
+results.obj1.all$purpose.lab <- factor(results.obj1.all$purpose.lab, levels = c(purpose.obj1.1.lab, purpose.obj1.2.lab, purpose.obj1.3.lab, purpose.obj1.4.lab, purpose.obj1.5.lab))
+
+#Specify parameters
+#jags_params <- c("Nfa", "Nfb", "Nm", "surv", "lam", "psi", "pb") #if estimating all parameters with the HS|PO model
+jags_params <- c("Nf", "psi", "Nm", "survival", "lambda") #If estimating all parameters with the HS only model
+
+#Save instances that failed to converge so they can be removed later from the HPDI dataframes
+no.convergence.obj1 <- results.obj1.all %>% dplyr::filter(Rhat > 1.01) %>% 
+  mutate(purp = ifelse(purpose.lab == purpose.obj1.1.lab, 1,
+                       ifelse(purpose.lab == purpose.obj1.2.lab, 2,
+                              ifelse(purpose.lab == purpose.obj1.3.lab, 3, 4)))) %>% 
+  distinct(purpose.lab, purp, iteration)
+
+#Print the number of instances that failed to converge
+#cat(paste0("Of the ", nrow(results.all), " parameter estimates from these simulations, ", nrow(no.convergence), " instances failed to converge at Rhat > 1.01"))
+
+#Remove instances that failed to converge
+results.obj1.all <- results.obj1.all %>% dplyr::filter(Rhat < 1.01)
+
+
+
+
+
+
+
+
+#-------------Objective 2 --------------------#
+results.obj2.all <- results.obj2.1 %>% 
+  bind_rows(results.obj2.2, results.obj2.3) %>% 
+  #mutate(total_samples = total_juvenile_samples + total_adult_samples) %>%
+  mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% #Can change truth to breed.truth if looking for number of active breeders
+  mutate(in_interval = ifelse(HPD2.5 < all.truth & all.truth < HPD97.5, "Y", "N")) %>% 
+  mutate(cv = (sd/mean)*100) %>% 
+  mutate(samples.lab = paste0(proportion.sampled, " percent sampled"))
+
+mean_cv.obj2 <-  results.obj2.all %>% group_by(parameter, purpose.lab, samples.lab) %>% summarize(mean.cv = round(mean(cv), 1))
+
+results.obj2.all <- results.obj2.all %>% inner_join(mean_cv.obj2, by = c("parameter", "purpose.lab", "samples.lab"))
+
+results.obj2.all$samples.lab <- factor(results.obj2.all$samples.lab, levels = c(samples1.obj2.lab, samples2.obj2.lab, samples3.obj2.lab, samples4.obj2.lab))
+
+results.obj2.all$purpose.lab <- factor(results.obj2.all$purpose.lab, levels = c(purpose.obj2.1.lab, purpose.obj2.2.lab, purpose.obj2.3.lab))
+
+#Specify parameters
+#jags_params <- c("Nfa", "Nfb", "Nm", "surv", "lam", "psi", "pb") #if estimating all parameters with the HS|PO model
+jags_params <- c("Nf", "psi", "Nm", "survival", "lambda") #If estimating all parameters with the HS only model
+
+#Save instances that failed to converge so they can be removed later from the HPDI dataframes
+no.convergence.obj2 <- results.obj2.all %>% dplyr::filter(Rhat > 1.01) %>% 
+  mutate(purp = ifelse(purpose.lab == purpose.obj2.1.lab, 1,
+                       ifelse(purpose.lab == purpose.obj2.2.lab, 2, 3))) %>% 
+  mutate(samps = ifelse(proportion.sampled == sim.samples.obj2.all[1], 1,
+                        ifelse(proportion.sampled == sim.samples.obj2.all[2], 2,
+                               ifelse(proportion.sampled == sim.samples.obj2.all[3], 3, 4)))) %>% 
+  distinct(purpose.lab, purp, proportion.sampled, iteration, samps)
+
+#Print the number of instances that failed to converge
+#cat(paste0("Of the ", nrow(results.all), " parameter estimates from these simulations, ", nrow(no.convergence), " instances failed to converge at Rhat > 1.01"))
+
+#Remove instances that failed to converge
+results.obj2.all <- results.obj2.all %>% dplyr::filter(Rhat < 1.01)
+
+```
+
+```{r calculate-HPDI-intervals, echo=FALSE, include = FALSE}
+#-------------Objective 1 --------------------#
+HPD.obj1.1.summary.tidy = HPD.obj1.2.summary.tidy = HPD.obj1.3.summary.tidy = HPD.obj1.4.summary.tidy <- HPD.obj1.5.summary.tidy <-  NULL
+
+#Read in previously saved file
+HPD.obj1.1.summary_all <- read_csv(file = paste0(obj1.results_location, "HPD.summaries/HPD.summary_", date.of.simulation.obj1.1, "_", purpose.obj1.1, ".csv")) %>% 
+rename(percent_in_interval = percent_in_interval.0.5_percent_sampled)
+
+HPD.obj1.1.summary.tidy <- HPD.obj1.1.summary_all %>% 
+  mutate(model_type = model.type.obj1.1,
+         purpose.lab = purpose.obj1.1.lab) %>% 
+  mutate_if(is.character, str_replace_all, pattern = "_", replacement = " ") %>% 
+  inner_join(mean_cv.obj1, by = c("parameter", "purpose.lab"))
+
+#---------------------------Purpose 2 --------------------------------#    
+#Read in previously saved file
+HPD.obj1.2.summary_all <- read_csv(file = paste0(obj1.results_location, "HPD.summaries/HPD.summary_", date.of.simulation.obj1.2, "_", purpose.obj1.2, ".csv"))
+
+HPD.obj1.2.summary.tidy <- HPD.obj1.2.summary_all %>% 
+  mutate(model_type = model.type.obj1.2,
+         purpose.lab = purpose.obj1.2.lab) %>% 
+    mutate_if(is.character, str_replace_all, pattern = "_", replacement = " ") %>% 
+  inner_join(mean_cv.obj1, by = c("parameter", "purpose.lab"))
+
+#---------------------------Purpose 3 --------------------------------#    
+#Read in previously saved file
+HPD.obj1.3.summary_all <- read_csv(file = paste0(obj1.results_location, "HPD.summaries/HPD.summary_", date.of.simulation.obj1.3, "_", purpose.obj1.3, ".csv"))
+
+HPD.obj1.3.summary.tidy <- HPD.obj1.3.summary_all %>%
+  mutate(model_type = model.type.obj1.3,
+         purpose.lab = purpose.obj1.3.lab) %>%
+ mutate_if(is.character, str_replace_all, pattern = "_", replacement = " ") %>%
+  inner_join(mean_cv.obj1, by = c("parameter", "purpose.lab"))
+
+#---------------------------Purpose 4 --------------------------------#    
+#Read in previously saved file
+HPD.obj1.4.summary_all <- read_csv(file = paste0(obj1.results_location, "HPD.summaries/HPD.summary_", date.of.simulation.obj1.4, "_", purpose.obj1.4, ".csv")) %>% 
+  rename(percent_in_interval = percent_in_interval.0.5_percent_sampled)
+
+HPD.obj1.4.summary.tidy <- HPD.obj1.4.summary_all %>%
+  mutate(model_type = model.type.obj1.4,
+         purpose.lab = purpose.obj1.4.lab) %>%
+ mutate_if(is.character, str_replace_all, pattern = "_", replacement = " ") %>%
+  inner_join(mean_cv.obj1, by = c("parameter", "purpose.lab"))
+
+#---------------------------Purpose 5 --------------------------------#    
+#Read in previously saved file
+HPD.obj1.5.summary_all <- read_csv(file = paste0(obj1.results_location, "HPD.summaries/HPD.summary_", date.of.simulation.obj1.5, "_", purpose.obj1.5, ".csv"))
+
+HPD.obj1.5.summary.tidy <- HPD.obj1.5.summary_all %>% 
+  mutate(model_type = model.type.obj1.5,
+         purpose.lab = purpose.obj1.5.lab) %>% 
+    mutate_if(is.character, str_replace_all, pattern = "_", replacement = " ") %>% 
+  inner_join(mean_cv.obj1, by = c("parameter", "purpose.lab"))
+
+
+
+#---------------Create dataframes to plot by sample size--------#
+#Set eveyrthing to Null so the below scripts will run
+HPD.samples1.obj1.1.4viz = HPD.samples2.obj1.1.4viz = HPD.samples3.obj1.1.4viz = HPD.samples4.obj1.1.4viz = HPD.samples1.obj1.2.4viz = HPD.samples2.obj1.2.4viz = HPD.samples3.obj1.2.4viz = HPD.samples4.obj1.2.4viz = HPD.samples1.obj1.3.4viz = HPD.samples2.obj1.3.4viz = HPD.samples3.obj1.3.4viz = HPD.samples4.obj1.3.4viz = HPD.samples1.obj1.4.4viz = HPD.samples2.obj1.4.4viz = HPD.samples3.obj1.4.4viz = HPD.samples4.obj1.4.4viz = HPD.samples1.obj1.5.4viz = HPD.samples2.obj1.5.4viz = HPD.samples3.obj1.5.4viz = HPD.samples4.obj1.5.4viz <- NULL
+
+
+HPD.samples1.obj1.1.4viz <- HPD.obj1.1.summary.tidy %>% dplyr::filter(samples.lab == samples.obj1.lab)
+
+HPD.samples1.obj1.2.4viz <- HPD.obj1.2.summary.tidy %>% dplyr::filter(samples.lab == samples.obj1.lab)
+
+HPD.samples2.obj1.3.4viz <- HPD.obj1.3.summary.tidy %>% dplyr::filter(samples.lab == samples.obj1.lab)
+
+HPD.samples2.obj1.4.4viz <- HPD.obj1.4.summary.tidy %>% dplyr::filter(samples.lab == samples.obj1.lab)
+
+HPD.samples1.obj1.5.4viz <- HPD.obj1.5.summary.tidy %>% dplyr::filter(samples.lab == samples.obj1.lab)
+
+#Combine above dataframes, and re-order purpose as factors
+all.samples1.obj1.4viz <- HPD.samples1.obj1.1.4viz %>% bind_rows(HPD.samples1.obj1.2.4viz, HPD.samples1.obj1.3.4viz, HPD.samples1.obj1.4.4viz, HPD.samples1.obj1.5.4viz) 
+all.samples1.obj1.4viz$purpose.lab <- factor(all.samples1.obj1.4viz$purpose.lab, levels = c(purpose.obj1.1.lab, purpose.obj1.2.lab, purpose.obj1.3.lab, purpose.obj1.4.lab, purpose.obj1.5.lab))
+
+#For when we need everything together
+obj1.all.4viz <- HPD.obj1.1.summary.tidy %>% bind_rows(HPD.obj1.2.summary.tidy, HPD.obj1.3.summary.tidy, HPD.obj1.4.summary.tidy, HPD.obj1.5.summary.tidy)
+
+obj1.all.4viz$purpose.lab <- factor(obj1.all.4viz$purpose.lab, levels = c(purpose.obj1.1.lab, purpose.obj1.2.lab, purpose.obj1.3.lab, purpose.obj1.4.lab, purpose.obj1.5.lab))
+
+
+#--------------Separate into results for figure 1 and supplementary figure 1--------------
+#Figure 1
+fig1.4viz <- obj1.all.4viz %>% dplyr::filter(purpose.lab != purpose.obj1.4.lab & purpose.lab != purpose.obj1.5.lab)
+
+results.fig1.4viz <- results.obj1.all %>% dplyr::filter(purpose.lab != purpose.obj1.4.lab & purpose.lab != purpose.obj1.5.lab) %>% 
+  separate(purpose.lab, into = c("sampling.scheme", "prior"), sep = " \\| ", remove = FALSE)
+
+#----------------Figure S1-------------#
+figS1.4viz <- obj1.all.4viz %>% dplyr::filter(purpose.lab == purpose.obj1.4.lab | purpose.lab == purpose.obj1.5.lab)
+
+results.figS1.4viz <- results.obj1.all %>% dplyr::filter(purpose.lab == purpose.obj1.4.lab | purpose.lab == purpose.obj1.5.lab) %>% 
+  separate(purpose.lab, into = c("sampling.scheme", "prior"), sep = " \\| ", remove = FALSE)
+
+
+
+
+
+#-------------Objective 2 --------------------#
+HPD.obj2.1.summary.tidy = HPD.obj2.2.summary.tidy = HPD.obj2.3.summary.tidy <-  NULL
+
+#Read in previously saved file
+HPD.obj2.1.summary_all <- read_csv(file = paste0(obj2.results_location, "HPD.summaries/HPD.summary_", date.of.simulation.obj2.1, "_", purpose.obj2.1, ".csv"))
+
+HPD.obj2.1.summary.tidy <- HPD.obj2.1.summary_all %>% 
+  pivot_longer(
+    cols = starts_with("percent"),
+    names_to = "samples.lab",
+    names_prefix = "percent_in_interval.",
+    values_to = "percent_in_interval"
+    ) %>% 
+  mutate(model_type = model.type.obj2.1,
+         purpose.lab = purpose.obj2.1.lab) %>% 
+  mutate_if(is.character, str_replace_all, pattern = "_", replacement = " ") %>% 
+  inner_join(mean_cv.obj2, by = c("parameter", "purpose.lab", "samples.lab"))
+
+#---------------------------Purpose 2 --------------------------------#    
+#Read in previously saved file
+HPD.obj2.2.summary_all <- read_csv(file = paste0(obj2.results_location, "HPD.summaries/HPD.summary_", date.of.simulation.obj2.2, "_", purpose.obj2.2, ".csv"))
+
+HPD.obj2.2.summary.tidy <- HPD.obj2.2.summary_all %>% 
+  pivot_longer(
+    cols = starts_with("percent"),
+    names_to = "samples.lab",
+    names_prefix = "percent_in_interval.",
+    values_to = "percent_in_interval"
+  ) %>% 
+  mutate(model_type = model.type.obj2.2,
+         purpose.lab = purpose.obj2.2.lab) %>% 
+    mutate_if(is.character, str_replace_all, pattern = "_", replacement = " ") %>% 
+  inner_join(mean_cv.obj2, by = c("parameter", "purpose.lab", "samples.lab"))
+
+#---------------------------Purpose 3 --------------------------------#    
+#Read in previously saved file
+HPD.obj2.3.summary_all <- read_csv(file = paste0(obj2.results_location, "HPD.summaries/HPD.summary_", date.of.simulation.obj2.3, "_", purpose.obj2.3, ".csv"))
+
+HPD.obj2.3.summary.tidy <- HPD.obj2.3.summary_all %>% 
+  pivot_longer(
+    cols = starts_with("percent"),
+    names_to = "samples.lab",
+    names_prefix = "percent_in_interval.",
+    values_to = "percent_in_interval"
+  ) %>% 
+  mutate(model_type = model.type.obj2.3,
+         purpose.lab = purpose.obj2.3.lab) %>% 
+    mutate_if(is.character, str_replace_all, pattern = "_", replacement = " ") %>% 
+  inner_join(mean_cv.obj2, by = c("parameter", "purpose.lab", "samples.lab"))
+
+#---------------Create dataframes to plot by sample size--------#
+#Set eveyrthing to Null so the below scripts will run
+HPD.samples1.obj2.1.4viz = HPD.samples2.obj2.1.4viz = HPD.samples3.obj2.1.4viz = HPD.samples4.obj2.1.4viz = HPD.samples1.obj2.2.4viz = HPD.samples2.obj2.2.4viz = HPD.samples3.obj2.2.4viz = HPD.samples4.obj2.2.4viz = HPD.samples1.obj2.3.4viz = HPD.samples2.obj2.3.4viz = HPD.samples3.obj2.3.4viz = HPD.samples4.obj2.3.4viz <- NULL
+
+
+HPD.samples1.obj2.1.4viz <- HPD.obj2.1.summary.tidy %>% dplyr::filter(samples.lab == samples1.obj2.lab)
+HPD.samples2.obj2.1.4viz <- HPD.obj2.1.summary.tidy %>% dplyr::filter(samples.lab == samples2.obj2.lab)
+HPD.samples3.obj2.1.4viz <- HPD.obj2.1.summary.tidy %>% dplyr::filter(samples.lab == samples3.obj2.lab)
+HPD.samples4.obj2.1.4viz <- HPD.obj2.1.summary.tidy %>% dplyr::filter(samples.lab == samples4.obj2.lab)
+
+HPD.samples1.obj2.2.4viz <- HPD.obj2.2.summary.tidy %>% dplyr::filter(samples.lab == samples1.obj2.lab)
+HPD.samples2.obj2.2.4viz <- HPD.obj2.2.summary.tidy %>% dplyr::filter(samples.lab == samples2.obj2.lab)
+HPD.samples3.obj2.2.4viz <- HPD.obj2.2.summary.tidy %>% dplyr::filter(samples.lab == samples3.obj2.lab)
+HPD.samples4.obj2.2.4viz <- HPD.obj2.2.summary.tidy %>% dplyr::filter(samples.lab == samples4.obj2.lab)
+
+
+HPD.samples1.obj2.3.4viz <- HPD.obj2.3.summary.tidy %>% dplyr::filter(samples.lab == samples1.obj2.lab)
+HPD.samples2.obj2.3.4viz <- HPD.obj2.3.summary.tidy %>% dplyr::filter(samples.lab == samples2.obj2.lab)
+HPD.samples3.obj2.3.4viz <- HPD.obj2.3.summary.tidy %>% dplyr::filter(samples.lab == samples3.obj2.lab)
+HPD.samples4.obj2.3.4viz <- HPD.obj2.3.summary.tidy %>% dplyr::filter(samples.lab == samples4.obj2.lab)
+
+#Combine above dataframes, and re-order purpose as factors
+all.samples1.obj2.4viz <- HPD.samples1.obj2.1.4viz %>% bind_rows(HPD.samples1.obj2.2.4viz, HPD.samples1.obj2.3.4viz) 
+all.samples1.obj2.4viz$purpose.lab <- factor(all.samples1.obj2.4viz$purpose.lab, levels = c(purpose.obj2.1.lab, purpose.obj2.2.lab, purpose.obj2.3.lab))
+
+all.samples2.obj2.4viz <- HPD.samples2.obj2.1.4viz %>% bind_rows(HPD.samples2.obj2.2.4viz, HPD.samples2.obj2.3.4viz) 
+all.samples2.obj2.4viz$purpose.lab <- factor(all.samples2.obj2.4viz$purpose.lab, levels = c(purpose.obj2.1.lab, purpose.obj2.2.lab, purpose.obj2.3.lab))
+
+all.samples3.obj2.4viz <- HPD.samples3.obj2.1.4viz %>% bind_rows(HPD.samples3.obj2.2.4viz, HPD.samples3.obj2.3.4viz) 
+all.samples3.obj2.4viz$purpose.lab <- factor(all.samples3.obj2.4viz$purpose.lab, levels = c(purpose.obj2.1.lab, purpose.obj2.2.lab, purpose.obj2.3.lab))
+
+
+#For when we need everything together
+obj2.all.4viz <- HPD.obj2.1.summary.tidy %>% bind_rows(HPD.obj2.2.summary.tidy, HPD.obj2.3.summary.tidy)
+obj2.all.4viz$purpose.lab <- factor(obj2.all.4viz$purpose.lab, levels = c(purpose.obj2.1.lab, purpose.obj2.2.lab, purpose.obj2.3.lab))
+
+fig2.4viz <- obj2.all.4viz
+
+results.fig2.4viz <- results.obj2.all
+
+```
+
+
+```{r Fig1-HPDI-and-Density-Plots, echo=FALSE, include=FALSE}
+#---------------Figure 1---------------------#
+#plot.colors <- c("aquamarine", "aquamarine4", "indianred1", "indianred4", "khaki4")
+plot.colors.fig1 <- c("aquamarine4", "indianred1", "indianred4")
+scales::show_col(plot.colors.fig1)
+#Relevel for better visualization
+# results.obj1.4viz$purpose.lab <- factor(results.obj1.4viz$purpose.lab, levels = c(purpose1.lab, purpose3.lab, purpose2.lab, purpose4.lab))
+
+#HPDI line plot
+(fig1.p.Nf <- fig1.4viz %>% dplyr::filter(parameter == "Nf",
+                                     purpose.lab != purpose.obj1.5.lab) %>% 
+   ggplot(aes(x = interval.scale)) +
+   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+   geom_line(aes(y = interval.scale), size = 1.5) + 
+   ggtitle("A) Nf") + 
+   labs(x = "HPDI",
+        y = "Percent in HPDI") +
+   theme_bw() + 
+   theme(legend.title = element_blank()) + 
+  scale_color_manual(values = plot.colors.fig1) +
+#  facet_wrap(~proportion_sampled) + 
+  guides(color = guide_legend(nrow = 2)))
+
+#HPDI line plot
+(fig1.p.Nm <- fig1.4viz %>% dplyr::filter(parameter == "Nm",
+                                     purpose.lab != purpose.obj1.5.lab) %>% 
+  ggplot(aes(x = interval.scale)) +
+  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("B) Nm") + 
+  labs(x = "HPDI",
+       y = "Percent in HPDI") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_color_manual(values = plot.colors.fig1))
+
+#Density plot of relative bias of median
+(fig1.p2.Nf <- results.fig1.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("C) Nf") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.fig1) +
+    scale_color_manual(values = plot.colors.fig1) +
+    xlim(-100, 100))
+
+
+
+#-------------------Density plots-------------------------#
+#Density plot of relative bias of median
+(fig1.p2.Nm <- results.fig1.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("D) Nm") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig1) +
+  scale_color_manual(values = plot.colors.fig1) +
+  xlim(-100, 100))
+
+(fig1.p1.violin <- results.fig1.4viz %>% dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+  ggplot(aes(x=factor(parameter), fill = factor(purpose.lab))) +
+  geom_violin(aes(y=cv), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="CV", title="E)") +
+  scale_fill_manual(values = plot.colors.fig1) +
+  font("title", size = 10, face = "bold")) +
+  theme(legend.title = element_blank())
+
+
+```
+
+\
+\
+\
+\
+```{r Fig2-make-HPDI-and-Density-Plots, echo=FALSE, include = FALSE}
+#---------------Figure 2-------------------------#
+plot.colors.fig2 <- c("maroon", "goldenrod4", "lightsteelblue2")
+scales::show_col(plot.colors.fig2)
+
+#plot HPDI line plot
+(Fig2.p.Nf <- fig2.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+   ggplot(aes(x = interval.scale)) +
+   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+   geom_line(aes(y = interval.scale), size = 1.5) + 
+   ggtitle("A) Nf") + 
+   labs(x = "HPDI",
+        y = "Percent in HPDI") +
+   theme_bw() + 
+   theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig2) +
+  scale_color_manual(values = plot.colors.fig2) +
+  facet_wrap(~samples.lab) + 
+  guides(color = guide_legend(nrow = 2)))
+
+#HPDI line plot - Nm
+(Fig2.p.Nm <- fig2.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = interval.scale)) +
+  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("B) Nm") + 
+  labs(x = "HPDI",
+       y = "Percent in HPDI") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.fig2) +
+  scale_color_manual(values = plot.colors.fig2) +
+  facet_wrap(~samples.lab))
+
+#HPDI line plot - survival
+(Fig2.p.surv <- fig2.4viz %>% dplyr::filter(parameter == "survival") %>% 
+  ggplot(aes(x = interval.scale)) +
+  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("C) Survival") + 
+  labs(x = "HPDI",
+       y = "Percent in HPDI") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig2) +
+  scale_color_manual(values = plot.colors.fig2) +
+  facet_wrap(~samples.lab) +
+  guides(color = guide_legend(nrow = 2)))
+
+#Density plot - Nf
+(Fig2.p2.Nf <- results.fig2.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+    ggplot(aes(x = relative_bias, fill = purpose.lab)) +
+    geom_density(alpha = 0.6, aes(fill = purpose.lab)) + 
+    ggtitle("D) Nf") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.fig2) +
+    scale_color_manual(values = plot.colors.fig2) +
+    facet_wrap(~samples.lab) +
+    xlim(-100, 100))
+    
+
+#Density plot - Nm
+(Fig2.p2.Nm <- results.fig2.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = relative_bias, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("E) Nm") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig2) +
+  scale_color_manual(values = plot.colors.fig2) +
+  facet_wrap(~samples.lab) +
+  xlim(-100, 100)) 
+
+
+
+#-------------------Density plots-------------------------#
+#Density plot - survival
+(Fig2.p2.surv <- results.fig2.4viz %>% dplyr::filter(parameter == "survival") %>% 
+  ggplot(aes(x = relative_bias, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("F) Survival") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.fig2) +
+  scale_color_manual(values = plot.colors.fig2) +
+  facet_wrap(~samples.lab) +
+  xlim(-25, 25))
+
+
+
+```
+
+
+
+## Results
+### Objective 1:  Model construction and validation
+_Model validation_  
+To initially validate our model, we assumed a scenario where adult survival and population growth are known with a 10% and 1% CV respectively (Fig 1). After confirming that the model performed as expected under this ideal scenario, we assumed a data-limited scenario where survival and population growth rate are unknown and compared two distinct methods of setting a diffuse prior on lambda in situations with stable population growth (Fig 1) and also in scenarios where the population may be increasing or declining over time (Fig S1).
+
+Regardless of prior information, in most instances, the model captured the true value of abundance within the highest posterior density interval (HPDI) at the expected rate (Fig 1A), while the median of the posterior distributions was unbiased (Fig 1B). As expected, the CVs on abundance estimates were smallest when we assumed ample prior data to inform survival and population growth (Fig 1C); in the data-limited scenario, the CV was slightly improved by using a uniform prior for population growth relative to fixing population growth to three values in turn, though the model performed well under both scenarios.  Combined, these results demonstrate that our CKMR model reliably estimates abundance in both data-rich and data-limited scenarios.
+
+\
+\
+\
+\
+
+
+```{r Fig1-print-lambda-plots2, echo=FALSE, out.width = "120%", fig.height = 7}
+#Survival HPDI and relative bias for all four sample sizes
+ggarrange(fig1.p.Nf, fig1.p.Nm, fig1.p2.Nf, fig1.p2.Nm, common.legend = TRUE, nrow = 2, ncol = 2, legend = "none")
+```
+```{r Fig1 - print-lambda-plots1, echo = FALSE, fig.cap = "**Figure 1:** Model performance estimating abundance when population growth is unknown. **A)** Violin plot showing CVs on abundance estimates for two sampling schemes and two different approaches for setting a diffuse prior on lambda. **B & C)** Model accuracy and bias for number of mature females (Nf). **D & E)** Model accuracy and bias for number of mature males (Nm)"}
+fig1.p1.violin
+```
+
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+
+### Objective 2: Assess model performance in stochastic populations with uncertain vital rates.
+_Sample size_  
+To test the effect of sample size and sampling scheme on parameter estimates, we sampled at four different intensities, ranging from 0.5% of the population to 2% of the population (Figure 2). The model captured the true parameter values within the HPDI the majority of times for both sampling schemes and at all sampling intensities.  There was a slight difference in model performance between sampling schemes, with targeted sampling of YOY more accurately capturing the uncertainty of abundance estimates (Fig 2A, B), while sampling all juvenile age classes better captured the uncertainty of survival estimates (Fig 1C). The medians of the posterior distributions for abundance and survival generally showed a tighter distribution around 0% relative bias when sampling all juvenile age classes (Fig 2 D-F). Taken together, these results suggest that the CKMR model works well for scenarios that are conducive to focused sampling of YOY (e.g. nursery areas) as well as scenarios where all juvenile age classes are available to sample, though it is worth noting that differences in the number of HSPs between males and females (Fig 2 G, H) are expected when sex-specific dynamics are present (e.g. female skipped-breeding)
+
+
+
+
+
+
+```{r Fig2-print-plots, echo=FALSE, out.width = "250%", fig.height = 12, fig.cap = "**Figure 2:** Model performance under different sampling scenarios.**A, B, C** Percentage of times the true parameter value fell within the HPDI. Colored lines that are at or above the black line represent instances where the model captured the truth as often or more often than expected; colored lines that are below the black line represent instances where the model captured the truth less often than expected. **D, E, F:** Relative bias of the medians of the posterior distributions. **G, H:** Number of half-sibling pairs (HSPs) detected for each sex."}
+#Survival HPDI and relative bias for all four sample sizes
+ggarrange(Fig2.p.Nf, Fig2.p2.Nf, Fig2.p.Nm, Fig2.p2.Nm, Fig2.p.surv, Fig2.p2.surv, common.legend = TRUE, nrow = 4, ncol = 2, legend = "bottom")
+```
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+**Other figures:**
+<span style="color:orange"> **Figure 3:** Model performance when life history parameters are uncertain. A 3d figure that has the CV on the three major parameters (YOY/juvenile survival, Adult survival, and fecundity) as the axes and the relative bias of the median from the associated lambda values/simulations as the landscape. Include a slice through the plane that represents 0% relative bias and/or dotted lines indicating the precision/accuracy needed to attain a relative bias of 20% or less.
+</span>
+
+<span style="color:orange"> **Figure 4 (to be added): Parameter estimates for lemon shark data with credible intervals, with and without catch rate data**
+</span>
+
+
+  
+
+### Supplementary material
+
+
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+```{r FigS1-HPDI-and-Density-Plots, echo=FALSE, include=FALSE}
+#plot.colors <- c("aquamarine", "aquamarine4", "indianred1", "indianred4", "khaki4")
+plot.colors.figS1 <- c("indianred1", "indianred4")
+scales::show_col(plot.colors.figS1)
+#Relevel for better visualization
+# results.obj1.4viz$purpose.lab <- factor(results.obj1.4viz$purpose.lab, levels = c(purpose1.lab, purpose3.lab, purpose2.lab, purpose4.lab))
+
+#HPDI line plot
+(figS1.p.Nf <- figS1.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+   ggplot(aes(x = interval.scale)) +
+   geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+   geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+   geom_line(aes(y = interval.scale), size = 1.5) + 
+   ggtitle("A) Nf") + 
+   labs(x = "HPDI",
+        y = "Percent in HPDI") +
+   theme_bw() + 
+   theme(legend.title = element_blank()) + 
+  scale_color_manual(values = plot.colors.figS1) +
+   #facet_wrap(~proportion_sampled) + 
+  guides(color = guide_legend(nrow = 2)))
+
+#HPDI line plot
+(figS1.p.Nm <- figS1.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = interval.scale)) +
+  geom_point(aes(y = percent_in_interval, color = purpose.lab, fill = purpose.lab, shape = purpose.lab), size = 2.5, alpha = .7) + 
+  geom_smooth(aes(y = percent_in_interval, color = purpose.lab, linetype = ), se = FALSE, size = 1.5, show.legend = FALSE) + 
+  geom_line(aes(y = interval.scale), size = 1.5) + 
+  ggtitle("B) Nm") + 
+  labs(x = "HPDI",
+       y = "Percent in HPDI") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_color_manual(values = plot.colors.figS1))
+
+#Density plot of relative bias of median
+(figS1.p2.Nf <- results.figS1.4viz %>% dplyr::filter(parameter == "Nf") %>% 
+    ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+    geom_density(alpha = 0.6) + 
+    ggtitle("C) Nf") + 
+    labs(x = "Relative bias of posterior median") +
+    geom_vline(xintercept=c(0), linetype="dotted") +
+    theme_bw() + 
+    theme(legend.title = element_blank()) + 
+    scale_fill_manual(values = plot.colors.figS1) +
+    scale_color_manual(values = plot.colors.figS1) +
+    xlim(-100, 100))
+
+
+
+#-------------------Density plots-------------------------#
+#Density plot of relative bias of median
+(figS1.p2.Nm <- results.figS1.4viz %>% dplyr::filter(parameter == "Nm") %>% 
+  ggplot(aes(x = relative_bias, color = purpose.lab, fill = purpose.lab)) +
+  geom_density(alpha = 0.6) + 
+  ggtitle("D) Nm") + 
+  labs(x = "Relative bias of posterior median") +
+  geom_vline(xintercept=c(0), linetype="dotted") +
+  theme_bw() + 
+  theme(legend.title = element_blank()) + 
+  scale_fill_manual(values = plot.colors.figS1) +
+  scale_color_manual(values = plot.colors.figS1) +
+  xlim(-100, 100))
+
+(figS1.p.violin <- results.figS1.4viz %>% dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+  ggplot(aes(x=factor(parameter), fill = factor(purpose.lab))) +
+  geom_violin(aes(y=cv), draw_quantiles = 0.5) +
+  #ylim(-50, 160) +
+  geom_hline(yintercept=0, col="black", size=1.25) +
+  #annotate("rect", xmin=0, xmax=Inf, ymin=-20, ymax=20, alpha=.5, col="red") +
+  labs(x="Parameter", y="CV", title="E)") +
+  scale_fill_manual(values = plot.colors.figS1) +
+  font("title", size = 10, face = "bold")) +
+  theme(legend.title = element_blank())
+
+```
+
+
+```{r FigS1-print-plots, echo=FALSE, out.width = "120%", fig.height = 7}
+#Survival HPDI and relative bias for all four sample sizes
+ggarrange(figS1.p.Nf, figS1.p.Nm, figS1.p2.Nf, figS1.p2.Nm, common.legend = TRUE, nrow = 2, ncol = 2, legend = "none")
+```
+
+```{r FigS1-print-plot2, echo=FALSE, out.width = "120%", fig.cap = "**Figure S1:** Model performance with diffuse priors with an increasing or declining population."}
+figS1.p.violin
+```
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+
+```{r FigS2-print-plots, echo=FALSE, out.width = "120%", fig.cap = "**Figure S1:** Elasticity analysis of lemon shark vital rates, showing that population growth is most sensitive to juvenile survival and fecundity at younger mature age classes."}
+
+S3.E <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Objective.3_life_history_sensitivity/elasticity_tidy_df")
+
+(S3.E %>% ggplot(aes(x = age, y = elasticity, group = parameter)) + 
+  geom_point(aes(colour = parameter)) +
+  theme_classic() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = -.15),
+        legend.title = element_blank()))
+    
+```
+\
+\
+----------------------------------------------------------------------------------------------
+\
+\
+<span style="color:orange"> **Figure S2 (to be added): Mean correlation among parameter estimates.**
+</span>
+
+```{r FigSx-print-HSP-plots, echo=FALSE, include = FALSE, out.width = "120%", fig.height = 7}
+#-----------------------Examine expected vs observed kin pairs--------------------
+#Calculate % difference in expected vs observed kin
+# results.all2 <- results.S1.4viz %>% mutate(HS_exp_obs_diff = (HSPs_expected - HSPs_detected)/HSPs_expected)
+# 
+# 
+# 
+# #----------------Make scatter plot of expected vs observed 
+# #Purpose 1
+# (EO1 <- results.all2 %>% dplyr::filter(parameter == "Nf" | parameter == "Nm") %>% 
+#   ggplot(aes(x = HS_exp_obs_diff, y = relative_bias, fill = parameter, color = parameter)) +
+#   geom_point() +
+#   facet_wrap(~samples.lab) + 
+#   labs(title = "C)", x = "Percent difference (Exp - Obs)/Exp", y = "Relative bias") + 
+#   theme(legend.title = element_blank()))
+
+```
+
+```{r FigSx-print-plot2, echo=FALSE, out.width = "120%", fig.height = 7, fig.cap = "**Figure S2:** Kin pairs detected by sampling scheme and bias", include = FALSE}
+#EO1
+```
+
+
+
+
