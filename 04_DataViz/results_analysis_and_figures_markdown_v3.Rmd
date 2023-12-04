@@ -43,24 +43,57 @@ results.files <- list.files(path = paste0(results_location),
 
 results.raw <- map_dfr(results.files, read_csv, guess_max = 30000) #Have to specify guess_max or else the function will guess column type using the first 1,000 columns and assume the POP columns are logical (bc the first several thousand are NA)
 
-naive_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_3.7.1") #Note that scenario 3.7.1 is not technically "naive", but for the test it was used for it is. So we will label it as such, and this label will be used later when we label it as an annual model in graphs for Objective 3.
+naive_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_3.7.1") #Note that scenario 3.7.1 is not technically "naive" (bc the population simulation was all annual breeders). However we will label it as such in the code, and this label will be used later when we label it as an annual model in graphs for Objective 3.
 
 objective1 <- c("scenario_1_model.validation", "scenario_1.2.1", "scenario_1.2.2", "scenario_1.2.3")
 objective2 <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_2.2.1", "scenario_2.2.2", "scenario_2.3.3", "scenario_2.2.4", "scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scenario_2.4.4")
 objective3 <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2", "scenario_3.5.1", "scenario_3.5.2", "scenario_3.6.1", "scenario_3.6.2", "scenario_3.7.1", "scenario_3.7.2")
 objective4 <- c("scenario_4.1", "scenario_4.2", "scenario_4.3", "scenario_4.4", "scenario_4.5", "scenario_4.6")
 
-#Add labels for naive and adapted; CHANGE Nft and Nmt to Nf and Nm
+#Add labels for naive and adapted; CHANGE Nft and Nmt to Nf and Nm for consistency across scenarios; remove columns containing "expected" values for HSPs and POPs (comes from a vestigial function in the simulation scripts)
 results.raw <- results.raw %>% mutate(model = ifelse(scenario %in% naive_scenarios, "naive", "adapted")) %>% 
   mutate(objective = ifelse(scenario %in% objective1, "objective1", 
                             ifelse(scenario %in% objective2, "objective2",
                                    ifelse(scenario %in% objective3, "objective3", 
                                           ifelse(scenario %in% objective4, "objective4", NA))))) %>% 
   mutate(parameter = ifelse(parameter == "Nft", "Nf",
-                            ifelse(parameter == "Nmt", "Nm", parameter)))
-
+                            ifelse(parameter == "Nmt", "Nm", parameter))) %>% 
+  dplyr::select(-c(HSPs_expected, POPs_expected))
 
 ```
+
+Columns in the results.raw dataframe are:
+parameter: self-explanatory
+estimation.sim: year in which abundance is estimated, standardized (in a way) so we can compare across sampling schemes
+Q50: median parameter estimate from JAGS
+all.truth: true parameter value from the population simulation
+HPD2.5: 2.5% highest posterior density interval
+HPD97.5: 97.5% highest posterior density interval
+T0: the first year of data for the specified simulation - varies broadly with sampling scheme, and occasionally within sampling schemes with each set of samples
+estimation.year: the specific year in which abundance is being estimated
+sampling.scheme: sampling scheme employed
+iteration: iteration index
+full.siblings: number of full siblings identified
+diff.cohort_full.siblings: number of full siblings from different cohorts
+imposters: number of aunt|uncle / niece|nephew pairs masquerading as full siblings
+mean: mean of posterior distribution
+sd: standard deviation of posterior distribution
+Q2.5: 2.5th quantile
+Q97.5: 97.5th quantile
+Rhat: Rhat convergence diagnostic
+neff: number of effective samples from the posterior distribution
+sample.prop: proportion of the population sampled
+seed: seed used for every set.seed call in the simulation
+HSPs_detected: number of half-sibling pairs detected
+POPs_detected: number of parent-offspring pairs detected - only relevant for the sample.ALL.ages simulations
+scenario: scenario corresponds to the metadata in the Simulation_log_key.xlsx file and is used to set simulation settings in the specify.simulation.R script
+relative_bias: relative bias, calculated using the median (Q50) of the posterior distribution and the true value in all.truth.
+in_interval: is the truth in the 95% HPDI?
+model: "naive" or "adapted"
+objective: objective addressed by running the simulation 
+
+
+
 
 ```{r double-check columns and look for NAs, include = FALSE}
 colnames(results.raw)
