@@ -41,7 +41,8 @@ results.files <- list.files(path = paste0(results_location),
                             pattern = "*.csv",
                             full.names = TRUE)
 
-results.raw <- map_dfr(results.files, read_csv, guess_max = 30000) #Have to specify guess_max or else the function will guess column type using the first 1,000 columns and assume the POP columns are logical (bc the first several thousand are NA)
+results.raw <- map_dfr(results.files, read_csv, guess_max = 30000) %>%  #Have to specify guess_max or else the function will guess column type using the first 1,000 columns and assume the POP columns are logical (bc the first several thousand are NA)
+  dplyr::select(-c(HSPs_expected, POPs_expected)) #remove columns containing "expected" values for HSPs and POPs (they come from a vestigial function in the simulation scripts)
 
 naive_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_3.7.1") #Note that scenario 3.7.1 is not technically "naive" (bc the population simulation was all annual breeders). However we will label it as such in the code, and this label will be used later when we label it as an annual model in graphs for Objective 3.
 
@@ -50,7 +51,7 @@ objective2 <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_
 objective3 <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2", "scenario_3.5.1", "scenario_3.5.2", "scenario_3.6.1", "scenario_3.6.2", "scenario_3.7.1", "scenario_3.7.2")
 objective4 <- c("scenario_4.1", "scenario_4.2", "scenario_4.3", "scenario_4.4", "scenario_4.5", "scenario_4.6")
 
-#Add labels for naive and adapted; CHANGE Nft and Nmt to Nf and Nm for consistency across scenarios; remove columns containing "expected" values for HSPs and POPs (comes from a vestigial function in the simulation scripts)
+#Add labels for naive and adapted; CHANGE Nft and Nmt to Nf and Nm for consistency across scenarios
 results.raw <- results.raw %>% mutate(model = ifelse(scenario %in% naive_scenarios, "naive", "adapted")) %>% 
   mutate(objective = ifelse(scenario %in% objective1, "objective1", 
                             ifelse(scenario %in% objective2, "objective2",
@@ -58,7 +59,8 @@ results.raw <- results.raw %>% mutate(model = ifelse(scenario %in% naive_scenari
                                           ifelse(scenario %in% objective4, "objective4", NA))))) %>% 
   mutate(parameter = ifelse(parameter == "Nft", "Nf",
                             ifelse(parameter == "Nmt", "Nm", parameter))) %>% 
-  dplyr::select(-c(HSPs_expected, POPs_expected))
+      mutate(iterID = paste0(sampling.scheme, "_", estimation.sim, "_", sample.prop, "_", scenario, "_", iteration))
+
 
 ```
 
@@ -115,7 +117,8 @@ results.raw %>% dplyr::count(iteration) %>%
 #results.raw %>% dplyr::count(seed) %>% View()
 
 #Total number of individual simulations run
-results.raw %>% dplyr::filter(parameter == "Nf" | parameter == "Nf0") %>% dplyr::count(sampling.scheme, estimation.sim, sample.prop, scenario) %>% 
+#Note that some of the simulations for objective 2 gave rise to duplicate estimates in year 0: one that was labeled as e.g., "Nf0" and one that was labeled as "Nft". These estimates are the same, and downstream steps filter to only include one (so there's no double-counting)
+results.raw %>% dplyr::filter(parameter == "Nf") %>% dplyr::count(sampling.scheme, estimation.sim, sample.prop, scenario) %>% 
   summarize(sum(n))
 
 #Count number of times the model failed to converge
@@ -148,7 +151,18 @@ results.raw %>% group_by(scenario) %>%
   summarize(percent.failed.from.scenario2.3 = scenario2.3.failed/total.failed)
 
 #Filter out instances that failed to converge
-results <- results.raw %>% dplyr::filter(Rhat <= 1.01)
+#What percentage of parameter estimates failed to converge (is multiplied by 100)
+results.raw %>% dplyr::filter(Rhat > 1.01) %>%
+  dplyr::count(sampling.scheme, estimation.sim, sample.prop, scenario) %>% 
+  summarize((sum(n)/nrow(results.raw))*100)
+
+#Save iterations that failed to converge
+convergence_failures.df <- results.raw %>% dplyr::filter(Rhat > 1.01) %>% 
+  distinct(sampling.scheme, estimation.sim, sample.prop, scenario, iteration) %>% 
+  mutate(iterID = paste0(sampling.scheme, "_", estimation.sim, "_", sample.prop, "_", scenario, "_", iteration))
+
+#Remove iterations that failed to converge
+results <- results.raw %>% anti_join(convergence_failures.df, by = "iterID")
 ```
 
 
@@ -1404,19 +1418,33 @@ ggsave("Figure_5b_aging.error_2023.10.06.tiff", plot = last_plot(), device = "ti
 
 #--------------Load lemon shark simulation results-----------#
 #-----------------Keeping full siblings-------------------
-ls_dataSim_allSibs <- read_csv(file = paste0(results_location, "lemon_shark_sims/lemon_shark_time_series_sims_results_Conn5_allSibs.csv")) %>%
+ls_dataSim_allSibs <- read_csv(file = paste0(results_location, "lemon_shark_sims/peer_review_rd2/lemon_shark_time_series_sims_results_Conn5_allSibs_temp.csv")) %>%
   mutate(time_window = ifelse(time_window == "all available samples" ,"all available samples",
                               ifelse(time_window == "three year block", "three year window",
                                      ifelse(time_window == "five year block", "five year window", NA)))) %>% 
-  dplyr::filter(Rhat < 1.01)
+    mutate(iterID = paste0(T0, "_", iteration, "_", time_window))
 
+#Filter out iterations with Rhat > 1.01
+#Check time windows that failed to converge. "Estimation year" was different across parameters - estimates in T0 were assigned that year as the estimation year, and estimates in year t were assigned that year. If it's just the three or five year windows that fail to converge, then we can remove iterations with Rhat > 1.01 just using T0 as the unique identifier, since it changes with each estimation year; if estimates using all available samples fail, then we need a different approach, since T0 remains the same for all estimates.
+ls_dataSim_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  dplyr::count(time_window)
+
+#Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
+
+#Save iterations that failed to converge
+convergence_failures_allSibs.df <- ls_dataSim_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  distinct(T0, iteration, time_window) %>% 
+  mutate(iterID = paste0(T0, "_", iteration, "_", time_window))
+
+#Remove iterations that failed to converge
+ls_dataSim_allSibs <- ls_dataSim_allSibs %>% anti_join(convergence_failures_allSibs.df, by = "iterID")
 
 #Save first year in which abundance was estimated
 min.yr <- ls_dataSim_allSibs %>% dplyr::filter(parameter == "Nfbt") %>% summarize(min.yr = min(estimation.year)) %>% 
   pull(min.yr)
 
-#----------------------Load population size for trajectory
-ls_dataTrend_allSibs <- readRDS(file = paste0(results_location, "lemon_shark_sims/lemon_shark_time_series_sims_popsize_Conn5_allSibs"))
+#----------------------Load population size for trajectory------------
+ls_dataTrend_allSibs <- readRDS(file = paste0(results_location, "lemon_shark_sims/peer_review_rd2/lemon_shark_time_series_sims_popsize_Conn5_allSibs_temp"))
 
 #Format population size dataframe so it can be used in tandem with dataframe of estimates
 ls_dataTrend_allSibs.df <- ls_dataTrend_allSibs %>% dplyr::group_by(year) %>% 
@@ -1430,7 +1458,7 @@ ls_dataTrend_allSibs.df <- ls_dataTrend_allSibs %>% dplyr::group_by(year) %>%
   dplyr::filter(year >= min.yr) %>% 
   mutate(type = "lambda trend")
 
-#--------------------Single interation abundance trend
+#--------------------Single iteration abundance trend---------------
 #-------Single iteration abundance trend----------------#
 (iter <- sample(c(1:100), size = 1)) #Iteration 16 is a good one for visualization
 iter <- 16
@@ -1449,14 +1477,27 @@ ls_truthSim.otherParams_allSibs <- ls_truthSim_allSibs %>% dplyr::filter(paramet
 
 
 # #------------------Removing full siblings---------------------
-ls_dataSim_filterSibs <- read_csv(file = paste0(results_location, "/lemon_shark_sims/lemon_shark_time_series_sims_results_Conn5_filterSibs.csv")) %>%
+ls_dataSim_filterSibs <- read_csv(file = paste0(results_location, "/lemon_shark_sims/peer_review_rd2/lemon_shark_time_series_sims_results_Conn5_filterSibs_temp.csv")) %>%
   mutate(time_window = ifelse(time_window == "all available samples" ,"all available samples",
                               ifelse(time_window == "three year block", "three year window",
                                      ifelse(time_window == "five year block", "five year window", NA)))) %>% 
-  dplyr::filter(Rhat < 1.01)
+  mutate(iterID = paste0(T0, "_", iteration, "_", time_window))
+  
+#Filter out iterations with Rhat > 1.01
+ls_dataSim_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  dplyr::count(time_window)
+#Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
 
-#----------------------Load population size for trajectory
-ls_dataTrend_filterSibs <- readRDS(file = paste0(results_location, "lemon_shark_sims/lemon_shark_time_series_sims_popsize_Conn5_filterSibs"))
+#Save iterations that failed to converge
+convergence_failures_filterSibs.df <- ls_dataSim_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  distinct(T0, iteration, time_window) %>% 
+  mutate(iterID = paste0(T0, "_", iteration, "_", time_window))
+
+#Remove iterations that failed to converge
+ls_dataSim_filterSibs <- ls_dataSim_filterSibs %>% anti_join(convergence_failures_filterSibs.df, by = "iterID")
+
+#----------------------Load population size for trajectory-----------------
+ls_dataTrend_filterSibs <- readRDS(file = paste0(results_location, "lemon_shark_sims/peer_review_rd2/lemon_shark_time_series_sims_popsize_Conn5_filterSibs_temp"))
 
 #Format population size dataframe so it can be used in tandem with dataframe of estimates
 ls_dataTrend_filterSibs.df <- ls_dataTrend_filterSibs %>% dplyr::group_by(year) %>% 
@@ -1470,7 +1511,7 @@ ls_dataTrend_filterSibs.df <- ls_dataTrend_filterSibs %>% dplyr::group_by(year) 
   dplyr::filter(year >= min.yr) %>% 
   mutate(type = "lambda trend")
 
-#--------------------Single interation abundance trend
+#--------------------Single interation abundance trend------------
 #-------Single iteration abundance trend----------------#
 (iter <- sample(c(1:100), size = 1)) #Iteration 16 is a good one for visualization
 iter <- 16
@@ -1491,16 +1532,27 @@ ls_truthSim.otherParams_filterSibs <- ls_truthSim_filterSibs %>% dplyr::filter(p
 #--------------------Load lemon shark data estimates---------
 #--------------------All sibs -------------------------------
 #----------------Keep all samples
-ls_data_allSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_AllSibs_2023.10.08.csv") %>%
+ls_data_allSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_allsibs_2023.12.08.csv") %>%
   #mutate(num.samps = num.samps_all) %>%
   #dplyr::select(-c(num.samps_all)) %>%
   dplyr::filter(estimation.year >= 1997) %>%
   mutate(time_window = ifelse(time_window == "all available samples" ,"all available samples",
                               ifelse(time_window == "three year block", "three year window",
                                      ifelse(time_window == "five year block", "five year window", NA)))) %>% 
-  dplyr::filter(Rhat < 1.01)
+  mutate(iterID = paste0(time_window, "_", T0))
+  
+#Filter out iterations with Rhat > 1.01
+ls_data_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  dplyr::count(time_window, T0, estimation.year)
+#Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
 
+#Save iterations that failed to converge
+convergence_failures_LSdata_allSibs.df <- ls_data_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  distinct(T0, time_window) %>% 
+  mutate(iterID = paste0(time_window, "_", T0))
 
+#Remove iterations that failed to converge
+ls_data_allSibs <- ls_data_allSibs %>% anti_join(convergence_failures_LSdata_allSibs.df, by = "iterID")
 
 
 #----------------Downsample
@@ -1512,7 +1564,20 @@ ls_data.Down_allSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/outp
   mutate(time_window = ifelse(time_window == "all available samples" ,"all available samples",
                               ifelse(time_window == "three year block", "three year window",
                                      ifelse(time_window == "five year block", "five year window", NA)))) %>% 
-  dplyr::filter(Rhat < 1.01)
+  mutate(iterID = paste0(time_window, T0))
+  
+#Filter out iterations with Rhat > 1.01
+ls_data.Down_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  dplyr::count(time_window, T0, estimation.year)
+#Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
+
+#Save iterations that failed to converge
+convergence_failures_LSdata.Down_allSibs.df <- ls_data.Down_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  distinct(T0, iteration, time_window) %>% 
+  mutate(iterID = paste0(T0, "_", iteration, "_", time_window))
+
+#Remove iterations that failed to converge
+ls_data.Down_allSibs <- ls_data.Down_allSibs %>% anti_join(convergence_failures_LSdata.Down_allSibs.df, by = "iterID")
 
 #Take mean abundance estimates over 100 iterations
  ls_data.Down4viz_allSibs <- ls_data.Down_allSibs %>% group_by(time_window, estimation.year, parameter) %>% 
@@ -1536,7 +1601,21 @@ ls_data_filterSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output
  mutate(time_window = ifelse(time_window == "all available samples" ,"all available samples",
                              ifelse(time_window == "three year block", "three year window",
                                     ifelse(time_window == "five year block", "five year window", NA)))) %>% 
-  dplyr::filter(Rhat < 1.01)
+  mutate(iterID = paste0(time_window, T0))
+  
+#Filter out iterations with Rhat > 1.01
+ls_data_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  dplyr::count(time_window, T0, estimation.year)
+#Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
+
+#Save iterations that failed to converge
+convergence_failures_LSdata_filterSibs.df <- ls_data_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  distinct(T0, iteration, time_window) %>% 
+  mutate(iterID = paste0(T0, "_", iteration, "_", time_window))
+
+#Remove iterations that failed to converge
+ls_data_filterSibs <- ls_data_filterSibs %>% 
+  anti_join(convergence_failures_LSdata_filterSibs.df, by = "iterID")
 
 #-----------------Downsample then filter sibs
 ls_data.Down_filterSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_filterSibsDown_2023.10.29.csv") %>%
@@ -1547,8 +1626,20 @@ ls_data.Down_filterSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/o
   mutate(time_window = ifelse(time_window == "all available samples" ,"all available samples",
                               ifelse(time_window == "three year block", "three year window",
                                      ifelse(time_window == "five year block", "five year window", NA)))) %>% 
-  dplyr::filter(Rhat < 1.01)
+  mutate(iterID = paste0(time_window, T0))
+  
+#Filter out iterations with Rhat > 1.01
+ls_data.Down_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  dplyr::count(time_window, T0, estimation.year)
+#Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
 
+#Save iterations that failed to converge
+convergence_failures_LSdata.Down_filterSibs.df <- ls_data.Down_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+  distinct(T0, iteration, time_window) %>% 
+  mutate(iterID = paste0(T0, "_", iteration, "_", time_window))
+
+#Remove iterations that failed to converge
+ls_data.Down_filterSibs <- ls_data.Down_filterSibs %>% anti_join(convergence_failures_LSdata.Down_filterSibs.df, by = "iterID")
 
 
 ls_data_filterSibs
@@ -1581,6 +1672,67 @@ ls_data.Down_filterSibs
  ls_data.Down_allSibs %>% dplyr::count(estimation.year)
  ls_data.Down_filterSibs %>% dplyr::count(estimation.year)
 ```
+
+
+
+
+```{r objective 5 simulation and data checks}
+source("04_DataViz/functions/plot.functions.R")
+
+#------------------- Simulation figs --------------------------
+brewer.pal.info #See different palette options from Rcolorbrewer
+cp5 <- brewer.pal(3, "Dark2") #Choose palette + number of colors
+cp5[4] <- "black" #If not including average trendline on second plot
+#cp5[4] <- "darkslateblue" #If including average trendline on second plot
+#cp5[5] <- "black" #If including average trendline on second plot
+scales::show_col(cp5)
+
+#------- Keep all sibs -----------------------------------
+#------- Plot parameter estimates to check for correlation
+lambda.estimates <- ls_data_allSibs %>% dplyr::filter(parameter == "lambda") %>% 
+  dplyr::rename(Lambda = Q50) %>% 
+  dplyr::select(Lambda, time_window)
+psi.estimates <- ls_data_allSibs %>% dplyr::filter(parameter == "psi") %>% 
+  dplyr::rename(Psi = Q50) %>% 
+  dplyr::select(Psi)
+
+lamPsi.plot <- bind_cols(lambda.estimates, psi.estimates)
+
+lamPsi.plot %>% 
+  ggplot(aes(x = Lambda, y = Psi)) +
+  geom_point(aes(color = time_window)) +
+    geom_smooth(method = "loess", 
+              se = FALSE, 
+              aes(linetype = time_window,
+                  color = time_window)) +
+  ggtitle("All sibs")
+  
+
+#------- Box plot of relative bias for Nfb----------------#
+plot.Nfb(ls_dataSim_allSibs)
+
+#------- Box plot of lambda estimates ----------------#
+plot.lambda(ls_dataSim_allSibs)
+
+#------- Box plot of relative bias for survival ----------------#
+plot.survival(ls_dataSim_allSibs)
+
+plot.psi(ls_data_allSibs)
+
+#-----------------Single iteration abundance trend----------------
+params <- c("Nfbt")
+
+iter <- 20
+
+  ls_truthSim.abund.Plot_allSibs <- ls_truthSim.abund_allSibs %>% dplyr::filter(parameter %in% params,
+                                                                                iteration == iter)
+  
+plot.single.iter(ls_estimatesSim_allSibs)
+```
+
+
+
+
 
 
 ```{r objective 5 simulation viz}
@@ -2012,7 +2164,7 @@ real.truth <- tibble(estimation.year = c(seq(from = 1997, to = 2007, by = 1)),
 
 #----------Keep all sibs; keep all samples
 fig5a_allSibs <- ls_data_allSibs %>% 
-  dplyr::filter(parameter == "Nfbt") %>%
+  dplyr::filter(parameter == "Nfbt2") %>%
   ggplot(aes(x = estimation.year, y = Q50, color = time_window)) + 
   #geom_point() + 
   geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
@@ -2034,7 +2186,7 @@ fig5a_allSibs <- ls_data_allSibs %>%
         plot.title = element_text(size=25)) +
   scale_x_continuous(breaks = x.ticks,
                      labels = x.tick.labels) +
-  ggtitle("d) Nfb")
+  ggtitle("d) Nfb - calculate; constrain psi")
 
 fig5a_allSibs
 
@@ -2062,9 +2214,65 @@ fig5.survival_allSibs <- ls_data_allSibs %>%
         legend.title = element_text(size = 20),
         plot.title = element_text(size=25)) +
   scale_x_continuous(breaks = x.ticks,
-                     labels = x.tick.labels)
+                     labels = x.tick.labels) +
+  ggtitle("Survival - constrain psi")
 
 fig5.survival_allSibs
+
+#-----------------------Lambda------------------------------------#
+fig5.lambda_allSibs <- ls_data_allSibs %>% 
+  dplyr::filter(parameter == "lambda") %>%
+  ggplot(aes(x = estimation.year, y = Q50, color = time_window)) + 
+  #geom_point() + 
+  geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
+                  position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "loess", se = FALSE, aes(linetype = time_window), show.legend = FALSE) +
+  #facet_wrap(~years.lab) +
+  theme_bw() +
+  #ylim(0, 75) +
+  labs(x = "Estimation year", y = "lambda") +
+  scale_color_manual(values = cp5, name = "Sample window") +
+#  ggtitle("a)") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25)) +
+  scale_x_continuous(breaks = x.ticks,
+                     labels = x.tick.labels) +
+  ggtitle("Lambda - constrain psi")
+
+fig5.lambda_allSibs
+
+
+#-----------------------Psi------------------------------------#
+fig5.psi_allSibs <- ls_data_allSibs %>% 
+  dplyr::filter(parameter == "psi") %>%
+  ggplot(aes(x = estimation.year, y = Q50, color = time_window)) + 
+  #geom_point() + 
+  geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
+                  position = position_dodge(width = 0.5)) +
+  geom_smooth(method = "loess", se = FALSE, aes(linetype = time_window), show.legend = FALSE) +
+  #facet_wrap(~years.lab) +
+  theme_bw() +
+  #ylim(0, 75) +
+  labs(x = "Estimation year", y = "psi") +
+  scale_color_manual(values = cp5, name = "Sample window") +
+#  ggtitle("a)") +
+  theme(axis.text = element_text(size = 15),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size = 15),
+        strip.text.y = element_text(size = 15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25)) +
+  scale_x_continuous(breaks = x.ticks,
+                     labels = x.tick.labels) +
+  ggtitle("psi - constrained")
+
+fig5.psi_allSibs
 
 ggsave("SuppFig7_LS_data_allSibs_survival_2023.10.28.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 

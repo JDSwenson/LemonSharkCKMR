@@ -1,3 +1,17 @@
+ls_dataSim_allSibs %>% dplyr::filter(parameter == "lambda", Q50 >= 1.29)
+
+dad.comps <- readRDS(file = paste0(results_location, "lemon_shark_sims/peer_review_rd2/lemon_shark_time_series_sims_dad.comps_Conn5_allSibs_temp"))
+
+mom.comps <- readRDS(file = paste0(results_location, "lemon_shark_sims/peer_review_rd2/lemon_shark_time_series_sims_mom.comps_Conn5_allSibs_temp"))
+
+mom.comps %>% dplyr::filter(iteration == 1) %>% mutate(estimation.yr = ref.year + pop.growth.yrs) %>% 
+  group_by(time_window, BI, pop.growth.yrs) %>% 
+  summarize(sum(yes))
+
+mom.comps %>% dplyr::filter(pop.growth.yrs == 19) %>% 
+  group_by(BI) %>% 
+  summarize(sum(yes))
+
 obj2_results %>% dplyr::filter(scenario %in% c("scenario_2.3.3", "scenario_2.4.3")) %>% dplyr::filter(parameter == "lambda") %>% 
   dplyr::select(parameter, Q50, all.truth, scenario, estimation.sim.label, model.label)
 

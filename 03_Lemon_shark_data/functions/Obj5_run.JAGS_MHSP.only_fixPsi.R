@@ -21,7 +21,8 @@ jags_data = list(
   #general
   estimation.year = estimation.year,
   est.year.calibrate = est.year.calibrate,
-  a = mating.periodicity
+  a = mating.periodicity,
+  psi = 0.9
 
   )
   
@@ -32,7 +33,6 @@ jags_inits = function(nc) {
     inits[[c]] = list(
       survival = runif(1, min=0.5, max=0.95),
       Nf0 = rnorm(1, mean = 500, sd = 50),
-      psi = runif(1, min=0.8, max=1),
       lambda = 1
     )
   }

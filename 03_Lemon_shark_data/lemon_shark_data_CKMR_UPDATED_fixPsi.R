@@ -39,13 +39,13 @@ nc <- 2      # number of chains
 PopSim.breeding.schedule <- "biennial.breeding" #Can be annual.breeding or biennial.breeding
 model <- "multiennial.model"
 
-jags_params <- c("Nft", "Nfbt", "Nf0", "survival", "lambda", "psi") #List the parameters to be estimated
+jags_params <- c("Nft", "Nfbt", "Nf0", "survival", "lambda") #List the parameters to be estimated
 HS.only <- "yes"
-downsample <- "yes"
+downsample <- "no"
 down.perc <- .3
 filter.full.sibs <- "no"
 
-jags_file <- paste0(jags.model_location, "MHS.only_narrowLambda_Skip_model_Conn.txt")
+jags_file <- paste0(jags.model_location, "MHS.only_narrowLambda_Skip_model_Conn_fixPsi.txt")
 
 #---------------------------Read in and organize data------------------------------------
 purpose <- "CKMR_LS_data"
@@ -592,7 +592,7 @@ for(block in first.est.year:n_yrs){
     set.seed(rseed)
 
     tryCatch({
-        source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
+        source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only_fixPsi.R")
     
     if(downsample == "yes"){
       results.temp.block3 <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
@@ -931,7 +931,7 @@ for(block in first.est.year:n_yrs){
     set.seed(rseed)
     
     tryCatch({
-    source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
+    source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only_fixPsi.R")
     
     if(downsample == "yes"){
       results.temp.block5 <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
@@ -1271,7 +1271,7 @@ for(block in first.est.year:n_yrs){
     set.seed(rseed)
     
     tryCatch({
-    source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only.R")
+    source("~/R/working_directory/LemonSharkCKMR/03_Lemon_shark_data/functions/Obj5_run.JAGS_MHSP.only_fixPsi.R")
     
     if(downsample == "yes"){
       results.temp.all <- model.summary2 %>% mutate(T0 = est.year.calibrate, 
@@ -1369,12 +1369,12 @@ rep <- rep+1
 }
   
   #Save as temporary files so they save and overwrite every iteration. Also will ask Shelley to run the code at the end.
-  write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_allSibs_2023.12.08_downsample_temp.csv")
+  write_csv(results, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_allSibs_fixPsi_2023.12.08_temp.csv")
   
   #Save final pairwise comparison matrices
-  saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_allSibs_2023.12.08_downsample_temp")
+  saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_allSibs_fixPsi_2023.12.08_temp")
   
-  saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_allSibs_2023.12.08_downsample_temp")
+  saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel__allSibs_fixPsi_2023.12.08")
   
 }
 
@@ -1392,23 +1392,23 @@ results %>% dplyr::filter(parameter == "Nfbt", time_window == "all available sam
 results %>% distinct(.keep_all = TRUE) %>% dplyr::filter(parameter == "Nfbt", time_window == "all available samples") %>% dplyr::count(estimation.year)
 
 results %>% distinct(.keep_all = TRUE) %>% 
-  write_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_allSibs_2023.12.08_downsample.csv")
+  write_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/LS_data_ConnModel_allSibs_fixPsi_2023.12.08.csv")
 
 #Save final pairwise comparison matrices
-saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_allSibs_2023.12.08_downsample")
+saveRDS(mom.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/mom.comps_LS_data_ConnModel_allSibs_fixPsi_2023.12.08")
 
-saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_allSibs_2023.12.08_downsample")
+saveRDS(dad.comps.tibble, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/dad.comps_LS_data_ConnModel_allSibs_fixPsi_2023.12.08")
 
 
 #Save model results
-saveRDS(post.samps_list.block3, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/block3_model_results_2023.12.08_downsample")
+saveRDS(post.samps_list.block3, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/block3_model_results_allSibs_fixPsi_2023.12.08")
 
-saveRDS(post.samps_list.block5, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/block5_model_results_2023.12.08_downsample")
+saveRDS(post.samps_list.block5, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/block5_model_results_allSibs_fixPsi_2023.12.08")
 
-saveRDS(post.samps_list.all, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/all_model_results_2023.12.08_downsample")
+saveRDS(post.samps_list.all, file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/all_model_results_allSibs_fixPsi_2023.12.08")
 
 
-
+############# END MAIN SCRIPT #######################
 
 
 #######################################################################################-
