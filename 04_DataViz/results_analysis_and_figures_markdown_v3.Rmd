@@ -1555,6 +1555,9 @@ ls_truthSim.abund_filterSibs <- ls_truthSim_filterSibs %>% dplyr::filter(paramet
 
 ls_truthSim.otherParams_filterSibs <- ls_truthSim_filterSibs %>% dplyr::filter(parameter %in% c("survival", "lambda"))
 ```
+
+
+
 ```{r Load lemon shark data estimates}
 #--------------------All sibs -------------------------------
 #----------------Keep all samples
@@ -1982,7 +1985,7 @@ ls_Nfb_boxplot_filterSibs <- ls_dataSim_filterSibs %>% dplyr::filter(parameter %
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank()) +
   guides(fill=guide_legend(title="Sample window")) +
-  ggtitle("a) Nfb")
+  ggtitle("a) Nf")
 
 ls_Nfb_boxplot_filterSibs
 
@@ -2244,7 +2247,7 @@ fig5.survival_allSibs <- ls_data_allSibs %>%
 
 fig5.survival_allSibs
 
-ggsave("SuppFig10_LS_data_allSibs_survival_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig10a_LS_data_allSibs_survival_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 #-----------------------Lambda------------------------------------#
@@ -2305,7 +2308,7 @@ fig5.psi_allSibs
 
 #----------Filter sibs; keep all samples
 fig5a_filterSibs <- ls_data_filterSibs %>% 
-  dplyr::filter(parameter == "Nfbt") %>%
+  dplyr::filter(parameter == "Nft") %>%
   ggplot(aes(x = estimation.year, y = Q50, color = time_window)) + 
   #geom_point() + 
   geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
