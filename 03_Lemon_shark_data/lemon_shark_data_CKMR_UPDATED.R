@@ -316,9 +316,10 @@ for(block in first.est.year:n_yrs){
     if(filter.full.sibs == "yes"){
       filtered.samples.HS.df.block3 <- filtered.samples.HS.df.block3 %>%
         drop_na(mother.x) %>%
-        group_by(mother.x, father.x) %>%
-        slice_sample(n = 1) %>%
-        ungroup()
+        distinct(mother.x, father.x, .keep_all = TRUE)
+        # group_by(mother.x, father.x) %>%
+        # slice_sample(n = 1) %>%
+        # ungroup()
     }
 
   pairwise.df.HS.block3 <- data.frame(t(combn(filtered.samples.HS.df.block3$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
@@ -441,9 +442,10 @@ for(block in first.est.year:n_yrs){
     if(filter.full.sibs == "yes"){
       HS.samps.df.down.block3 <- HS.samps.df.down.block3 %>%
         drop_na(mother.x) %>%
-        group_by(mother.x, father.x) %>%
-        slice_sample(n = 1) %>%
-        ungroup()
+        distinct(mother.x, father.x, .keep_all = TRUE)
+      # group_by(mother.x, father.x) %>%
+      # slice_sample(n = 1) %>%
+      # ungroup()
     }
     
     num.samps_down.block3 <- nrow(HS.samps.df.down.block3) 
@@ -655,9 +657,10 @@ for(block in first.est.year:n_yrs){
   if(filter.full.sibs == "yes"){
     filtered.samples.HS.df.block5 <- filtered.samples.HS.df.block5 %>%
       drop_na(mother.x) %>%
-      group_by(mother.x, father.x) %>%
-      slice_sample(n = 1) %>%
-      ungroup()
+      distinct(mother.x, father.x, .keep_all = TRUE)
+    # group_by(mother.x, father.x) %>%
+    # slice_sample(n = 1) %>%
+    # ungroup()
   }
   
   pairwise.df.HS.block5 <- data.frame(t(combn(filtered.samples.HS.df.block5$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
@@ -780,9 +783,10 @@ for(block in first.est.year:n_yrs){
     if(filter.full.sibs == "yes"){
       HS.samps.df.down.block5 <- HS.samps.df.down.block5 %>%
         drop_na(mother.x) %>%
-        group_by(mother.x, father.x) %>%
-        slice_sample(n = 1) %>%
-        ungroup()
+        distinct(mother.x, father.x, .keep_all = TRUE)
+      # group_by(mother.x, father.x) %>%
+      # slice_sample(n = 1) %>%
+      # ungroup()
     }
   
     num.samps_down.block5 <- nrow(HS.samps.df.down.block5)
@@ -995,9 +999,10 @@ for(block in first.est.year:n_yrs){
   if(filter.full.sibs == "yes"){
     filtered.samples.HS.df.all <- filtered.samples.HS.df.all %>%
       drop_na(mother.x) %>%
-      group_by(mother.x, father.x) %>%
-      slice_sample(n = 1) %>%
-      ungroup()
+      distinct(mother.x, father.x, .keep_all = TRUE)
+    # group_by(mother.x, father.x) %>%
+    # slice_sample(n = 1) %>%
+    # ungroup()
   }
   
   pairwise.df.HS.all <- data.frame(t(combn(filtered.samples.HS.df.all$indv.name, m=2))) # generate all combinations of the elements of x, taken m at a time.
@@ -1120,9 +1125,10 @@ for(block in first.est.year:n_yrs){
     if(filter.full.sibs == "yes"){
       HS.samps.df.down.all <- HS.samps.df.down.all %>%
         drop_na(mother.x) %>%
-        group_by(mother.x, father.x) %>%
-        slice_sample(n = 1) %>%
-        ungroup()
+        distinct(mother.x, father.x, .keep_all = TRUE)
+#        group_by(mother.x, father.x) %>%
+ #       slice_sample(n = 1) %>%
+ #       ungroup()
     }
     
     num.samps_down.all <- nrow(HS.samps.df.down.all)
