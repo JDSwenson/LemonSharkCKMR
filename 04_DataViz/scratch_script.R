@@ -1,3 +1,30 @@
+mom.comps1 <- readRDS(file = paste0(results_location, "mom.comps_04Oct2023_Seeds2022.04.15_scenario_3.1.2_multiennial.model")) %>% 
+  mutate(scenario = "scenario_3.1.2")
+
+mom.comps2 <- readRDS(file = paste0(results_location, "mom.comps_04Oct2023_Seeds2022.04.15_scenario_3.2.2_multiennial.model")) %>% 
+  mutate(scenario = "scenario_3.2.2")
+
+mom.comps3 <- readRDS(file = paste0(results_location, "mom.comps_04Oct2023_Seeds2022.04.15_scenario_3.3.2_multiennial.model")) %>% 
+  mutate(scenario = "scenario_3.3.2")
+
+mom.comps4 <- readRDS(file = paste0(results_location, "mom.comps_04Oct2023_Seeds2022.04.15_scenario_3.4.2_multiennial.model")) %>% 
+  mutate(scenario = "scenario_3.4.2")
+
+mom.comps5 <- readRDS(file = paste0(results_location, "mom.comps_04Oct2023_Seeds2022.04.15_scenario_3.5.2_multiennial.model")) %>% 
+  mutate(scenario = "scenario_3.5.2")
+
+mom.comps6 <- readRDS(file = paste0(results_location, "mom.comps_04Oct2023_Seeds2022.04.15_scenario_3.6.2_multiennial.model")) %>% 
+  mutate(scenario = "scenario_3.6.2")
+
+mom.comps7 <- readRDS(file = paste0(results_location, "mom.comps_04Oct2023_Seeds2022.04.15_scenario_3.7.2_multiennial.model")) %>% 
+  mutate(scenario = "scenario_3.7.2")
+
+mom.comps.all <- bind_rows(mom.comps1, mom.comps2, mom.comps3, mom.comps4, mom.comps5, mom.comps6, mom.comps7)
+
+mom.comps.all %>% dplyr::count(scenario)
+
+mom.comps.all %>% saveRDS(file = paste0(results_location, "objective3_mom.comps.all"))
+
 ls_dataSim_allSibs %>% dplyr::filter(parameter == "lambda", Q50 >= 1.29)
 
 dad.comps <- readRDS(file = paste0(results_location, "lemon_shark_sims/peer_review_rd2/lemon_shark_time_series_sims_dad.comps_Conn5_allSibs_temp"))
