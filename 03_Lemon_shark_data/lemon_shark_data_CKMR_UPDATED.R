@@ -43,7 +43,7 @@ jags_params <- c("Nft", "Nfbt", "Nf0", "survival", "lambda", "psi") #List the pa
 HS.only <- "yes"
 downsample <- "no"
 down.perc <- .3
-filter.full.sibs <- "yes"
+filter.full.sibs <- "no"
 
 jags_file <- paste0(jags.model_location, "MHS.only_narrowLambda_Skip_model_Conn.txt")
 

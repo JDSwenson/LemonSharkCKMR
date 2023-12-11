@@ -1598,7 +1598,6 @@ ls_data.Down_allSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/outp
 #Filter out iterations with Rhat > 1.01
 ls_data.Down_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
   dplyr::count(time_window, T0, estimation.year)
-#Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
 
 #Save iterations that failed to converge
 convergence_failures_LSdata.Down_allSibs.df <- ls_data.Down_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
@@ -1682,11 +1681,19 @@ ls_data.Down_filterSibs
             mean_MHSPs = mean(mom_HSPs, na.rm = TRUE))
 # 
 # #Use these dfs to get numbers for a table
- ls_data_filterSibs
+ ls_data_filterSibs %>% dplyr::filter(parameter == "Nfbt") %>% dplyr::select(time_window, estimation.year, Q50, HPD2.5, HPD97.5, num.samps_all, HSPs_detected) %>% 
+   dplyr::filter(time_window == "three year window")
  
- ls_data.Down4viz_allSibs %>% dplyr::filter(parameter == "Nfbt", 
-                                            time_window == "all available samples") %>% dplyr::select(time_window, estimation.year, mean_MHSPs) %>% 
-   print(n = 20)
+ #Run the below, then copy into a separate tab in the "sim.stats.xlsx" workbook, labeled with which samples were retained.
+ #Copy concatenate function into "95% HPDI" column to automate that column, and then can copy and paste into Word.
+ #If there are instances where the model failed to converge at Rhat 1.01 in the real dataset (i.e. no bootstrapping), then will need to 
+ls_data.Down4viz_filterSibs %>% dplyr::filter(parameter == "Nfbt") %>% dplyr::select(time_window, estimation.year, mean_Q50, mean_HPD2.5, mean_HPD97.5, mean_samps, mean_MHSPs) %>% 
+   writexl::write_xlsx(path = "/Users/John/Documents/R/sim.stats2.xlsx")
+ 
+ #
+ 
+ 
+ 
    
  ls_data.Down4viz_filterSibs %>% dplyr::filter(parameter == "Nfbt", 
                                             time_window == "all available samples") %>% dplyr::mutate(mean_Q50 = round(mean_Q50, 0),
@@ -2219,7 +2226,7 @@ fig5a_allSibs <- ls_data_allSibs %>%
 
 fig5a_allSibs
 
-ggsave("Fig6_LS_data_allSibs_Nfb_trend_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 4, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Fig6d_LS_data_allSibs_Nfb_trend_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 4, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #-----------------------Survival------------------------------------#
 fig5.survival_allSibs <- ls_data_allSibs %>% 
