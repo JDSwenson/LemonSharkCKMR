@@ -34,7 +34,6 @@ results_location <- "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model
 ```
 
 
-START HERE on Dec 10th
 
 ```{r set-file-locations and read in files, include = FALSE}
 #------------- Simulation parameters and labels  ----------------#
@@ -1102,10 +1101,12 @@ lambda <- obj3_results %>% dplyr::filter(scenario == "scenario_3.4.2", parameter
 
 psi <- obj3_results %>% dplyr::filter(scenario == "scenario_3.4.2", parameter == "psi")
 
+#Should be spread out with no correlation
 plot(x = lambda$Q50, y = psi$Q50)
 
 obj3_results  
 
+#Just for checking ...
 mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.4.2") %>% group_by(BI) %>% 
   summarize(sum(yes))
 ```
@@ -1119,15 +1120,24 @@ scales::show_col(cp3.sub)
 
 ######################################################################################################### Objective 3 Main Figure ####################################################################################################################
 #-------------------Objective 3 Density plots of relative bias-----------------------#
+psi.df <- obj3_results %>% dplyr::filter(psi.label %in% c("1", "1*", "0"),
+                                         estimation.year == 90,
+                                         parameter == "psi")
+
 (fig4a <- obj3_results %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival"),
                                          breeding.schedule %in% c("annual", "biennial", "biennial*", "triennial"),
                                          !scenario %in% all.psi.scenarios) %>% 
   ggplot(aes(x=factor(breeding.schedule, levels = c("triennial", "biennial", "biennial*", "annual")), fill = model.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  geom_pointrange(data = psi.df, 
+                  aes(y = Q50, ymin = HPD2.5, ymax = HPD97.5),
+                  position = position_dodge(width = 0.5), 
+                  alpha = 0.2,
+                  colour = "#67A9CF") +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(x="Breeding cycle", y="Relative bias") +
   scale_fill_manual(values = cp3.sub) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival", "lambda"))), scales = "free") +
+  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival", "psi"))), scales = "free") +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
@@ -1148,15 +1158,20 @@ ggsave("Figure_4_Obj3_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi
 ##################################################################################
 
 #-------------------Mixed breeding --------------------#  
-(fig4_others <- obj3_results %>% dplyr::filter(!breeding.schedule %in% c("triennial"),
+psi.df2 <- obj3_results %>% dplyr::filter(psi.label %in% c("0.90", "0.75", "0.50"),
+                                         estimation.year == 90,
+                                         parameter == "psi")
+
+(fig4_others <- obj3_results %>% dplyr::filter(psi.label %in% c("0.90", "0.75", "0.50"),
                                          estimation.year == 90,
                                          parameter %in% c("Nf", "Nm", "survival")) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
   ggplot(aes(x=factor(psi.label), fill = model.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  geom_boxplot(data = psi.df2, aes(x=factor(psi.label), y=relative_bias), draw_quantiles = 0.5, notch = TRUE) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(x="Proportion biennial breeders", y="Relative bias") +
   scale_fill_manual(values = cp3.sub) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival", "lambda"))), scales = "free") +
+  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival", "psi"))), scales = "free") +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
@@ -1167,7 +1182,7 @@ ggsave("Figure_4_Obj3_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi
         plot.title = element_text(size=25)) +
   guides(fill=guide_legend(title="Model")))
 
-ggsave("SuppFig5_variablepsi_Obj3_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig10_variablepsi_Obj3_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #      ggsave("Figure_4a_2022.01.01.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 14, height = 6, units = "in")
 
@@ -1250,14 +1265,26 @@ ggsave("SuppFig5_variablepsi_Obj3_2023.12.10.tiff", plot = last_plot(), device =
 # 
 # 
 # #-------------------Plot of psi bias-----------------------#
-      (figS3_psi <- obj3_results %>% dplyr::filter(parameter %in% c("psi"),
-                                         breeding.schedule != "triennial",
-                                         estimation.year %in% c(90)) %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
-  ggplot(aes(x=factor(psi.label), fill = model.label)) +
-  geom_boxplot(aes(y=relative_bias), draw_quantiles = 0.5, notch = TRUE) +
-  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
-  labs(x="Proportion biennial breeders", y="Relative bias") +
-  scale_fill_manual(values = cp3.sub[2]) +
+psi.df <- obj3_results %>% dplyr::filter(psi.label %in% c("1", "1*", "0"),
+                                         estimation.year == 90,
+                                         parameter == "psi")
+
+(figS6_psi <- obj3_results %>% dplyr::filter(psi.label %in% c("1", "1*", "0"),
+                                         estimation.year == 90,
+                                         parameter == "psi") %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
+    dplyr::mutate(plot.truth = ifelse(breeding.schedule %in% c("triennial", "biennial", "annual"), 1,
+                                      ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "sample all ages", 0.767,
+                                             ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "sample juveniles", 0.766,
+                                                    ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "target YOY", 0.674, NA))))) %>% 
+  ggplot(aes(x=factor(breeding.schedule, levels = c("triennial", "biennial", "biennial*", "annual")))) +
+  geom_pointrange(aes(y = Q50, ymin = HPD2.5, ymax = HPD97.5),
+                  position = position_dodge(width = 0.5), 
+                  alpha = 0.2,
+                  colour = "#67A9CF") +
+  geom_point(aes(y = plot.truth), colour = "darkred", pch = 3) +
+  #geom_hline(yintercept=1, col="blue", size=1, linetype = "dashed") +
+  labs(x="Breeding schedule", y="Q50") +
+  #scale_color_manual(values = cp3.sub[2]) +
   facet_grid(cols = vars(sampling.scheme.label), scales = "fixed") +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
@@ -1266,9 +1293,9 @@ ggsave("SuppFig5_variablepsi_Obj3_2023.12.10.tiff", plot = last_plot(), device =
         strip.text.y = element_text(size=15),
         legend.position = "none",
         plot.title = element_text(size=25)))
+ 
 # 
-# 
-ggsave("SuppFig6_Obj3_psi_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 12, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig5_Obj3_psi_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 12, height = 8, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 # #-----------Plot of bias in Nfb, calculated in two ways -----------#
 # (figS3.Nfb <- obj3_results %>% dplyr::filter(parameter %in% c("Nfb1", "Nfb2"),
 #                                          breeding.schedule != "triennial",
@@ -1588,13 +1615,13 @@ ls_data_allSibs %>% dplyr::filter(Rhat > 1.01) %>%
   dplyr::count(time_window, T0, estimation.year)
 #Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
 
-#Save iterations that failed to converge
-convergence_failures_LSdata_allSibs.df <- ls_data_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
-  distinct(T0, time_window) %>% 
-  mutate(iterID = paste0(time_window, "_", T0))
+#Save iterations that failed to converge. Want to mark these but not necessarily remove them for the full dataset
+# convergence_failures_LSdata_allSibs.df <- ls_data_allSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+#   distinct(T0, time_window) %>% 
+#   mutate(iterID = paste0(time_window, "_", T0))
 
 #Remove iterations that failed to converge
-ls_data_allSibs <- ls_data_allSibs %>% anti_join(convergence_failures_LSdata_allSibs.df, by = "iterID")
+# ls_data_allSibs <- ls_data_allSibs %>% anti_join(convergence_failures_LSdata_allSibs.df, by = "iterID")
 
 
 #----------------Downsample
@@ -1644,19 +1671,19 @@ ls_data_filterSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output
                                     ifelse(time_window == "five year block", "five year window", NA)))) %>% 
   mutate(iterID = paste0(time_window, T0))
   
-#Filter out iterations with Rhat > 1.01
-ls_data_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+#Filter out iterations with Rhat > 1.01. 
+ls_data_filterSibs %>% dplyr::filter(Rhat > 1.01) %>%
   dplyr::count(time_window, T0, estimation.year)
 #Looks like there are no failures to converge for the full dataset, so we can just uniquely identify using T0. CONFIRMED that the below works to remove all parameter estimates from iterations where one parameter failed to converge.
 
-#Save iterations that failed to converge
-convergence_failures_LSdata_filterSibs.df <- ls_data_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
-  distinct(T0, time_window) %>% 
-  mutate(iterID = paste0(time_window, T0))
+#Save iterations that failed to converge - Want to mark these but not necessarily remove them for the full dataset
+# convergence_failures_LSdata_filterSibs.df <- ls_data_filterSibs %>% dplyr::filter(Rhat > 1.01) %>% 
+#   distinct(T0, time_window) %>% 
+#   mutate(iterID = paste0(time_window, T0))
 
 #Remove iterations that failed to converge
-ls_data_filterSibs <- ls_data_filterSibs %>% 
-  anti_join(convergence_failures_LSdata_filterSibs.df, by = "iterID")
+# ls_data_filterSibs <- ls_data_filterSibs %>% 
+#   anti_join(convergence_failures_LSdata_filterSibs.df, by = "iterID")
 
 #-----------------Downsample then filter sibs
 ls_data.Down_filterSibs <- read_csv(file = "G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/peer_review_rd2/LS_data/LS_data_ConnModel_filterSibs_2023.12.08_downsample.csv") %>%
@@ -2211,8 +2238,11 @@ real.truth <- tibble(estimation.year = c(seq(from = 1997, to = 2007, by = 1)),
                      time_window = "z     pedigree abundance",
                      Q50 = c(18, 10, 19, 12, 17, 14, 17, 14, 22, 23, 19))
 
+#Remove outlier datapoint from three year window
+ls_data_allSibs_plotNf <- ls_data_allSibs %>% dplyr::filter(parameter == "Nfbt", Q50 < 100)
+
 #----------Keep all sibs; keep all samples
-fig5a_allSibs <- ls_data_allSibs %>% 
+fig5a_allSibs <- ls_data_allSibs_plotNf %>% 
   dplyr::filter(parameter == "Nfbt") %>%
   ggplot(aes(x = estimation.year, y = Q50, color = time_window)) + 
   #geom_point() + 
@@ -2222,7 +2252,8 @@ fig5a_allSibs <- ls_data_allSibs %>%
   geom_line(data = real.truth, aes(color = time_window), size = 1.5) +
   #facet_wrap(~years.lab) +
   theme_bw() +
-  ylim(0, 60) +
+#  ylim(0, 60) +
+  coord_cartesian(ylim = c(0,60)) +
   labs(x = "Estimation year", y = "Female abundance") +
   scale_color_manual(values = cp5, name = "Sample window") +
 #  ggtitle("a)") +
@@ -2267,7 +2298,7 @@ fig5.survival_allSibs <- ls_data_allSibs %>%
 
 fig5.survival_allSibs
 
-ggsave("SuppFig10a_LS_data_allSibs_survival_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig9a_LS_data_allSibs_survival_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 #-----------------------Lambda------------------------------------#
@@ -2327,8 +2358,12 @@ fig5.psi_allSibs
 
 
 #----------Filter sibs; keep all samples
-fig5a_filterSibs <- ls_data_filterSibs %>% 
-  dplyr::filter(parameter == "Nft") %>%
+#Remove outlier datapoint from three year window
+ls_data_filterSibs_plotNf <- ls_data_filterSibs %>% dplyr::filter(parameter == "Nfbt", Q50 < 100)
+
+
+fig5a_filterSibs <- ls_data_filterSibs_plotNf %>% 
+  dplyr::filter(parameter == "Nfbt") %>%
   ggplot(aes(x = estimation.year, y = Q50, color = time_window)) + 
   #geom_point() + 
   geom_pointrange(aes(ymin = HPD2.5, ymax = HPD97.5),
@@ -2337,7 +2372,8 @@ fig5a_filterSibs <- ls_data_filterSibs %>%
   geom_line(data = real.truth, aes(color = time_window), size = 1.5) +
   #facet_wrap(~years.lab) +
   theme_bw() +
-  ylim(0, 60) +
+  coord_cartesian(ylim = c(0,60)) +
+#  ylim(0, 60) +
   labs(x = "Estimation year", y = "Female abundance") +
   scale_color_manual(values = cp5, name = "Sample window") +
 #  ggtitle("a)") +
@@ -2354,7 +2390,7 @@ fig5a_filterSibs <- ls_data_filterSibs %>%
 
 fig5a_filterSibs
 
-ggsave("SuppFig8b_LS_data_filterSibs_Nfb_trend_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 4, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig7b_LS_data_filterSibs_Nfb_trend_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 15, height = 4, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #-----------------------Survival------------------------------------#
 fig5.survival_filterSibs <- ls_data_filterSibs %>% 
@@ -2382,7 +2418,7 @@ fig5.survival_filterSibs <- ls_data_filterSibs %>%
 
 fig5.survival_filterSibs
 
-ggsave("SuppFig10b_LS_data_filterSibs_survival_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("SuppFig9b_LS_data_filterSibs_survival_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 
 
