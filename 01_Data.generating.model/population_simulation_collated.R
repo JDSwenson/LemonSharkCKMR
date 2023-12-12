@@ -46,7 +46,7 @@ f <- (1-Adult.survival)/(YOY.survival * juvenile.survival^11) # adult fecundity 
 
 #################### Toggles for  population simulation options ####################
 b.schedule <- "annual" #annual or biennial or triennial
-input.psi <- 1 #Can use any number here; 1 if wanting every individual to have the same schedule
+input.psi <- 1 #Can use any number here (bounded by 0, 1); 1 if wanting every individual to have the same schedule
 offcycle.breeding <- "no" #Options are "yes" or "no"
 input.popGrowth <- "stable" #Options are "stable", "slight increase", "slight decline", or "severe decline"
 #sampling.scheme <- "target.YOY"

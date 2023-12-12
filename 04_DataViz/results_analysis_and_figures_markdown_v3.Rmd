@@ -1095,6 +1095,19 @@ obj3_results <- obj3_results %>% left_join(psi.calcs, by = c("scenario", "iterat
   mutate(all.truth = ifelse(parameter == "psi", psi.truth, all.truth)) %>% 
   mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1))
 
+obj3_results %>% dplyr::filter(parameter == "psi", sampling.scheme == "sample.ALL.ages") %>% group_by(sampling.scheme, scenario) %>% summarize(median(all.truth), median(Q50)) %>% print(n = 30)
+
+#plot lambda vs psi
+lambda <- obj3_results %>% dplyr::filter(scenario == "scenario_3.4.2", parameter == "lambda")
+
+psi <- obj3_results %>% dplyr::filter(scenario == "scenario_3.4.2", parameter == "psi")
+
+plot(x = lambda$Q50, y = psi$Q50)
+
+obj3_results  
+
+mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.4.2") %>% group_by(BI) %>% 
+  summarize(sum(yes))
 ```
 
 

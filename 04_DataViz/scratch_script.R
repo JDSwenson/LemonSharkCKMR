@@ -1,3 +1,11 @@
+rents <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Peer_review/parents.breakdown_03Aug2023_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.75")
+
+rents %>% group_by(parent.sex) %>% 
+  summarize(mean(num.off),
+            min(num.off),
+            max(num.off))
+
+
 mom.comps1 <- readRDS(file = paste0(results_location, "mom.comps_04Oct2023_Seeds2022.04.15_scenario_3.1.2_multiennial.model")) %>% 
   mutate(scenario = "scenario_3.1.2")
 
