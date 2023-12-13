@@ -2609,7 +2609,131 @@ cross.corr_all %>% dplyr::filter(scenario == "scenario_3.1.2", parameter == "sur
 ```
 
 
+```{r Check on model output}
+model.out.all <- readRDS("G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/peer_review_rd2/LS_data/Model.output/all_model_results_allSibs_2023.12.08")
 
+crosscorr(model.out.all[[15]]$samples)
+
+model.out.block5 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/peer_review_rd2/LS_data/Model.output/block5_model_results_allSibs_2023.12.08")
+
+crosscorr(model.out.block5[[15]]$samples)
+
+model.out.block3 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/peer_review_rd2/LS_data/Model.output/block3_model_results_allSibs_2023.12.08")
+
+crosscorr(model.out.block3[[15]]$samples)
+
+
+mcmc.all = mcmc.block5 = mcmc.block3 <- NULL
+
+yr <- 1997
+
+for(cr in 1:length(model.out.all)){
+
+   mcmc.all[[cr]] <- as.data.frame(crosscorr(model.out.all[[cr]]$samples))
+  #   mutate(est_yr = yr, 
+  #          time_window = "all available samples") %>% 
+  #   rownames_to_column(var = "parameter")
+  
+  mcmc.block5[[cr]] <- as.data.frame(crosscorr(model.out.block5[[cr]]$samples))
+    # mutate(est_yr = yr,
+    #        time_window = "five year window") %>% 
+    # rownames_to_column(var = "parameter")
+  
+  mcmc.block3[[cr]] <- as.data.frame(crosscorr(model.out.block3[[cr]]$samples))
+    # mutate(est_yr = yr,
+    #        time_window = "three year window") %>% 
+    # rownames_to_column(var = "parameter")
+
+  yr <- yr+1
+}
+
+#Have to get rid of the rownames_to_column function above to calculate means below
+(all_cross.mean <- as.data.frame(Reduce("+", mcmc.all) / length(mcmc.all)) %>% 
+  mutate(time_window = "all available samples") %>% 
+  rownames_to_column(var = "parameter"))
+
+(block5_cross.mean <- as.data.frame(Reduce("+", mcmc.block5) / length(mcmc.block5)) %>% 
+  mutate(time_window = "five year window") %>% 
+  rownames_to_column(var = "parameter"))
+
+(block3_cross.mean <- as.data.frame(Reduce("+", mcmc.block3) / length(mcmc.block3)) %>% 
+  mutate(time_window = "three year window") %>% 
+  rownames_to_column(var = "parameter"))
+
+cross.corr_all.mean <- bind_rows(all_cross.mean, block5_cross.mean, block3_cross.mean) %>%
+  dplyr::select(-deviance) %>% 
+  dplyr::filter(parameter != "deviance")
+
+write_csv(cross.corr_all.mean, file = paste0(results_location,"lemon_shark_sims/peer_review_rd2/LS_data/cross.corr_allsibs_mean.csv"))
+
+#To look at cross-correlation by year and time window
+cross.corr_all <- as_tibble(bind_rows(mcmc.all, mcmc.block5, mcmc.block3))
+
+#Need to filter out for the parameters we want to check
+cross.corr_all %>% dplyr::filter(parameter != "psi",
+                                 time_window != "three year window") %>% 
+  arrange(desc(psi)) %>% 
+  print(n = 100)
+
+
+#---------------Filter siblings-------------------------------
+model.out.all <- readRDS("G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/peer_review_rd2/LS_data/Model.output/all_model_results_filterSibs_2023.12.08")
+
+crosscorr(model.out.all[[15]]$samples)
+
+model.out.block5 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/peer_review_rd2/LS_data/Model.output/block5_model_results_filterSibs_2023.12.08")
+
+crosscorr(model.out.block5[[15]]$samples)
+
+model.out.block3 <- readRDS("G://My Drive/Personal_Drive/R/CKMR/output_peer_review/Model.results/lemon_shark_sims/peer_review_rd2/LS_data/Model.output/block3_model_results_filterSibs_2023.12.08")
+
+crosscorr(model.out.block3[[15]]$samples)
+
+
+mcmc.all = mcmc.block5 = mcmc.block3 <- NULL
+
+yr <- 1997
+
+for(cr in 1:length(model.out.all)){
+
+   mcmc.all[[cr]] <- as.data.frame(crosscorr(model.out.all[[cr]]$samples))
+  #   mutate(est_yr = yr, 
+  #          time_window = "all available samples") %>% 
+  #   rownames_to_column(var = "parameter")
+  
+  mcmc.block5[[cr]] <- as.data.frame(crosscorr(model.out.block5[[cr]]$samples))
+    # mutate(est_yr = yr,
+    #        time_window = "five year window") %>% 
+    # rownames_to_column(var = "parameter")
+  
+  mcmc.block3[[cr]] <- as.data.frame(crosscorr(model.out.block3[[cr]]$samples))
+    # mutate(est_yr = yr,
+    #        time_window = "three year window") %>% 
+    # rownames_to_column(var = "parameter")
+
+  yr <- yr+1
+}
+
+#Have to get rid of the rownames_to_column function above to calculate means below
+(all_cross.mean <- as.data.frame(Reduce("+", mcmc.all) / length(mcmc.all)) %>% 
+  mutate(time_window = "all available samples") %>% 
+  rownames_to_column(var = "parameter"))
+
+(block5_cross.mean <- as.data.frame(Reduce("+", mcmc.block5) / length(mcmc.block5)) %>% 
+  mutate(time_window = "five year window") %>% 
+  rownames_to_column(var = "parameter"))
+
+(block3_cross.mean <- as.data.frame(Reduce("+", mcmc.block3) / length(mcmc.block3)) %>% 
+  mutate(time_window = "three year window") %>% 
+  rownames_to_column(var = "parameter"))
+
+cross.corr_all.mean <- bind_rows(all_cross.mean, block5_cross.mean, block3_cross.mean) %>% 
+  dplyr::select(-deviance) %>% 
+  dplyr::filter(parameter != "deviance")
+
+write_csv(cross.corr_all.mean, file = paste0(results_location,"lemon_shark_sims/peer_review_rd2/LS_data/cross.corr_filtersibs_mean.csv"))
+
+```
 
 
 
