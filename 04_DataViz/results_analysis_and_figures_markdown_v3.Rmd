@@ -630,7 +630,8 @@ samples.df_all <- samples.df_all %>%
    mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
                                       ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample juveniles", 
                                              ifelse(sampling.scheme == "target.YOY", "target YOY", NA)))) %>% 
-  mutate(ref.yr = ifelse(sampling.scheme == "sample.ALL.ages" & is.na(ref.yr) == FALSE, 76, ref.yr))
+  mutate(ref.yr = ifelse(sampling.scheme == "sample.ALL.ages" & is.na(ref.yr) == FALSE, 76, ref.yr)) %>% 
+  mutate(est.year.calibrate = ref.yr + 1)
 
 
 #Get numbers of samples of each age class
@@ -736,7 +737,7 @@ ggsave("Figure_3a_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 3
 num.bins <- length(min(samples.df_all$birth.year):max(samples.df_all$birth.year))
 
 age.dist_plot <- samples.df_all %>% gghistogram(x = "birth.year", y = "..density..", bins = num.bins, facet.by = "sampling.scheme.label", color = "darkslategray4", fill = "darkslategray4", ggtheme = theme_bw()) +
-  geom_vline(aes(xintercept= ref.yr), color = "darkslategrey", linetype = "longdash", size = 1.1) +
+  geom_vline(aes(xintercept= est.year.calibrate), color = "darkslategrey", linetype = "longdash", size = 1.1) +
 #  geom_vline(aes(xintercept = ref.yr - 10), color = "darkturquoise", linetype = "longdash", size = 1.1, alpha = 0.6) +
 #  geom_vline(xintercept = 85, color = "indianred4", linetype = "longdash", size = 1.1, alpha = 0.6) +
 #  geom_vline(xintercept = 90, color = "seagreen4", linetype = "longdash", size = 1.1, alpha = 0.6) +
@@ -1106,9 +1107,21 @@ plot(x = lambda$Q50, y = psi$Q50)
 
 obj3_results  
 
-#Just for checking ...
-mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.4.2") %>% group_by(BI) %>% 
-  summarize(sum(yes))
+#Calculate naive "truth" for psi as the proportion of positive comparisons that come from on-cycle mothers.
+total.HSPs <- mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.6.2", 
+                                               yes > 0) %>% 
+  group_by(sampling.scheme, iteration) %>% 
+  summarize(all.yes = sum(yes)) %>% 
+  summarize(mean.yes = mean(all.yes))
+
+on.HSPs <- mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.6.2") %>% 
+  group_by(sampling.scheme, BI, iteration) %>% 
+  summarize(all.yes.BI = sum(yes)) %>% 
+  summarize(mean.yes.BI = mean(all.yes.BI))
+
+psi.truth <- total.HSPs %>% left_join(on.HSPs, by = "sampling.scheme") %>% 
+  dplyr::filter(BI == "on") %>% 
+  mutate(truth = mean.yes.BI/mean.yes)
 ```
 
 
@@ -1268,20 +1281,23 @@ ggsave("SuppFig10_variablepsi_Obj3_2023.12.10.tiff", plot = last_plot(), device 
 psi.df <- obj3_results %>% dplyr::filter(psi.label %in% c("1", "1*", "0"),
                                          estimation.year == 90,
                                          parameter == "psi")
+#This df has the mean truth for each sampling scheme (calculated across all iterations). Use it to manually add value for truth into plot.
+psi.truth
+
 
 (figS6_psi <- obj3_results %>% dplyr::filter(psi.label %in% c("1", "1*", "0"),
                                          estimation.year == 90,
-                                         parameter == "psi") %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5
+                                         parameter == "psi") %>%  # May want to add a filter for year estimate: estimation.sim.label == present-5. Derived truth from calculations of 
     dplyr::mutate(plot.truth = ifelse(breeding.schedule %in% c("triennial", "biennial", "annual"), 1,
-                                      ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "sample all ages", 0.767,
-                                             ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "sample juveniles", 0.766,
-                                                    ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "target YOY", 0.674, NA))))) %>% 
+                                      ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "sample all ages", 0.775,
+                                             ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "sample juveniles", 0.765,
+                                                    ifelse(breeding.schedule == "biennial*" & sampling.scheme.label == "target YOY", 0.673, NA))))) %>% 
   ggplot(aes(x=factor(breeding.schedule, levels = c("triennial", "biennial", "biennial*", "annual")))) +
   geom_pointrange(aes(y = Q50, ymin = HPD2.5, ymax = HPD97.5),
                   position = position_dodge(width = 0.5), 
                   alpha = 0.2,
                   colour = "#67A9CF") +
-  geom_point(aes(y = plot.truth), colour = "darkred", pch = 3) +
+  geom_point(aes(y = plot.truth), colour = "darkred", pch = 3, size = 4) +
   #geom_hline(yintercept=1, col="blue", size=1, linetype = "dashed") +
   labs(x="Breeding schedule", y="Q50") +
   #scale_color_manual(values = cp3.sub[2]) +
@@ -2493,7 +2509,7 @@ p.LS.down_survival_allSibs
 
 #ggarrange(fig5a, fig5b, common.legend = TRUE, legend = "bottom")
 
-ggsave("SuppFig9a_LSData_Down_allSibs_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 12, height = 6, units = "in")
+ggsave("SuppFig8a_LSData_Down_allSibs_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/", width = 12, height = 6, units = "in")
 
 
 #----------Filter sibs; downsample

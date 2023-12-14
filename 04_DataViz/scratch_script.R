@@ -1,3 +1,16 @@
+total.HSPs <- mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.3.2", 
+                                               yes > 0) %>% 
+  group_by(sampling.scheme, iteration) %>% 
+  summarize(all.yes = sum(yes)) %>% 
+  summarize(mean.yes = mean(all.yes))
+
+on.HSPs <- mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.3.2") %>% 
+  group_by(sampling.scheme, BI, iteration) %>% 
+  summarize(all.yes.BI = sum(yes)) %>% 
+  summarize(mean.yes.BI = mean(all.yes.BI))
+
+
+
 rents <- readRDS(file = "G://My Drive/Personal_Drive/R/CKMR/Population.simulations/Peer_review/parents.breakdown_03Aug2023_Seeds2022.04.15_lambda.1_biennial.breeding_psi0.75")
 
 rents %>% group_by(parent.sex) %>% 
