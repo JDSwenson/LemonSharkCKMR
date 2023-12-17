@@ -45,11 +45,11 @@ results.files <- list.files(path = paste0(results_location),
 results.raw <- map_dfr(results.files, read_csv, guess_max = 30000) %>%  #Have to specify guess_max or else the function will guess column type using the first 1,000 columns and assume the POP columns are logical (bc the first several thousand are NA)
   dplyr::select(-c(HSPs_expected, POPs_expected)) #remove columns containing "expected" values for HSPs and POPs (they come from a vestigial function in the simulation scripts)
 
-naive_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_3.7.1") #Note that scenario 3.7.1 is not technically "naive" (bc the population simulation was all annual breeders). However we will label it as such in the code, and this label will be used later when we label it as an annual model in graphs for Objective 3.
+naive_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_3.1.1", "scenario_3.1.3", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.5.3", "scenario_3.6.1", "scenario_3.6.3", "scenario_3.7.1") #Note that scenario 3.7.1 is not technically "naive" (bc the population simulation was all annual breeders). However we will label it as such in the code, and this label will be used later when we label it as an annual model in graphs for Objective 3.
 
 objective1 <- c("scenario_1_model.validation", "scenario_1.2.1", "scenario_1.2.2", "scenario_1.2.3")
 objective2 <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_2.2.1", "scenario_2.2.2", "scenario_2.3.3", "scenario_2.2.4", "scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scenario_2.4.4")
-objective3 <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2", "scenario_3.5.1", "scenario_3.5.2", "scenario_3.6.1", "scenario_3.6.2", "scenario_3.7.1", "scenario_3.7.2")
+objective3 <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.1.3", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2", "scenario_3.5.1", "scenario_3.5.2", "scenario_3.5.3", "scenario_3.6.1", "scenario_3.6.2", "scenario_3.6.3", "scenario_3.7.1", "scenario_3.7.2")
 objective4 <- c("scenario_4.1", "scenario_4.2", "scenario_4.3", "scenario_4.4", "scenario_4.5", "scenario_4.6")
 
 #Add labels for naive and adapted; CHANGE Nft and Nmt to Nf and Nm for consistency across scenarios
@@ -1032,8 +1032,8 @@ Format data for tests of multiennial breeding (Objective 3)
 ```{r Obj3 data prep}
 ##################### Objective 3 ############################
 #---------------------Prep results----------------------------
-psi1_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.5.1", "scenario_3.5.2", "scenario_3.7.1", "scenario_3.7.2")
-psi1stoch_scenarios <- c("scenario_3.6.1", "scenario_3.6.2")
+psi1_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.1.3", "scenario_3.5.1", "scenario_3.5.2", "scenario_3.5.3", "scenario_3.7.1", "scenario_3.7.2")
+psi1stoch_scenarios <- c("scenario_3.6.1", "scenario_3.6.2", "scenario_3.6.3")
 psi0.9_scenarios <- c("scenario_3.2.1", "scenario_3.2.2")
 psi0.75_scenarios <- c("scenario_3.3.1", "scenario_3.3.2")
 psi0.50_scenarios <- c("scenario_3.4.1", "scenario_3.4.2")
@@ -1041,9 +1041,10 @@ psi0.50_scenarios <- c("scenario_3.4.1", "scenario_3.4.2")
 all.psi.scenarios <- c("scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2")
 
 annual_scenarios <- c("scenario_3.7.1", "scenario_3.7.2")
-biennial_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2")
-biennial_stoch_scenarios <- c("scenario_3.6.1", "scenario_3.6.2")
-triennial_scenarios <- c("scenario_3.5.1", "scenario_3.5.2")
+biennial_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.1.3", "scenario_3.2.1", "scenario_3.2.2", "scenario_3.3.1", "scenario_3.3.2", "scenario_3.4.1", "scenario_3.4.2")
+biennial_stoch_scenarios <- c("scenario_3.6.1", "scenario_3.6.2", "scenario_3.6.3")
+triennial_scenarios <- c("scenario_3.5.1", "scenario_3.5.2", "scenario_3.5.3")
+no.offcycle_scenarios <- c("scenario_3.1.3", "scenario_3.5.3", "scenario_3.6.3")
 
 #Create labels for plotting
 obj3_results <- results %>% dplyr::filter(objective == "objective3") %>% 
@@ -1122,8 +1123,33 @@ on.HSPs <- mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.6.2") %>%
 psi.truth <- total.HSPs %>% left_join(on.HSPs, by = "sampling.scheme") %>% 
   dplyr::filter(BI == "on") %>% 
   mutate(truth = mean.yes.BI/mean.yes)
+
+#Fix dataframe for temporary results (tests without off-cycle breeders)
+plot.3 <- obj3_results %>% mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% 
+  dplyr::filter(scenario %in% c(no.offcycle_scenarios, "scenario_3.1.1", "scenario_3.5.1", "scenario_3.6.1")) %>% 
+  mutate(plot.label = ifelse(scenario %in% no.offcycle_scenarios, "No off-cycle comps", "Include off-cycle comps"))
 ```
 
+```{r Quick plot for checking}
+plot.3 %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival", "lambda")) %>% 
+  ggplot(aes(x=factor(breeding.schedule, levels = c("triennial", "biennial", "biennial*")), fill = plot.label)) +
+  geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
+  geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
+  labs(x="Breeding cycle", y="Relative bias") +
+  scale_fill_manual(values = cp3.sub) +
+  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival", "lambda"))), scales = "free") +
+  theme_bw() +
+  theme(axis.text = element_text(size = 12),
+        axis.title = element_text(size = 20),
+        strip.text.x = element_text(size=15),
+        strip.text.y = element_text(size=15),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20),
+        plot.title = element_text(size=25)) +
+  guides(fill=guide_legend(title="Model"))
+
+
+```
 
 ```{r Obj3 Viz}
 #Palette I want to use

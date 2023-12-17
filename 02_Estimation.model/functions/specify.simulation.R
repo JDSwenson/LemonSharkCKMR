@@ -3,7 +3,7 @@
 specify.model <- function(){
 noLambda_model.validation.scenarios <- c("scenario_1_model.validation") #Includes a tight prior for survival; no lambda
 noLambda_annual.model.scenarios <- c("scenario_1.2.1", "scenario_1.2.2", "scenario_1.2.3", "scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4") #Includes a uniform prior for survival; no lambda
-narrowLambda_annual.model.scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_3.7.1", "scenario_4.4", "scenario_4.5", "scenario_4.6")
+narrowLambda_annual.model.scenarios <- c("scenario_2.2.1", "scenario_2.2.2", "scenario_2.2.3", "scenario_2.2.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.1.3", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.5.3", "scenario_3.6.1", "scenario_3.6.3", "scenario_3.7.1", "scenario_4.4", "scenario_4.5", "scenario_4.6")
 wideLambda_annual.model.scenarios <- c("scenario_2.3.1", "scenario_2.3.2", "scenario_2.3.3", "scenario_2.3.4")
 narrowLambda_skip.model.scenarios <- c("scenario_3.1.2", "scenario_3.2.2", "scenario_3.3.2", "scenario_3.4.2", "scenario_3.5.2", "scenario_3.6.2", "scenario_3.7.2", "scenario_4.1", "scenario_4.2", "scenario_4.3")
 
@@ -296,7 +296,7 @@ if(objective == 1){
   
   cat(paste0("Testing multiennial breeding (Objective 3)"))
   
-  if(scenario == "scenario_3.1.1"){
+  if(scenario %in% c("scenario_3.1.1", "scenario_3.1.3")){
     #========================= Scenario 3.1 =========================
     #------------------------- Scenario 3.1.1: Biennial breeding; psi = 1; annual model
     cat(paste0(" with 100% biennial breeders and a naive model."))
@@ -372,7 +372,7 @@ if(objective == 1){
     jags_params = c("Nf0", "Nft", "Nm0", "Nmt", "Nfb0", "Nfbt", "survival", "lambda", "psi")
 
     
-  } else if(scenario == "scenario_3.5.1"){
+  } else if(scenario %in% c("scenario_3.5.1", "scenario_3.5.3")){
     #========================= Scenario 3.5: Triennial breeding =========================
     #------------------------- Scenario 3.5.1: Triennial breeding; psi = 1; annual model
     cat(paste0(" with 100% triennial breeders and a naive model."))
@@ -393,7 +393,7 @@ if(objective == 1){
     mating.periodicity <- 3
     
     
-  } else if(scenario == "scenario_3.6.1"){
+  } else if(scenario %in% c("scenario_3.6.1", "scenario_3.6.3")){
     
     #========================= Scenario 3.6: Biennial breeding w/ stochasticity
     #------------------------- Scenario 3.6.1: Biennial breeding; psi = 1; annual model; 10% on-cycle breeders fail to breed; 10% off-cycle breeders do breed.

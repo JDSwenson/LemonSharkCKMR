@@ -882,6 +882,22 @@ calc.truth <- function(truth.df = truth.df){
            sampling.scheme = s.scheme,
            sample.prop = sample.proportion)
   
+  if(scenario %in% c("scenario_3.1.3", "scenario_3.5.3", "scenario_3.6.3")){
+    #If fitting an annual model to a multiennial population, then we need to calculate the truth as the number of year-specific breeders.
+    
+    truth.iter <- truth.iter %>% dplyr::filter(parameter %in% c("Nfb0", "Nfbt", "Nm0", "Nmt", "survival", "lambda")) %>% 
+      mutate(parameter2 = ifelse(parameter == "Nfb0", "Nf0",
+                                                     ifelse(parameter == "Nfbt", "Nft", parameter))) %>% 
+      dplyr::select(estimation.year,
+                    iteration,
+                    seed,
+                    parameter = parameter2,
+                    all.truth,
+                    T0,
+                    sampling.scheme,
+                    sample.prop)
+  }
+  
   #----------END ADDED 10/3/2023
   # N0.truth <- pop_size.df %>% dplyr::filter(iteration == iter,
   #                                           year == est.year.calibrate) %>% 
