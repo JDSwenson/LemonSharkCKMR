@@ -45,7 +45,9 @@ results.files <- list.files(path = paste0(results_location),
 results.raw <- map_dfr(results.files, read_csv, guess_max = 30000) %>%  #Have to specify guess_max or else the function will guess column type using the first 1,000 columns and assume the POP columns are logical (bc the first several thousand are NA)
   dplyr::select(-c(HSPs_expected, POPs_expected)) #remove columns containing "expected" values for HSPs and POPs (they come from a vestigial function in the simulation scripts)
 
-naive_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_3.1.1", "scenario_3.1.3", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.5.3", "scenario_3.6.1", "scenario_3.6.3", "scenario_3.7.1") #Note that scenario 3.7.1 is not technically "naive" (bc the population simulation was all annual breeders). However we will label it as such in the code, and this label will be used later when we label it as an annual model in graphs for Objective 3.
+naive_scenarios <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_3.1.1", "scenario_3.2.1", "scenario_3.3.1", "scenario_3.4.1", "scenario_3.5.1", "scenario_3.6.1", "scenario_3.7.1") #Note that scenario 3.7.1 is not technically "naive" (bc the population simulation was all annual breeders). However we will label it as such in the code, and this label will be used later when we label it as an annual model in graphs for Objective 3.
+
+naive.filtered_scenarios <- c("scenario_3.1.3", "scenario_3.5.3", "scenario_3.6.3")
 
 objective1 <- c("scenario_1_model.validation", "scenario_1.2.1", "scenario_1.2.2", "scenario_1.2.3")
 objective2 <- c("scenario_2.1.1", "scenario_2.1.2", "scenario_2.1.3", "scenario_2.1.4", "scenario_2.2.1", "scenario_2.2.2", "scenario_2.3.3", "scenario_2.2.4", "scenario_2.4.1", "scenario_2.4.2", "scenario_2.4.3", "scenario_2.4.4")
@@ -1032,6 +1034,7 @@ Format data for tests of multiennial breeding (Objective 3)
 ```{r Obj3 data prep}
 ##################### Objective 3 ############################
 #---------------------Prep results----------------------------
+#Group scenarios by tests
 psi1_scenarios <- c("scenario_3.1.1", "scenario_3.1.2", "scenario_3.1.3", "scenario_3.5.1", "scenario_3.5.2", "scenario_3.5.3", "scenario_3.7.1", "scenario_3.7.2")
 psi1stoch_scenarios <- c("scenario_3.6.1", "scenario_3.6.2", "scenario_3.6.3")
 psi0.9_scenarios <- c("scenario_3.2.1", "scenario_3.2.2")
@@ -1046,8 +1049,39 @@ biennial_stoch_scenarios <- c("scenario_3.6.1", "scenario_3.6.2", "scenario_3.6.
 triennial_scenarios <- c("scenario_3.5.1", "scenario_3.5.2", "scenario_3.5.3")
 no.offcycle_scenarios <- c("scenario_3.1.3", "scenario_3.5.3", "scenario_3.6.3")
 
-#Create labels for plotting
-obj3_results <- results %>% dplyr::filter(objective == "objective3") %>% 
+#Subset all results for Obj3 results
+obj3_results <- results %>% dplyr::filter(objective == "objective3") 
+
+#Re-calculate estimates as Q50 * 2 and truth as all.truth
+scenario_3.1.3_trueNf <- obj3_results %>% dplyr::filter(scenario == "scenario_3.1.1", parameter == "Nf") %>% 
+  dplyr::select(parameter, iteration, all.truth) %>% 
+  distinct(.keep_all = TRUE) %>% 
+  mutate(scenario = "scenario_3.1.3")
+  
+scenario_3.5.3_trueNf <- obj3_results %>% dplyr::filter(scenario == "scenario_3.5.1", parameter == "Nf") %>% 
+  dplyr::select(parameter, iteration, all.truth) %>% 
+  distinct(.keep_all = TRUE) %>% 
+  mutate(scenario = "scenario_3.5.3")
+
+scenario_3.6.3_trueNf <- obj3_results %>% dplyr::filter(scenario == "scenario_3.6.1", parameter == "Nf") %>% 
+  dplyr::select(parameter, iteration, all.truth) %>% 
+  distinct(.keep_all = TRUE) %>% 
+  mutate(scenario = "scenario_3.6.3")
+
+offcycle_totalNf_truths <- bind_rows(scenario_3.1.3_trueNf, scenario_3.5.3_trueNf, scenario_3.6.3_trueNf) %>% 
+  mutate(totalNf = all.truth) %>% 
+  dplyr::select(-all.truth)
+
+obj3_results <- obj3_results %>% left_join(offcycle_totalNf_truths, by = c("parameter", "iteration", "scenario")) %>% 
+  mutate(all.truth = ifelse(scenario %in% no.offcycle_scenarios & parameter == "Nf", totalNf, all.truth)) %>% 
+  mutate(breeding.schedule = ifelse(scenario %in% annual_scenarios, "annual",
+                                    ifelse(scenario %in% biennial_scenarios, "biennial", 
+                                           ifelse(scenario %in% triennial_scenarios, "triennial", 
+                                                  ifelse(scenario %in% biennial_stoch_scenarios, "biennial*", NA))))) %>% 
+
+  mutate(Q50 = ifelse(scenario %in% no.offcycle_scenarios & parameter == "Nf" & breeding.schedule != "triennial", Q50*2,
+                      ifelse(scenario %in% no.offcycle_scenarios & parameter == "Nf" & breeding.schedule == "triennial", Q50*3, Q50))) %>% 
+  mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% 
   mutate(psi.label = ifelse(scenario %in% psi1_scenarios & !scenario %in% annual_scenarios, "1",
                             ifelse(scenario %in% psi1stoch_scenarios, "1*",
                                    ifelse(scenario %in% psi0.9_scenarios, "0.90",
@@ -1055,12 +1089,9 @@ obj3_results <- results %>% dplyr::filter(objective == "objective3") %>%
                                                  ifelse(scenario %in% psi0.50_scenarios, "0.50", 
                                                         ifelse(scenario %in% annual_scenarios, "0", NA))))))) %>%
   mutate(psi.label = factor(psi.label, levels = c("1", "1*", "0.90", "0.75", "0.50", "0"))) %>% 
-  mutate(breeding.schedule = ifelse(scenario %in% annual_scenarios, "annual",
-                                    ifelse(scenario %in% biennial_scenarios, "biennial", 
-                                           ifelse(scenario %in% triennial_scenarios, "triennial", 
-                                                  ifelse(scenario %in% biennial_stoch_scenarios, "biennial*", NA))))) %>% 
-  mutate(model.label = ifelse(scenario %in% naive_scenarios, "naive", "adapted")) %>% 
-  mutate(model.label = factor(model.label, levels = c("naive", "adapted"))) %>%
+    mutate(model.label = ifelse(scenario %in% naive_scenarios, "naive", 
+                              ifelse(scenario %in% naive.filtered_scenarios, "naive - filtered", "adapted"))) %>% 
+  mutate(model.label = factor(model.label, levels = c("naive", "naive - filtered", "adapted"))) %>%
   mutate(sampling.scheme.label = ifelse(sampling.scheme == "sample.ALL.ages", "sample all ages", 
                                       ifelse(sampling.scheme == "sample.all.juvenile.ages", "sample juveniles", 
                                              ifelse(sampling.scheme == "target.YOY", "target YOY", NA))))# %>% 
@@ -1092,11 +1123,13 @@ psi.calcs <- mom.pos.BI.obj3 %>% dplyr::filter(BI == "on") %>%
   mutate(psi.truth = BI_pos / total_pos,
          parameter = "psi")
 
+#Will throw an error if run more than once
 obj3_results <- obj3_results %>% left_join(psi.calcs, by = c("scenario", "iteration", "sampling.scheme", "parameter")) %>% 
   mutate(all.truth = ifelse(parameter == "psi", psi.truth, all.truth)) %>% 
   mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1))
 
 obj3_results %>% dplyr::filter(parameter == "psi", sampling.scheme == "sample.ALL.ages") %>% group_by(sampling.scheme, scenario) %>% summarize(median(all.truth), median(Q50)) %>% print(n = 30)
+
 
 #plot lambda vs psi
 lambda <- obj3_results %>% dplyr::filter(scenario == "scenario_3.4.2", parameter == "lambda")
@@ -1108,30 +1141,70 @@ plot(x = lambda$Q50, y = psi$Q50)
 
 obj3_results  
 
-#Calculate naive "truth" for psi as the proportion of positive comparisons that come from on-cycle mothers.
-total.HSPs <- mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.6.2", 
-                                               yes > 0) %>% 
+#Calculate naive "truth" for psi as the proportion of positive comparisons that come from on-cycle mothers -- view for specific scenarios
+#All comparisons
+total.HSPs <- mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.6.2") %>% 
   group_by(sampling.scheme, iteration) %>% 
-  summarize(all.yes = sum(yes)) %>% 
-  summarize(mean.yes = mean(all.yes))
+  summarize(all.yes = sum(yes),
+            all.all = sum(all)) %>% 
+  summarize(mean.yes = mean(all.yes),
+            mean.all = mean(all.all))
 
+#All comparisons by BI
 on.HSPs <- mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.6.2") %>% 
   group_by(sampling.scheme, BI, iteration) %>% 
-  summarize(all.yes.BI = sum(yes)) %>% 
-  summarize(mean.yes.BI = mean(all.yes.BI))
+  summarize(all.yes.BI = sum(yes),
+            all.all.BI = sum(all)) %>% 
+  summarize(mean.yes.BI = mean(all.yes.BI),
+            mean.all.BI = mean(all.all.BI))
 
-psi.truth <- total.HSPs %>% left_join(on.HSPs, by = "sampling.scheme") %>% 
-  dplyr::filter(BI == "on") %>% 
-  mutate(truth = mean.yes.BI/mean.yes)
+(psi.truth <- total.HSPs %>% left_join(on.HSPs, by = "sampling.scheme") %>% 
+  mutate(psi_truth = mean.yes.BI/mean.yes,
+         percent_total = mean.all.BI/mean.all))
+
+#How many on vs off-cycle comparisons were there?
+mom.comps.obj3 %>% dplyr::filter(scenario == "scenario_3.6.2") %>% 
+  group_by(sampling.scheme, BI) %>% 
+  summarize(all.yes = sum(yes),
+            all.all = sum(all))
 
 #Fix dataframe for temporary results (tests without off-cycle breeders)
-plot.3 <- obj3_results %>% mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% 
-  dplyr::filter(scenario %in% c(no.offcycle_scenarios, "scenario_3.1.1", "scenario_3.5.1", "scenario_3.6.1")) %>% 
-  mutate(plot.label = ifelse(scenario %in% no.offcycle_scenarios, "No off-cycle comps", "Include off-cycle comps"))
+# plot.3 <- obj3_results %>% mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% 
+#   dplyr::filter(scenario %in% c(no.offcycle_scenarios, "scenario_3.1.1", "scenario_3.5.1", "scenario_3.6.1")) %>% 
+#   mutate(plot.label = ifelse(scenario %in% no.offcycle_scenarios, "No off-cycle comps", "Include off-cycle comps"))
+
+# #Re-calculate estimates as Q50 * 2 and truth as all.truth
+# scenario_3.1.3_trueNf <- obj3_results %>% dplyr::filter(scenario == "scenario_3.1.1", parameter == "Nf") %>% 
+#   dplyr::select(parameter, iteration, all.truth) %>% 
+#   distinct(.keep_all = TRUE) %>% 
+#   mutate(scenario = "scenario_3.1.3")
+#   
+# scenario_3.5.3_trueNf <- obj3_results %>% dplyr::filter(scenario == "scenario_3.5.1", parameter == "Nf") %>% 
+#   dplyr::select(parameter, iteration, all.truth) %>% 
+#   distinct(.keep_all = TRUE) %>% 
+#   mutate(scenario = "scenario_3.5.3")
+# 
+# scenario_3.6.3_trueNf <- obj3_results %>% dplyr::filter(scenario == "scenario_3.6.1", parameter == "Nf") %>% 
+#   dplyr::select(parameter, iteration, all.truth) %>% 
+#   distinct(.keep_all = TRUE) %>% 
+#   mutate(scenario = "scenario_3.6.3")
+# 
+# offcycle_totalNf_truths <- bind_rows(scenario_3.1.3_trueNf, scenario_3.5.3_trueNf, scenario_3.6.3_trueNf) %>% 
+#   mutate(totalNf = all.truth) %>% 
+#   dplyr::select(-all.truth)
+# 
+# plot.4 <- plot.3 %>% left_join(offcycle_totalNf_truths, by = c("parameter", "iteration", "scenario")) %>% 
+#   mutate(all.truth = ifelse(scenario %in% no.offcycle_scenarios & parameter == "Nf", totalNf, all.truth)) %>% 
+#   mutate(Q50 = ifelse(scenario %in% no.offcycle_scenarios & parameter == "Nf" & breeding.schedule != "triennial", Q50*2,
+#                       ifelse(scenario %in% no.offcycle_scenarios & parameter == "Nf" & breeding.schedule == "triennial", Q50*3, Q50))) %>% 
+#   mutate(relative_bias = round(((Q50 - all.truth)/all.truth)*100, 1)) %>% 
+#   mutate(plot.label = ifelse(scenario %in% no.offcycle_scenarios, "No off-cycle comps", "Include off-cycle comps"))
+
+obj3_results
 ```
 
 ```{r Quick plot for checking}
-plot.3 %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival", "lambda")) %>% 
+plot.4 %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival", "lambda")) %>% 
   ggplot(aes(x=factor(breeding.schedule, levels = c("triennial", "biennial", "biennial*")), fill = plot.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
@@ -1155,7 +1228,7 @@ plot.3 %>% dplyr::filter(parameter %in% c("Nf", "Nm", "survival", "lambda")) %>%
 #Palette I want to use
 cp3 <- brewer.pal(3, "RdBu") #Choose palette + number of colors
 cp3.sub <- cp3[c(1,3)]
-scales::show_col(cp3.sub)
+scales::show_col(cp3)
 
 ######################################################################################################### Objective 3 Main Figure ####################################################################################################################
 #-------------------Objective 3 Density plots of relative bias-----------------------#
@@ -1168,15 +1241,15 @@ psi.df <- obj3_results %>% dplyr::filter(psi.label %in% c("1", "1*", "0"),
                                          !scenario %in% all.psi.scenarios) %>% 
   ggplot(aes(x=factor(breeding.schedule, levels = c("triennial", "biennial", "biennial*", "annual")), fill = model.label)) +
   geom_violin(aes(y=relative_bias), draw_quantiles = 0.5) +
-  geom_pointrange(data = psi.df, 
-                  aes(y = Q50, ymin = HPD2.5, ymax = HPD97.5),
-                  position = position_dodge(width = 0.5), 
-                  alpha = 0.2,
-                  colour = "#67A9CF") +
+  # geom_pointrange(data = psi.df, 
+  #                 aes(y = Q50, ymin = HPD2.5, ymax = HPD97.5),
+  #                 position = position_dodge(width = 0.5), 
+  #                 alpha = 0.2,
+  #                 colour = "#67A9CF") +
   geom_hline(yintercept=0, col="blue", size=1.25, linetype = "dashed") +
   labs(x="Breeding cycle", y="Relative bias") +
-  scale_fill_manual(values = cp3.sub) +
-  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival", "psi"))), scales = "free") +
+  scale_fill_manual(values = cp3) +
+  facet_grid(cols = vars(sampling.scheme.label), rows = vars(factor(parameter, levels = c("Nf", "Nm", "survival"))), scales = "free") +
   theme_bw() +
   theme(axis.text = element_text(size = 12),
         axis.title = element_text(size = 20),
@@ -1184,10 +1257,11 @@ psi.df <- obj3_results %>% dplyr::filter(psi.label %in% c("1", "1*", "0"),
         strip.text.y = element_text(size=15),
         legend.text = element_text(size = 15),
         legend.title = element_text(size = 20),
+        legend.position = "bottom",
         plot.title = element_text(size=25))) +
   guides(fill=guide_legend(title="Model"))
 
-ggsave("Figure_4_Obj3_2023.12.10.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
+ggsave("Figure_4_Obj3_2023.12.19.tiff", plot = last_plot(), device = "tiff", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
 #ggsave("Figure_4_Obj3_2023.10.06.jpg", plot = last_plot(), device = "jpg", dpi = 300, width = 14, height = 6, units = "in", path = "G://My Drive/Personal_Drive/R/CKMR/manuscript.figs/raw/")
 
